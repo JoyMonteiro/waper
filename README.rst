@@ -1,17 +1,16 @@
-MY NEW PROJECT
+Waper
 
-Create artificial artwork using AI.
-
+A rossby Wave Packet trackER
 .. start-badges
 
 | |build| |docs| |coverage| |maintainability| |better_code_hub| |tech-debt|
 | |release_version| |wheel| |supported_versions| |gh-lic| |commits_since_specific_tag_on_master| |commits_since_latest_github_release|
 
 |
-| **Code:** https://github.com/john-doe-gh-account-name/my-new-project
-| **Docs:** https://my-new-project.readthedocs.io/en/master/
-| **PyPI:** https://pypi.org/project/my-new-project/
-| **CI:** https://github.com/john-doe-gh-account-name/my-new-project/actions/
+| **Code:** https://github.com/JoyMonteiro/waper
+| **Docs:** https://waper.readthedocs.io/en/master/
+| **PyPI:** https://pypi.org/project/waper/
+| **CI:** https://github.com/JoyMonteiro/waper/actions/
 
 
 Features
@@ -98,9 +97,9 @@ License
 
 .. _black: https://black.readthedocs.io/en/stable/
 
-.. _Github Actions: https://github.com/john-doe-gh-account-name/my-new-project/actions
+.. _Github Actions: https://github.com/JoyMonteiro/waper/actions
 
-.. _GNU Affero General Public License v3.0: https://github.com/john-doe-gh-account-name/my-new-project/blob/master/LICENSE
+.. _GNU Affero General Public License v3.0: https://github.com/JoyMonteiro/waper/blob/master/LICENSE
 
 
 .. BADGE ALIASES
@@ -108,22 +107,22 @@ License
 .. Build Status
 .. Github Actions: Test Workflow Status for specific branch <branch>
 
-.. |build| image:: https://img.shields.io/github/workflow/status/john-doe-gh-account-name/my-new-project/Test%20Python%20Package/master?label=build&logo=github-actions&logoColor=%233392FF
+.. |build| image:: https://img.shields.io/github/workflow/status/JoyMonteiro/waper/Test%20Python%20Package/master?label=build&logo=github-actions&logoColor=%233392FF
     :alt: GitHub Workflow Status (branch)
-    :target: https://github.com/john-doe-gh-account-name/my-new-project/actions/workflows/test.yaml?query=branch%3Amaster
+    :target: https://github.com/JoyMonteiro/waper/actions/workflows/test.yaml?query=branch%3Amaster
 
 
 .. Documentation
 
-.. |docs| image:: https://img.shields.io/readthedocs/my-new-project/master?logo=readthedocs&logoColor=lightblue
+.. |docs| image:: https://img.shields.io/readthedocs/waper/master?logo=readthedocs&logoColor=lightblue
     :alt: Read the Docs (version)
-    :target: https://my-new-project.readthedocs.io/en/master/
+    :target: https://waper.readthedocs.io/en/master/
 
 .. Code Coverage
 
-.. |coverage| image:: https://img.shields.io/codecov/c/github/john-doe-gh-account-name/my-new-project/master?logo=codecov
+.. |coverage| image:: https://img.shields.io/codecov/c/github/JoyMonteiro/waper/master?logo=codecov
     :alt: Codecov
-    :target: https://app.codecov.io/gh/john-doe-gh-account-name/my-new-project
+    :target: https://app.codecov.io/gh/JoyMonteiro/waper
 
 .. PyPI
 
@@ -131,29 +130,29 @@ License
     :alt: Production Version
     :target: https://pypi.org/project/my_new_project/
 
-.. |wheel| image:: https://img.shields.io/pypi/wheel/my-new-project?color=green&label=wheel
+.. |wheel| image:: https://img.shields.io/pypi/wheel/waper?color=green&label=wheel
     :alt: PyPI - Wheel
     :target: https://pypi.org/project/my_new_project
 
-.. |supported_versions| image:: https://img.shields.io/pypi/pyversions/my-new-project?color=blue&label=python&logo=python&logoColor=%23ccccff
+.. |supported_versions| image:: https://img.shields.io/pypi/pyversions/waper?color=blue&label=python&logo=python&logoColor=%23ccccff
     :alt: Supported Python versions
     :target: https://pypi.org/project/my_new_project
 
 .. Github Releases & Tags
 
-.. |commits_since_specific_tag_on_master| image:: https://img.shields.io/github/commits-since/john-doe-gh-account-name/my-new-project/v0.0.1/master?color=blue&logo=github
+.. |commits_since_specific_tag_on_master| image:: https://img.shields.io/github/commits-since/JoyMonteiro/waper/v0.0.1/master?color=blue&logo=github
     :alt: GitHub commits since tagged version (branch)
-    :target: https://github.com/john-doe-gh-account-name/my-new-project/compare/v0.0.1..master
+    :target: https://github.com/JoyMonteiro/waper/compare/v0.0.1..master
 
-.. |commits_since_latest_github_release| image:: https://img.shields.io/github/commits-since/john-doe-gh-account-name/my-new-project/latest?color=blue&logo=semver&sort=semver
+.. |commits_since_latest_github_release| image:: https://img.shields.io/github/commits-since/JoyMonteiro/waper/latest?color=blue&logo=semver&sort=semver
     :alt: GitHub commits since latest release (by SemVer)
 
 .. LICENSE (eg AGPL, MIT)
 .. Github License
 
-.. |gh-lic| image:: https://img.shields.io/github/license/john-doe-gh-account-name/my-new-project
+.. |gh-lic| image:: https://img.shields.io/github/license/JoyMonteiro/waper
     :alt: GitHub
-    :target: https://github.com/john-doe-gh-account-name/my-new-project/blob/master/LICENSE
+    :target: https://github.com/JoyMonteiro/waper/blob/master/LICENSE
 
 
 .. CODE QUALITY
@@ -161,7 +160,7 @@ License
 .. Better Code Hub
 .. Software Design Patterns
 
-.. |better_code_hub| image:: https://bettercodehub.com/edge/badge/john-doe-gh-account-name/my-new-project?branch=master
+.. |better_code_hub| image:: https://bettercodehub.com/edge/badge/JoyMonteiro/waper?branch=master
     :alt: Better Code Hub
     :target: https://bettercodehub.com/
 
@@ -169,10 +168,10 @@ License
 .. Code Climate CI
 .. Code maintainability & Technical Debt
 
-.. |maintainability| image:: https://img.shields.io/codeclimate/maintainability/john-doe-gh-account-name/my-new-project
+.. |maintainability| image:: https://img.shields.io/codeclimate/maintainability/JoyMonteiro/waper
     :alt: Code Climate Maintainability
-    :target: https://codeclimate.com/github/john-doe-gh-account-name/my-new-project/maintainability
+    :target: https://codeclimate.com/github/JoyMonteiro/waper/maintainability
 
-.. |tech-debt| image:: https://img.shields.io/codeclimate/tech-debt/john-doe-gh-account-name/my-new-project
+.. |tech-debt| image:: https://img.shields.io/codeclimate/tech-debt/JoyMonteiro/waper
     :alt: Technical Debt
-    :target: https://codeclimate.com/github/john-doe-gh-account-name/my-new-project/maintainability
+    :target: https://codeclimate.com/github/JoyMonteiro/waper/maintainability

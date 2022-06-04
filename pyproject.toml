@@ -9,23 +9,23 @@ build-backend = "poetry.core.masonry.api"
 # Information required for building (sdist/wheel)
 ## Also renders on pypi as 'subtitle'
 [tool.poetry]
-name = "my_new_project"
+name = "waper"
 version = "0.0.1"
-description = "Create artificial artwork using AI."
-authors = ["John Doe <john_doe@protonmail.com>"]
-maintainers = ["John Doe <john_doe@protonmail.com>"]
-license = "AGPL-3.0-only"
+description = "Rossby wave packet tracker"
+authors = ["Malavika Biju and Karran Pandey"]
+maintainers = ["joy.merwin@gmail.com"]
+license = "BSD 3 clause"
 readme = "README.rst"
 
-homepage = "https://github.com/john-doe-gh-account-name/my-new-project"
-repository = "https://github.com/john-doe-gh-account-name/my-new-project"
-documentation = "https://my-new-project.readthedocs.io/"
+homepage = "https://github.com/JoyMonteiro/waper"
+repository = "https://github.com/JoyMonteiro/waper"
+documentation = "https://waper.readthedocs.io/"
 
 keywords = [
     "python package",
 ]
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
+    "Development Status :: 1 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: End Users/Desktop",
     "Intended Audience :: Science/Research",
@@ -47,7 +47,7 @@ classifiers = [
 ]
 
 packages = [
-    { include = "my_new_project", from = "src" },
+    { include = "waper", from = "src" },
 ]
 
 include = [
@@ -121,12 +121,12 @@ typing = [
 
 # PyPi url links, that appear in 'Project Links' section
 [tool.poetry.urls]
-"Bug Tracker" = "https://github.com/my-new-project/issues"
-"CI: Github Actions" = "https://github.com/john-doe-gh-account-name/my-new-project/actions"
-"Documentation" = "https://my-new-project.readthedocs.io/"
-"Source Code" = "https://github.com/john-doe-gh-account-name/my-new-project"
-"Changelog" = "https://github.com/john-doe-gh-account-name/my-new-project/blob/master/CHANGELOG.rst"
-"Code of Conduct" = "https://github.com/john-doe-gh-account-name/my-new-project/blob/master/CONTRIBUTING.rst"
+"Bug Tracker" = "https://github.com/waper/issues"
+"CI: Github Actions" = "https://github.com/JoyMonteiro/waper/actions"
+"Documentation" = "https://waper.readthedocs.io/"
+"Source Code" = "https://github.com/JoyMonteiro/waper"
+"Changelog" = "https://github.com/JoyMonteiro/waper/blob/master/CHANGELOG.rst"
+"Code of Conduct" = "https://github.com/JoyMonteiro/waper/blob/master/CONTRIBUTING.rst"
 
 
 # TOOLS
