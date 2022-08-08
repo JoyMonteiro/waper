@@ -16,7 +16,7 @@ A rossby Wave Packet trackER
 Features
 ========
 
-1. **my_new_project** `python package`
+1. **waper** `python package`
 
    a. TODO Document a **Great Feature**
    b. TODO Document another **Nice Feature**
@@ -54,11 +54,11 @@ You need to have `Python` installed.
 Quickstart
 ==========
 
-Using `pip` is the approved way for installing `my_new_project`.
+Using `pip` is the approved way for installing `waper`.
 
 .. code-block:: sh
 
-    python3 -m pip install my_new_project
+    python3 -m pip install waper
 
 
 TODO Document a use case
@@ -126,17 +126,17 @@ License
 
 .. PyPI
 
-.. |release_version| image:: https://img.shields.io/pypi/v/my_new_project
+.. |release_version| image:: https://img.shields.io/pypi/v/waper
     :alt: Production Version
-    :target: https://pypi.org/project/my_new_project/
+    :target: https://pypi.org/project/waper/
 
 .. |wheel| image:: https://img.shields.io/pypi/wheel/waper?color=green&label=wheel
     :alt: PyPI - Wheel
-    :target: https://pypi.org/project/my_new_project
+    :target: https://pypi.org/project/waper
 
 .. |supported_versions| image:: https://img.shields.io/pypi/pyversions/waper?color=blue&label=python&logo=python&logoColor=%23ccccff
     :alt: Supported Python versions
-    :target: https://pypi.org/project/my_new_project
+    :target: https://pypi.org/project/waper
 
 .. Github Releases & Tags
 
