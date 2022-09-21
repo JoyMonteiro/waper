@@ -1,6 +1,9 @@
+import math
 import numpy as np
 import pyvista as pv
 import vtk
+from sklearn import cluster
+from collections import defaultdict
 
 CLUSTER_MAX_DISTANCE = 1e5
 
@@ -298,3 +301,66 @@ def addConnectivityData_min(dataset):
     connectivity_filter.ColorRegionsOn()
     connectivity_filter.Update()
     return connectivity_filter.GetOutput()
+
+
+def min_cluster_assign(min_points):
+    """Get points in each minima cluster
+
+    Args:
+        min_points (vtk): clustered minima points in scalar field
+    """
+
+    num_points_min = min_points.GetNumberOfPoints()
+    cluster_id_min = min_points.GetPointData().GetArray("Cluster ID")
+    num_min_clusters = np.max(cluster_id_min) + 1
+
+    min_pt_dict = defaultdict(list)
+    cluster_min_arr = np.full(num_min_clusters, 0.0)
+    cluster_min_point = np.full((num_min_clusters, 2), 0.0)
+    min_scalars = min_points.GetPointData().GetArray("v")
+
+    for i in range(num_points_min):
+        x, y, z = min_points.GetPoint(i)
+        coords = [x, y]
+        min_pt_dict[cluster_id_min.GetTuple1(i)].append(coords)
+
+        # Identify the most negative point in the cluster
+        if cluster_min_arr[int(cluster_id_min.GetTuple1(i))] > min_scalars.GetTuple1(i):
+            cluster_min_arr[int(cluster_id_min.GetTuple1(i))] = min_scalars.GetTuple1(i)
+            cluster_min_point[int(cluster_id_min.GetTuple1(i))][0] = min_points.GetPoint(i)[0]
+            cluster_min_point[int(cluster_id_min.GetTuple1(i))][1] = min_points.GetPoint(i)[1]
+
+    # most negative point in each cluster, its coordinates,
+    # dictionary with key = cluster ID and values = all points in cluster, total number of min clusters
+    return (cluster_min_arr, cluster_min_point, min_pt_dict, num_min_clusters)
+
+
+def max_cluster_assign(max_points):
+    """Get points in each maxima cluster
+
+    Args:
+        max_points (vtk): clustered maxima points in scalar field
+    """
+
+    num_points_max = max_points.GetNumberOfPoints()
+    cluster_id_max = max_points.GetPointData().GetArray("Cluster ID")
+    num_max_clusters = np.max(cluster_id_max) + 1
+
+    max_pt_dict = defaultdict(list)
+    cluster_max_arr = np.full(num_max_clusters, 0.0)
+    cluster_max_point = np.full((num_max_clusters, 2), 0.0)
+    max_scalars = max_points.GetPointData().GetArray("v")
+
+    #Identify largest point in each cluster
+    for i in range(num_points_max):
+        x, y, z = max_points.GetPoint(i)
+        coords = [x, y]
+        max_pt_dict[cluster_id_max.GetTuple1(i)].append(coords)
+        if cluster_max_arr[int(cluster_id_max.GetTuple1(i))] < max_scalars.GetTuple1(i):
+            cluster_max_arr[int(cluster_id_max.GetTuple1(i))] = max_scalars.GetTuple1(i)
+            cluster_max_point[int(cluster_id_max.GetTuple1(i))][0] = max_points.GetPoint(i)[0]
+            cluster_max_point[int(cluster_id_max.GetTuple1(i))][1] = max_points.GetPoint(i)[1]
+
+    # most largest point in each cluster, its coordinates,
+    # dictionary with key = cluster ID and values = all points in cluster, total number of max clusters
+    return (cluster_max_arr, cluster_max_point, max_pt_dict, num_max_clusters)

@@ -2,6 +2,10 @@
 Changelog
 =========
 
+2022-09-21
+=======================================
+* Moved most identification code to appropriate files
+
 2022-06-24
 =======================================
 * Some superficial changes

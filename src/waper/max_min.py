@@ -1,10 +1,21 @@
 import numpy as np
+import vtk
 
 from .utils import get_vtk_object_from_scalar_data
 
 
-def addMaxData(lat, lon, scalar_values, scalar_name):
+def add_maxima_data(lat, lon, scalar_values, scalar_name):
+    """Identify maxima in scalar field
 
+    Args:
+        lat (np.array): latitude coordinates
+        lon (np.array): longitude coordinates
+        scalar_values (np.array): the scalar field
+        scalar_name (string): name of the scalar
+
+    Returns:
+        rect: vtk object containing the scalar data and maxima
+    """
     r, c = scalar_values.shape
     check = np.zeros((r, c))
     is_max = np.zeros((r, c))
@@ -70,11 +81,20 @@ def addMaxData(lat, lon, scalar_values, scalar_name):
     rect.point_arrays["Vertex_id"] = vertex_identifiers
     rect.cell_arrays["Cell_{}".format(scalar_name)] = cell_id
     # print("max_count", count)
-    return (rect, is_max)
-
+    return rect
 
 def addMinData(lat, lon, scalar_values, scalar_name):
+    """Identify minima in scalar field
 
+    Args:
+        lat (np.array): latitude coordinates
+        lon (np.array): longitude coordinates
+        scalar_values (np.array): the scalar field
+        scalar_name (string): name of the scalar
+
+    Returns:
+        rect: vtk object containing the scalar data and minima
+    """
     # scalar_negative = np.negative(scalar_values)
 
     r, c = scalar_values.shape
@@ -142,19 +162,28 @@ def addMinData(lat, lon, scalar_values, scalar_name):
     rect.point_arrays["Vertex_id"] = vertex_identifiers
     rect.cell_arrays["Cell_{}".format(scalar_name)] = cell_id
     # print("min points", count)
-    return (rect, is_min)
+    return rect
 
 
-def interpolateCellVals(inputs, scalar_name):
+def interpolate_cell_values(inputs, scalar_name):
+    """Interpolate point data to cells
 
-    numCells = inputs.GetNumberOfCells()
+    Args:
+        inputs (vtk.RectilinearGrid): vtk object containing point data
+        scalar_name (string): name of variable being interpolated
+
+    Returns:
+        vtk.RectilinearGrid: input vtk object with cell data added
+    """
+
+    num_cells = inputs.GetNumberOfCells()
     scalar_v = inputs.GetPointData().GetArray(scalar_name)
     cell_scalars = vtk.vtkFloatArray()
     cell_scalars.SetNumberOfComponents(1)
-    cell_scalars.SetNumberOfTuples(numCells)
+    cell_scalars.SetNumberOfTuples(num_cells)
     cell_scalars.SetName("Cell {}".format(scalar_name))
 
-    for i in range(numCells):
+    for i in range(num_cells):
         cell = inputs.GetCell(i)
         num_points = cell.GetNumberOfPoints()
         func_value = 0
@@ -168,16 +197,26 @@ def interpolateCellVals(inputs, scalar_name):
     return inputs
 
 
-def interpolateCellVals_min(inputs, scalar_name):
+# CAN BE REMOVED?
+def interpolate_cell_values_min(inputs, scalar_name):
+    """Interpolate point data to cells
 
-    numCells = inputs.GetNumberOfCells()
+    Args:
+        inputs (vtk.RectilinearGrid): vtk object containing point data
+        scalar_name (string): name of variable being interpolated
+
+    Returns:
+        vtk.RectilinearGrid: input vtk object with cell data added
+    """
+    
+    num_cells = inputs.GetNumberOfCells()
     scalar_v = inputs.GetPointData().GetArray(scalar_name)
     cell_scalars = vtk.vtkFloatArray()
     cell_scalars.SetNumberOfComponents(1)
-    cell_scalars.SetNumberOfTuples(numCells)
+    cell_scalars.SetNumberOfTuples(num_cells)
     cell_scalars.SetName("Cell {}".format(scalar_name))
 
-    for i in range(numCells):
+    for i in range(num_cells):
         cell = inputs.GetCell(i)
         num_points = cell.GetNumberOfPoints()
         func_value = 0
@@ -190,23 +229,138 @@ def interpolateCellVals_min(inputs, scalar_name):
     inputs.GetCellData().AddArray(cell_scalars)
     return inputs
 
+#TODO what is the type of return?
+def clip_dataset(dataset, scalar_name, threshold):
+    """clip scalar field to eliminate values below threshold
 
-def clipDataset(dataset, scalar_name, scalar_val):
+    Args:
+        dataset (vtk.RectilinearGrid): vtk object containing scalar field
+        scalar_name (string): name of the scalar in the vtk object
+        threshold (float): threshold to clip at
+
+    Returns:
+        vtk.: vtk object containing the data
+    """
 
     clip_dataset = vtk.vtkClipDataSet()
     dataset.GetPointData().SetScalars(dataset.GetPointData().GetArray(scalar_name))
-    clip_dataset.SetValue(scalar_val)
+    clip_dataset.SetValue(threshold)
     clip_dataset.SetInputData(dataset)
     clip_dataset.Update()
     return clip_dataset.GetOutput()
 
 
-def clipDataset_min(dataset, scalar_name, scalar_val):
+def clip_dataset_min(dataset, scalar_name, threshold):
+    """clip scalar field to eliminate values above threshold
+
+    Args:
+        dataset (vtk.RectilinearGrid): vtk object containing scalar field
+        scalar_name (string): name of the scalar in the vtk object
+        threshold (float): threshold to clip at
+
+    Returns:
+        vtk.: vtk object containing the data
+    """
 
     clip_dataset = vtk.vtkClipDataSet()
     dataset.GetPointData().SetScalars(dataset.GetPointData().GetArray(scalar_name))
-    clip_dataset.SetValue(scalar_val)
+    clip_dataset.SetValue(threshold)
     clip_dataset.SetInputData(dataset)
     clip_dataset.InsideOutOn()
     clip_dataset.Update()
     return clip_dataset.GetOutput()
+
+#TODO type of scalar field
+def extract_position_ids_minima(scalar_field, threshold, scalar_name):
+    """extract position IDs of identified minima
+
+    Args:
+        scalar_field (vtk): vtk object with clipped dataset
+        threshold (float): discard minima above threshold
+        scalar_name (string): name of variable in scalar_field
+
+    Returns:
+        list: list of position IDs
+    """
+
+    pos_min_ids = vtk.vtkIdTypeArray()
+    num_pts = scalar_field.GetNumberOfPoints()
+    is_min_arr = scalar_field.GetPointData().GetArray("is min")
+    scalar_arr = scalar_field.GetPointData().GetArray(scalar_name)
+    
+    for i in range(num_pts):
+        if is_min_arr.GetTuple1(i) == 1 and scalar_arr.GetTuple1(i) <= threshold:
+            pos_min_ids.InsertNextValue(i)
+    return pos_min_ids
+
+
+def extract_position_ids_maxima(scalar_field, threshold, scalar_name):
+    """extract position IDs of identified maxima
+
+    Args:
+        scalar_field (vtk): vtk object with clipped dataset
+        threshold (float): discard minima below threshold
+        scalar_name (string): name of variable in scalar_field
+
+    Returns:
+        list: list of position IDs
+    """
+    
+    pos_max_ids = vtk.vtkIdTypeArray()
+    num_pts = scalar_field.GetNumberOfPoints()
+    is_max_arr = scalar_field.GetPointData().GetArray("is max")
+    scalar_arr = scalar_field.GetPointData().GetArray(scalar_name)
+    
+    for i in range(num_pts):
+        if is_max_arr.GetTuple1(i) == 1 and scalar_arr.GetTuple1(i) >= threshold:
+            pos_max_ids.InsertNextValue(i)
+    return pos_max_ids
+
+def extract_selection_ids_maxima(scalar_field, id_list):
+    """Get data corresponding to identified maxima
+
+    Args:
+        scalar_field (vtk.RectilinearGrid): vtk object containing clipped dataset
+        id_list (list): list of ids selected
+
+    Returns:
+        vtk.: array containing identified maxima
+    """
+    
+    selection_node = vtk.vtkSelectionNode()
+    selection_node.SetFieldType(1)
+    selection_node.SetContentType(4)
+    selection_node.SetSelectionList(id_list)
+    selection = vtk.vtkSelection()
+    selection.AddNode(selection_node)
+    
+    extract_selection = vtk.vtkExtractSelection()
+    extract_selection.SetInputData(0, scalar_field)
+    extract_selection.SetInputData(1, selection)
+    extract_selection.Update()
+    
+    return extract_selection.GetOutput()
+
+def extract_selection_ids_minima(scalar_field, id_list):
+    """Get data corresponding to identified minima
+
+    Args:
+        scalar_field (vtk.RectilinearGrid): vtk object containing clipped dataset
+        id_list (list): list of ids selected
+
+    Returns:
+        vtk.: array containing identified minima
+    """
+    
+    selection_node=vtk.vtkSelectionNode()
+    selection_node.SetFieldType(1)
+    selection_node.SetContentType(4)
+    selection_node.SetSelectionList(id_list)
+    selection=vtk.vtkSelection()
+    selection.AddNode(selection_node)
+    
+    extract_selection=vtk.vtkExtractSelection()
+    extract_selection.SetInputData(0,scalar_field)
+    extract_selection.SetInputData(1,selection)
+    extract_selection.Update()
+    return extract_selection.GetOutput()
