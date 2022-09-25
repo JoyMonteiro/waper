@@ -5,24 +5,26 @@ import vtk
 from sklearn import cluster
 from collections import defaultdict
 
-CLUSTER_MAX_DISTANCE = 1e5
+CLUSTER_MAX_DISTANCE = 400
 
 
-def cluster_max(scalar_field, connectivity_clipped_scalar_field, max_points):
+def cluster_max(base_field, connectivity_clipped_scalar_field, max_points, scalar_name):
     """Cluster all the maxima in the scalar field
 
     Args:
-        scalar_field (object): vtk object containing the scalar field data
+        base_field (object): vtk object containing the unclipped scalar field data
         connectivity_clipped_scalar_field (object): vtk object containing connectivity information of the clipped scalar field
         max_points (object): vtk object containing all the maxima available in the field
+        scalar_name (string): name of the variable
 
     Returns:
         object: list of maxima points with cluster IDs
     """
     # import scalar field and critical point data objects
-    scalar_field = connectivity_clipped_scalar_field
     maxima_points = max_points
-    base_field = scalar_field
+    # base_field = scalar_field
+    scalar_field = connectivity_clipped_scalar_field
+
 
     geometry_filter = vtk.vtkGeometryFilter()
     geometry_filter.SetInputData(scalar_field)
@@ -52,9 +54,9 @@ def cluster_max(scalar_field, connectivity_clipped_scalar_field, max_points):
     locator = vtk.vtkCellLocator()
     locator.SetDataSet(base_field)
     locator.BuildLocator()
-    cellIds = vtk.vtkIdList()
+    cell_ids = vtk.vtkIdList()
 
-    cell_v = base_field.GetCellData().GetArray("Cell V")
+    cell_v = base_field.GetCellData().GetArray("{} Cell Value".format(scalar_name))
 
     point_coords = np.empty((0, 3))
     for i in range(num_points):
@@ -80,10 +82,12 @@ def cluster_max(scalar_field, connectivity_clipped_scalar_field, max_points):
                 dist += math.sqrt(vtk.vtkMath.Distance2BetweenPoints(p0, p1))
             dist_matrix[i][j] = dist
             dist_matrix[j][i] = dist
-            locator.FindCellsAlongLine(point_coords[i], point_coords[j], 0.001, cellIds)
-            for k in range(cellIds.GetNumberOfIds()):
-                if cell_v.GetTuple1(cellIds.GetId(k)) < min_v:
-                    min_v = cell_v.GetTuple1(cellIds.GetId(k))
+            
+            locator.FindCellsAlongLine(point_coords[i], point_coords[j], 0.001, cell_ids)
+            for k in range(cell_ids.GetNumberOfIds()):
+                if cell_v.GetTuple1(cell_ids.GetId(k)) < min_v:
+                    min_v = cell_v.GetTuple1(cell_ids.GetId(k))
+                    
             dist_matrix[i][j] = dist_matrix[i][j] - min_v
             dist_matrix[j][i] = dist_matrix[i][j]
 
@@ -91,12 +95,12 @@ def cluster_max(scalar_field, connectivity_clipped_scalar_field, max_points):
     cluster_assign = np.full(num_points, 0)
 
     median_dist = -np.median(dist_matrix)
-
+    
     for i in range(num_points):
         region_array[int(point_region_id.GetTuple1(int(maxima_point_id.GetTuple1(i))))].append(
             i
         )
-
+        
     prev_max = 0
 
     for k in range(num_regions):
@@ -122,7 +126,7 @@ def cluster_max(scalar_field, connectivity_clipped_scalar_field, max_points):
             continue
 
         sim_matrix = np.negative(new_dist)
-
+                
         af_clustering = cluster.AffinityPropagation(
             preference=np.full(num_cluster, median_dist / 5.0), affinity="precomputed"
         )
@@ -145,7 +149,7 @@ def cluster_max(scalar_field, connectivity_clipped_scalar_field, max_points):
     return maxima_points
 
 
-def cluster_min(scalar_field, connectivity_clipped_scalar_field, min_points):
+def cluster_min(scalar_field, connectivity_clipped_scalar_field, min_points, scalar_name):
     """Cluster all the minima in the scalar field
 
     Args:
@@ -188,7 +192,7 @@ def cluster_min(scalar_field, connectivity_clipped_scalar_field, min_points):
     locator.BuildLocator()
     cell_ids = vtk.vtkIdList()
 
-    cell_v = base_field.GetCellData().GetArray("Cell V")
+    cell_v = base_field.GetCellData().GetArray("{} Cell Value".format(scalar_name))
 
     co_ords = np.empty((0, 3))
     for i in range(num_points):
@@ -284,7 +288,15 @@ def cluster_min(scalar_field, connectivity_clipped_scalar_field, min_points):
     return minima_points
 
 
-def addConnectivityData(dataset):
+def add_connectivity_data(dataset):
+    """Identify connected regions in the data
+
+    Args:
+        dataset (vtk.UnstructuredGrid): scalar field
+
+    Returns:
+        vtk.UnstructuredGrid: scalar field labeled by connected regions
+    """
 
     connectivity_filter = vtk.vtkConnectivityFilter()
     connectivity_filter.SetInputData(dataset)
@@ -294,7 +306,16 @@ def addConnectivityData(dataset):
     return connectivity_filter.GetOutput()
 
 
-def addConnectivityData_min(dataset):
+def add_connectivity_data_min(dataset):
+    """Identify connected regions in the data
+
+    Args:
+        dataset (vtk.UnstructuredGrid): scalar field
+
+    Returns:
+        vtk.UnstructuredGrid: scalar field labeled by connected regions
+    """
+    
     connectivity_filter = vtk.vtkConnectivityFilter()
     connectivity_filter.SetInputData(dataset)
     connectivity_filter.SetExtractionModeToAllRegions()
@@ -335,32 +356,32 @@ def min_cluster_assign(min_points):
     return (cluster_min_arr, cluster_min_point, min_pt_dict, num_min_clusters)
 
 
-def max_cluster_assign(max_points):
+def max_cluster_assign(max_points, scalar_name):
     """Get points in each maxima cluster
 
     Args:
         max_points (vtk): clustered maxima points in scalar field
     """
 
-    num_points_max = max_points.GetNumberOfPoints()
-    cluster_id_max = max_points.GetPointData().GetArray("Cluster ID")
+    num_points_max = max_points.n_points
+    cluster_id_max = max_points["Cluster ID"]
     num_max_clusters = np.max(cluster_id_max) + 1
 
     max_pt_dict = defaultdict(list)
     cluster_max_arr = np.full(num_max_clusters, 0.0)
     cluster_max_point = np.full((num_max_clusters, 2), 0.0)
-    max_scalars = max_points.GetPointData().GetArray("v")
+    max_scalars = max_points[scalar_name]
 
     #Identify largest point in each cluster
     for i in range(num_points_max):
-        x, y, z = max_points.GetPoint(i)
+        x, y = max_points['Longitude'][i], max_points['Latitude'][i]
         coords = [x, y]
-        max_pt_dict[cluster_id_max.GetTuple1(i)].append(coords)
-        if cluster_max_arr[int(cluster_id_max.GetTuple1(i))] < max_scalars.GetTuple1(i):
-            cluster_max_arr[int(cluster_id_max.GetTuple1(i))] = max_scalars.GetTuple1(i)
-            cluster_max_point[int(cluster_id_max.GetTuple1(i))][0] = max_points.GetPoint(i)[0]
-            cluster_max_point[int(cluster_id_max.GetTuple1(i))][1] = max_points.GetPoint(i)[1]
+        max_pt_dict[cluster_id_max[i]].append(coords)
+        if cluster_max_arr[cluster_id_max[i]] < max_scalars[i]:
+            cluster_max_arr[cluster_id_max[i]] = max_scalars[i]
+            cluster_max_point[cluster_id_max[i]][0] = max_points['Longitude'][i]
+            cluster_max_point[cluster_id_max[i]][1] = max_points['Latitude'][i]
 
-    # most largest point in each cluster, its coordinates,
+    # largest point in each cluster, its coordinates,
     # dictionary with key = cluster ID and values = all points in cluster, total number of max clusters
     return (cluster_max_arr, cluster_max_point, max_pt_dict, num_max_clusters)

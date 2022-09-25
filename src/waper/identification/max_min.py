@@ -1,30 +1,30 @@
 import numpy as np
 import vtk
 
-from .utils import get_vtk_object_from_scalar_data
+from .utils import get_vtk_object_from_data_array
 
 
-def add_maxima_data(lat, lon, scalar_values, scalar_name):
+def add_maxima_data(scalar_values, scalar_name):
     """Identify maxima in scalar field
 
     Args:
-        lat (np.array): latitude coordinates
-        lon (np.array): longitude coordinates
-        scalar_values (np.array): the scalar field
+        scalar_values (dataArray): the scalar field
         scalar_name (string): name of the scalar
 
     Returns:
-        rect: vtk object containing the scalar data and maxima
+        vtk.RectilinearGrid: vtk object containing the scalar data and maxima
     """
     r, c = scalar_values.shape
     check = np.zeros((r, c))
     is_max = np.zeros((r, c))
     vertex_identifiers = np.zeros(r * c)
 
-    rect = get_vtk_object_from_scalar_data(lon, lat, scalar_values, scalar_name)
+    rect = get_vtk_object_from_data_array(scalar_values, scalar_name)
     # pv.RectilinearGrid(lon, lat)
     # scalar = scalar_values[::-1, :].ravel()
-    # rect.point_arrays["v"] = scalar
+    # rect.point_data["v"] = scalar
+    
+    numpy_data = scalar_values.values
 
     count = 0
     k = 0
@@ -44,7 +44,7 @@ def add_maxima_data(lat, lon, scalar_values, scalar_name):
                     for x in [i - 1, i, i + 1]:
                         for y in [c - 1, j, j + 1]:
                             if (0 <= x < r) and (0 <= y < c):
-                                if scalar_values[x][y] > scalar_values[i][j]:
+                                if numpy_data[x][y] > numpy_data[i][j]:
                                     max_flag = 0
                                 else:
                                     check[x][y] = 1
@@ -53,7 +53,7 @@ def add_maxima_data(lat, lon, scalar_values, scalar_name):
                     for x in [i - 1, i, i + 1]:
                         for y in [j - 1, j, 0]:
                             if (0 <= x < r) and (0 <= y < c):
-                                if scalar_values[x][y] > scalar_values[i][j]:
+                                if numpy_data[x][y] > numpy_data[i][j]:
                                     max_flag = 0
                                 else:
                                     check[x][y] = 1
@@ -62,7 +62,7 @@ def add_maxima_data(lat, lon, scalar_values, scalar_name):
                     for x in [i - 1, i, i + 1]:
                         for y in [j - 1, j, j + 1]:
                             if (0 <= x < r) and (0 <= y < c):
-                                if scalar_values[x][y] > scalar_values[i][j]:
+                                if numpy_data[x][y] > numpy_data[i][j]:
                                     max_flag = 0
                                 else:
                                     check[x][y] = 1
@@ -73,17 +73,18 @@ def add_maxima_data(lat, lon, scalar_values, scalar_name):
                 count += 1
 
     cell_number = rect.GetNumberOfCells()
-    cell_id = np.zeros(cell_number)
-    for i in range(cell_number):
-        cell_id[i] = i
+    cell_id = np.arange(cell_number)
+    # for i in range(cell_number):
+    #     cell_id[i] = i
 
-    rect.point_arrays["is max"] = is_max[::-1, :].ravel()
-    rect.point_arrays["Vertex_id"] = vertex_identifiers
-    rect.cell_arrays["Cell_{}".format(scalar_name)] = cell_id
+    print("number of maxima: {}".format(np.sum(is_max)))
+    rect.point_data["is max"] = is_max.ravel()
+    rect.point_data["Vertex_id"] = vertex_identifiers
+    rect.cell_data["{} Cell ID".format(scalar_name)] = cell_id
     # print("max_count", count)
-    return rect
+    return rect #, numpy_data, is_max
 
-def addMinData(lat, lon, scalar_values, scalar_name):
+def add_minima_data(lat, lon, scalar_values, scalar_name):
     """Identify minima in scalar field
 
     Args:
@@ -93,7 +94,7 @@ def addMinData(lat, lon, scalar_values, scalar_name):
         scalar_name (string): name of the scalar
 
     Returns:
-        rect: vtk object containing the scalar data and minima
+        vtk.RectilinearGrid: vtk object containing the scalar data and minima
     """
     # scalar_negative = np.negative(scalar_values)
 
@@ -102,12 +103,13 @@ def addMinData(lat, lon, scalar_values, scalar_name):
     is_min = np.zeros((r, c))
     vertex_identifiers = np.zeros(r * c)
 
-    rect = get_vtk_object_from_scalar_data(lon, lat, scalar_values, scalar_name)
+    rect = get_vtk_object_from_data_array(lon, lat, scalar_values, scalar_name)
 
     # rect = pv.RectilinearGrid(lon, lat)
     # scalar = scalar_values[::-1, :].ravel()
-    # rect.point_arrays["v"] = scalar
-
+    # rect.point_data["v"] = scalar
+    numpy_data = scalar_values.values
+    
     count = 0
     k = 0
 
@@ -125,7 +127,7 @@ def addMinData(lat, lon, scalar_values, scalar_name):
                     for x in [i - 1, i, i + 1]:
                         for y in [c - 1, j, j + 1]:
                             if (0 <= x < r) and (0 <= y < c):
-                                if scalar_values[x][y] < scalar_values[i][j]:
+                                if numpy_data[x][y] < numpy_data[i][j]:
                                     min_flag = 0
                                 else:
                                     check[x][y] = 1
@@ -134,7 +136,7 @@ def addMinData(lat, lon, scalar_values, scalar_name):
                     for x in [i - 1, i, i + 1]:
                         for y in [j - 1, j, 0]:
                             if (0 <= x < r) and (0 <= y < c):
-                                if scalar_values[x][y] < scalar_values[i][j]:
+                                if numpy_data[x][y] < numpy_data[i][j]:
                                     min_flag = 0
                                 else:
                                     check[x][y] = 1
@@ -143,7 +145,7 @@ def addMinData(lat, lon, scalar_values, scalar_name):
                     for x in [i - 1, i, i + 1]:
                         for y in [j - 1, j, j + 1]:
                             if (0 <= x < r) and (0 <= y < c):
-                                if scalar_values[x][y] < scalar_values[i][j]:
+                                if numpy_data[x][y] < numpy_data[i][j]:
                                     min_flag = 0
                                 else:
                                     check[x][y] = 1
@@ -154,37 +156,37 @@ def addMinData(lat, lon, scalar_values, scalar_name):
                     count += 1
 
     cell_number = rect.GetNumberOfCells()
-    cell_id = np.zeros(cell_number)
-    for i in range(cell_number):
-        cell_id[i] = i
+    cell_id = np.arange(cell_number)
+    # for i in range(cell_number):
+    #     cell_id[i] = i
 
-    rect.point_arrays["is min"] = is_min[::-1, :].ravel()
-    rect.point_arrays["Vertex_id"] = vertex_identifiers
-    rect.cell_arrays["Cell_{}".format(scalar_name)] = cell_id
+    rect.point_data["is min"] = is_min.ravel()
+    rect.point_data["Vertex_id"] = vertex_identifiers
+    rect.cell_data["{} Cell ID".format(scalar_name)] = cell_id
     # print("min points", count)
     return rect
 
 
-def interpolate_cell_values(inputs, scalar_name):
+def interpolate_cell_values(dataset, scalar_name):
     """Interpolate point data to cells
 
     Args:
-        inputs (vtk.RectilinearGrid): vtk object containing point data
+        dataset (vtk.RectilinearGrid): vtk object containing point data
         scalar_name (string): name of variable being interpolated
 
     Returns:
         vtk.RectilinearGrid: input vtk object with cell data added
     """
 
-    num_cells = inputs.GetNumberOfCells()
-    scalar_v = inputs.GetPointData().GetArray(scalar_name)
+    num_cells = dataset.GetNumberOfCells()
+    scalar_v = dataset.GetPointData().GetArray(scalar_name)
     cell_scalars = vtk.vtkFloatArray()
     cell_scalars.SetNumberOfComponents(1)
     cell_scalars.SetNumberOfTuples(num_cells)
-    cell_scalars.SetName("Cell {}".format(scalar_name))
+    cell_scalars.SetName("{} Cell Value".format(scalar_name))
 
     for i in range(num_cells):
-        cell = inputs.GetCell(i)
+        cell = dataset.GetCell(i)
         num_points = cell.GetNumberOfPoints()
         func_value = 0
         for j in range(num_points):
@@ -193,8 +195,8 @@ def interpolate_cell_values(inputs, scalar_name):
         func_value /= num_points
         cell_scalars.SetTuple1(i, func_value)
 
-    inputs.GetCellData().AddArray(cell_scalars)
-    return inputs
+    dataset.GetCellData().AddArray(cell_scalars)
+    return dataset
 
 
 # CAN BE REMOVED?
@@ -214,7 +216,7 @@ def interpolate_cell_values_min(inputs, scalar_name):
     cell_scalars = vtk.vtkFloatArray()
     cell_scalars.SetNumberOfComponents(1)
     cell_scalars.SetNumberOfTuples(num_cells)
-    cell_scalars.SetName("Cell {}".format(scalar_name))
+    cell_scalars.SetName("{} Cell Value".format(scalar_name))
 
     for i in range(num_cells):
         cell = inputs.GetCell(i)
@@ -239,7 +241,7 @@ def clip_dataset(dataset, scalar_name, threshold):
         threshold (float): threshold to clip at
 
     Returns:
-        vtk.: vtk object containing the data
+        vtk.UnstructuredGrid: vtk object containing the data
     """
 
     clip_dataset = vtk.vtkClipDataSet()
@@ -259,7 +261,7 @@ def clip_dataset_min(dataset, scalar_name, threshold):
         threshold (float): threshold to clip at
 
     Returns:
-        vtk.: vtk object containing the data
+        vtk.UnstructuredGrid: vtk object containing the data
     """
 
     clip_dataset = vtk.vtkClipDataSet()
@@ -280,7 +282,7 @@ def extract_position_ids_minima(scalar_field, threshold, scalar_name):
         scalar_name (string): name of variable in scalar_field
 
     Returns:
-        list: list of position IDs
+        vtk.vtkIdTypeArray: list of position IDs
     """
 
     pos_min_ids = vtk.vtkIdTypeArray()
@@ -303,7 +305,7 @@ def extract_position_ids_maxima(scalar_field, threshold, scalar_name):
         scalar_name (string): name of variable in scalar_field
 
     Returns:
-        list: list of position IDs
+        vtk.vtkIdTypeArray: list of position IDs
     """
     
     pos_max_ids = vtk.vtkIdTypeArray()
@@ -320,11 +322,11 @@ def extract_selection_ids_maxima(scalar_field, id_list):
     """Get data corresponding to identified maxima
 
     Args:
-        scalar_field (vtk.RectilinearGrid): vtk object containing clipped dataset
+        scalar_field (vtk.vtkUnstructuredGrid): vtk object containing clipped dataset
         id_list (list): list of ids selected
 
     Returns:
-        vtk.: array containing identified maxima
+        vtk.vtkUnstructuredGrid: array containing identified maxima
     """
     
     selection_node = vtk.vtkSelectionNode()
@@ -345,11 +347,11 @@ def extract_selection_ids_minima(scalar_field, id_list):
     """Get data corresponding to identified minima
 
     Args:
-        scalar_field (vtk.RectilinearGrid): vtk object containing clipped dataset
+        scalar_field (vtk.vtkUnstructuredGrid): vtk object containing clipped dataset
         id_list (list): list of ids selected
 
     Returns:
-        vtk.: array containing identified minima
+        vtk.vtkUnstructuredGrid: array containing identified minima
     """
     
     selection_node=vtk.vtkSelectionNode()

@@ -5,8 +5,14 @@ import math
 
 RADIUS_EARTH = 6371.0
 
-def get_vtk_object_from_scalar_data(longitude, latitude, scalar_values, array_name="v"):
-    """Get vtk object from plain numpy array
+def get_point_data_label(scalar_name):
+    return scalar_name
+
+def get_cell_data_label(scalar_name):
+    return "Cell Value {}".format(scalar_name)
+
+def get_vtk_object_from_data_array(data_array, array_name="v"):
+    """Get vtk object from xarray dataArray
 
     Args:
         longitude (array): coordinates along zonal direction
@@ -14,9 +20,9 @@ def get_vtk_object_from_scalar_data(longitude, latitude, scalar_values, array_na
         scalar_values (array): scalar field to convert to vtk object
     """
 
-    rect = pv.RectilinearGrid(longitude, latitude)
-    scalar = scalar_values[::-1, :].ravel()
-    rect.point_arrays[array_name] = scalar
+    rect = pv.RectilinearGrid(data_array[data_array.dims[1]].values, data_array[data_array.dims[0]].values)
+    scalar = data_array.values.ravel()
+    rect.point_data[array_name] = scalar
 
     return rect
 

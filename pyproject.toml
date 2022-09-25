@@ -13,7 +13,7 @@ name = "waper"
 version = "0.0.1"
 description = "Rossby wave packet tracker"
 authors = ["Malavika Biju, Joy Monteiro and Karran Pandey"]
-maintainers = ["joy.merwin@gmail.com"]
+maintainers = ["Joy Monteiro <joy.merwin@gmail.com>"]
 license = "BSD 3 clause"
 readme = "README.rst"
 
@@ -35,8 +35,6 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.6",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -81,7 +79,7 @@ exclude = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = "^3.8"
 
 # A list of all of the optional dependencies, some of which are included in the
 # below `extras`. They can be opted into by apps.
