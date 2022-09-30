@@ -1,9 +1,10 @@
-import pyvista as pv
+import geovista as gv
 import vtk
 import numpy as np
 import math
 
-RADIUS_EARTH = 6371.0
+RADIUS_SPHERE = 63.71
+RADIUS_EARTH = 6.371e6
 
 def get_point_data_label(scalar_name):
     return scalar_name
@@ -11,7 +12,7 @@ def get_point_data_label(scalar_name):
 def get_cell_data_label(scalar_name):
     return "Cell Value {}".format(scalar_name)
 
-def get_vtk_object_from_data_array(data_array, array_name="v"):
+def get_vtk_object_from_data_array(data_array, lons, lats, array_name="v"):
     """Get vtk object from xarray dataArray
 
     Args:
@@ -20,11 +21,18 @@ def get_vtk_object_from_data_array(data_array, array_name="v"):
         scalar_values (array): scalar field to convert to vtk object
     """
 
-    rect = pv.RectilinearGrid(data_array[data_array.dims[1]].values, data_array[data_array.dims[0]].values)
-    scalar = data_array.values.ravel()
-    rect.point_data[array_name] = scalar
+    grid = gv.Transform.from_1d(
+        lons, lats, 
+        data=data_array.data, name=array_name, radius=RADIUS_SPHERE, clean=False)
+    
+    mesh_lons, mesh_lats = np.meshgrid(lons, lats, indexing='xy')
+    
+    grid.cell_data['{} Cell Value'.format(array_name)] = grid.point_data_to_cell_data()[array_name]
+    
+    grid.point_data['Longitude'] = mesh_lons.ravel()
+    grid.point_data['Latitude'] = mesh_lats.ravel()
 
-    return rect
+    return grid
 
 def get_iso_contour(scalar_field, value, scalar_name):
     
@@ -57,3 +65,13 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     distance = RADIUS_EARTH * c
 
     return distance
+
+def is_to_the_west(lon1, lon2):
+    
+    delta_lat = lon1 - lon2
+    
+    if abs(delta_lat) > 180:
+        delta_lat = delta_lat%180
+    
+    if delta_lat > 0:
+        return True

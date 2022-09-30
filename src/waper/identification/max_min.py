@@ -1,28 +1,30 @@
 import numpy as np
 import vtk
-
+import pyvista as pv
 from .utils import get_vtk_object_from_data_array
 
 
-def add_maxima_data(scalar_values, scalar_name):
+def add_maxima_data(scalar_values, scalar_name, longitudes, latitudes):
     """Identify maxima in scalar field
 
     Args:
         scalar_values (dataArray): the scalar field
         scalar_name (string): name of the scalar
+        longitudes (np.array): longitude coordinates
+        latitudes (np.array): latitude coordinates
 
     Returns:
-        vtk.RectilinearGrid: vtk object containing the scalar data and maxima
+        pv.PolyData: vtk object containing the scalar data and maxima
     """
     r, c = scalar_values.shape
     check = np.zeros((r, c))
     is_max = np.zeros((r, c))
     vertex_identifiers = np.zeros(r * c)
+    
+    lons = np.linspace(0, 360, len(longitudes))
+    lats = latitudes
 
-    rect = get_vtk_object_from_data_array(scalar_values, scalar_name)
-    # pv.RectilinearGrid(lon, lat)
-    # scalar = scalar_values[::-1, :].ravel()
-    # rect.point_data["v"] = scalar
+    grid_vtk = get_vtk_object_from_data_array(scalar_values, lons, lats, scalar_name)
     
     numpy_data = scalar_values.values
 
@@ -72,42 +74,38 @@ def add_maxima_data(scalar_values, scalar_name):
                 check[i][j] = 1
                 count += 1
 
-    cell_number = rect.GetNumberOfCells()
+    cell_number = grid_vtk.GetNumberOfCells()
     cell_id = np.arange(cell_number)
-    # for i in range(cell_number):
-    #     cell_id[i] = i
 
-    print("number of maxima: {}".format(np.sum(is_max)))
-    rect.point_data["is max"] = is_max.ravel()
-    rect.point_data["Vertex_id"] = vertex_identifiers
-    rect.cell_data["{} Cell ID".format(scalar_name)] = cell_id
-    # print("max_count", count)
-    return rect #, numpy_data, is_max
+    grid_vtk.point_data["is max"] = is_max.ravel()
+    grid_vtk.point_data["Vertex_id"] = vertex_identifiers
+    grid_vtk.cell_data["{} Cell ID".format(scalar_name)] = cell_id
 
-def add_minima_data(lat, lon, scalar_values, scalar_name):
+    return grid_vtk
+
+def add_minima_data(scalar_values, scalar_name, longitudes, latitudes):
     """Identify minima in scalar field
 
     Args:
-        lat (np.array): latitude coordinates
-        lon (np.array): longitude coordinates
-        scalar_values (np.array): the scalar field
+        scalar_values (dataArray): the scalar field
         scalar_name (string): name of the scalar
+        longitudes (np.array): longitude coordinates
+        latitudes (np.array): latitude coordinates
 
     Returns:
-        vtk.RectilinearGrid: vtk object containing the scalar data and minima
+        pv.PolyData: vtk object containing the scalar data and minima
     """
-    # scalar_negative = np.negative(scalar_values)
 
     r, c = scalar_values.shape
     check = np.zeros((r, c))
     is_min = np.zeros((r, c))
     vertex_identifiers = np.zeros(r * c)
+    
+    lons = np.linspace(0, 360, len(longitudes))
+    lats = latitudes
 
-    rect = get_vtk_object_from_data_array(lon, lat, scalar_values, scalar_name)
+    grid_vtk = get_vtk_object_from_data_array(scalar_values, lons, lats, scalar_name)
 
-    # rect = pv.RectilinearGrid(lon, lat)
-    # scalar = scalar_values[::-1, :].ravel()
-    # rect.point_data["v"] = scalar
     numpy_data = scalar_values.values
     
     count = 0
@@ -116,6 +114,7 @@ def add_minima_data(lat, lon, scalar_values, scalar_name):
     for i in range(r):
         for j in range(c):
 
+            vertex_identifiers[k] = k + 1
             k += 1
             min_flag = 1
 
@@ -155,16 +154,15 @@ def add_minima_data(lat, lon, scalar_values, scalar_name):
                     check[i][j] = 1
                     count += 1
 
-    cell_number = rect.GetNumberOfCells()
+    cell_number = grid_vtk.GetNumberOfCells()
     cell_id = np.arange(cell_number)
-    # for i in range(cell_number):
-    #     cell_id[i] = i
 
-    rect.point_data["is min"] = is_min.ravel()
-    rect.point_data["Vertex_id"] = vertex_identifiers
-    rect.cell_data["{} Cell ID".format(scalar_name)] = cell_id
+
+    grid_vtk.point_data["is min"] = is_min.ravel()
+    grid_vtk.point_data["Vertex_id"] = vertex_identifiers
+    grid_vtk.cell_data["{} Cell ID".format(scalar_name)] = cell_id
     # print("min points", count)
-    return rect
+    return grid_vtk
 
 
 def interpolate_cell_values(dataset, scalar_name):
@@ -231,53 +229,47 @@ def interpolate_cell_values_min(inputs, scalar_name):
     inputs.GetCellData().AddArray(cell_scalars)
     return inputs
 
-#TODO what is the type of return?
-def clip_dataset(dataset, scalar_name, threshold):
+def clip_dataset(dataset, scalar_name, threshold, invert=False):
     """clip scalar field to eliminate values below threshold
 
     Args:
-        dataset (vtk.RectilinearGrid): vtk object containing scalar field
+        dataset (pv.PolyData): pyvista object containing scalar field
         scalar_name (string): name of the scalar in the vtk object
         threshold (float): threshold to clip at
+        invert (boolean): if False retain values above threshold, else below
 
     Returns:
-        vtk.UnstructuredGrid: vtk object containing the data
+        pv.PolyData: pv object containing the data
     """
-
-    clip_dataset = vtk.vtkClipDataSet()
-    dataset.GetPointData().SetScalars(dataset.GetPointData().GetArray(scalar_name))
-    clip_dataset.SetValue(threshold)
-    clip_dataset.SetInputData(dataset)
-    clip_dataset.Update()
-    return clip_dataset.GetOutput()
+    
+    return dataset.clip_scalar(scalars=scalar_name, invert=invert, value=threshold)
 
 
-def clip_dataset_min(dataset, scalar_name, threshold):
-    """clip scalar field to eliminate values above threshold
+# def clip_dataset_min(dataset, scalar_name, threshold):
+#     """clip scalar field to eliminate values above threshold
 
-    Args:
-        dataset (vtk.RectilinearGrid): vtk object containing scalar field
-        scalar_name (string): name of the scalar in the vtk object
-        threshold (float): threshold to clip at
+#     Args:
+#         dataset (vtk.RectilinearGrid): vtk object containing scalar field
+#         scalar_name (string): name of the scalar in the vtk object
+#         threshold (float): threshold to clip at
 
-    Returns:
-        vtk.UnstructuredGrid: vtk object containing the data
-    """
+#     Returns:
+#         vtk.UnstructuredGrid: vtk object containing the data
+#     """
 
-    clip_dataset = vtk.vtkClipDataSet()
-    dataset.GetPointData().SetScalars(dataset.GetPointData().GetArray(scalar_name))
-    clip_dataset.SetValue(threshold)
-    clip_dataset.SetInputData(dataset)
-    clip_dataset.InsideOutOn()
-    clip_dataset.Update()
-    return clip_dataset.GetOutput()
+#     clip_dataset = vtk.vtkClipDataSet()
+#     dataset.GetPointData().SetScalars(dataset.GetPointData().GetArray(scalar_name))
+#     clip_dataset.SetValue(threshold)
+#     clip_dataset.SetInputData(dataset)
+#     clip_dataset.InsideOutOn()
+#     clip_dataset.Update()
+#     return clip_dataset.GetOutput()
 
-#TODO type of scalar field
 def extract_position_ids_minima(scalar_field, threshold, scalar_name):
     """extract position IDs of identified minima
 
     Args:
-        scalar_field (vtk): vtk object with clipped dataset
+        scalar_field (pv.PolyData): vtk object with clipped dataset
         threshold (float): discard minima above threshold
         scalar_name (string): name of variable in scalar_field
 
@@ -341,7 +333,7 @@ def extract_selection_ids_maxima(scalar_field, id_list):
     extract_selection.SetInputData(1, selection)
     extract_selection.Update()
     
-    return extract_selection.GetOutput()
+    return pv.wrap(extract_selection.GetOutput())
 
 def extract_selection_ids_minima(scalar_field, id_list):
     """Get data corresponding to identified minima
@@ -365,4 +357,4 @@ def extract_selection_ids_minima(scalar_field, id_list):
     extract_selection.SetInputData(0,scalar_field)
     extract_selection.SetInputData(1,selection)
     extract_selection.Update()
-    return extract_selection.GetOutput()
+    return pv.wrap(extract_selection.GetOutput())

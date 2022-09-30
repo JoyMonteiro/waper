@@ -5,7 +5,7 @@ import vtk
 from sklearn import cluster
 from collections import defaultdict
 
-CLUSTER_MAX_DISTANCE = 400
+CLUSTER_MAX_DISTANCE = 150
 
 
 def cluster_max(base_field, connectivity_clipped_scalar_field, max_points, scalar_name):
@@ -149,7 +149,7 @@ def cluster_max(base_field, connectivity_clipped_scalar_field, max_points, scala
     return maxima_points
 
 
-def cluster_min(scalar_field, connectivity_clipped_scalar_field, min_points, scalar_name):
+def cluster_min(base_field, connectivity_clipped_scalar_field, min_points, scalar_name):
     """Cluster all the minima in the scalar field
 
     Args:
@@ -163,7 +163,7 @@ def cluster_min(scalar_field, connectivity_clipped_scalar_field, min_points, sca
 
     scalar_field = connectivity_clipped_scalar_field
     minima_points = min_points
-    base_field = scalar_field
+    # base_field = scalar_field
 
     geometry_filter = vtk.vtkGeometryFilter()
     geometry_filter.SetInputData(scalar_field)
@@ -288,22 +288,23 @@ def cluster_min(scalar_field, connectivity_clipped_scalar_field, min_points, sca
     return minima_points
 
 
-def add_connectivity_data(dataset):
+def identify_connected_regions(dataset):
     """Identify connected regions in the data
 
     Args:
-        dataset (vtk.UnstructuredGrid): scalar field
+        dataset (pv.PolyData): scalar field
 
     Returns:
-        vtk.UnstructuredGrid: scalar field labeled by connected regions
+        pv.PolyData: scalar field labeled by connected regions
     """
 
-    connectivity_filter = vtk.vtkConnectivityFilter()
-    connectivity_filter.SetInputData(dataset)
-    connectivity_filter.SetExtractionModeToAllRegions()
-    connectivity_filter.ColorRegionsOn()
-    connectivity_filter.Update()
-    return connectivity_filter.GetOutput()
+    return dataset.connectivity(largest=False)
+    # connectivity_filter = vtk.vtkConnectivityFilter()
+    # connectivity_filter.SetInputData(dataset)
+    # connectivity_filter.SetExtractionModeToAllRegions()
+    # connectivity_filter.ColorRegionsOn()
+    # connectivity_filter.Update()
+    # return connectivity_filter.GetOutput()
 
 
 def add_connectivity_data_min(dataset):
@@ -324,32 +325,33 @@ def add_connectivity_data_min(dataset):
     return connectivity_filter.GetOutput()
 
 
-def min_cluster_assign(min_points):
+def min_cluster_assign(min_points, scalar_name):
     """Get points in each minima cluster
 
     Args:
-        min_points (vtk): clustered minima points in scalar field
+        min_points (pv.PolyData): clustered minima points in scalar field
+        scalar_name (string): name of the variable
     """
 
-    num_points_min = min_points.GetNumberOfPoints()
-    cluster_id_min = min_points.GetPointData().GetArray("Cluster ID")
+    num_points_min = min_points.n_points
+    cluster_id_min = min_points["Cluster ID"]
     num_min_clusters = np.max(cluster_id_min) + 1
 
     min_pt_dict = defaultdict(list)
     cluster_min_arr = np.full(num_min_clusters, 0.0)
     cluster_min_point = np.full((num_min_clusters, 2), 0.0)
-    min_scalars = min_points.GetPointData().GetArray("v")
+    min_scalars = min_points[scalar_name]
 
     for i in range(num_points_min):
-        x, y, z = min_points.GetPoint(i)
+        x, y = min_points['Longitude'][i], min_points['Latitude'][i]
         coords = [x, y]
-        min_pt_dict[cluster_id_min.GetTuple1(i)].append(coords)
+        min_pt_dict[cluster_id_min[i]].append(coords)
 
         # Identify the most negative point in the cluster
-        if cluster_min_arr[int(cluster_id_min.GetTuple1(i))] > min_scalars.GetTuple1(i):
-            cluster_min_arr[int(cluster_id_min.GetTuple1(i))] = min_scalars.GetTuple1(i)
-            cluster_min_point[int(cluster_id_min.GetTuple1(i))][0] = min_points.GetPoint(i)[0]
-            cluster_min_point[int(cluster_id_min.GetTuple1(i))][1] = min_points.GetPoint(i)[1]
+        if cluster_min_arr[cluster_id_min[i]] > min_scalars[i]:
+            cluster_min_arr[cluster_id_min[i]] = min_scalars[i]
+            cluster_min_point[cluster_id_min[i]][0] = min_points['Longitude'][i]
+            cluster_min_point[cluster_id_min[i]][1] = min_points['Latitude'][i]
 
     # most negative point in each cluster, its coordinates,
     # dictionary with key = cluster ID and values = all points in cluster, total number of min clusters
@@ -360,7 +362,8 @@ def max_cluster_assign(max_points, scalar_name):
     """Get points in each maxima cluster
 
     Args:
-        max_points (vtk): clustered maxima points in scalar field
+        max_points (pv.PolyData): clustered maxima points in scalar field
+        scalar_name (string): name of the variable
     """
 
     num_points_max = max_points.n_points
