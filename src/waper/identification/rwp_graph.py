@@ -1,7 +1,7 @@
 import networkx as nx
 import numpy as np
 from collections import defaultdict
-from .utils import haversine_distance, is_to_the_west
+from .utils import haversine_distance, is_to_the_east
 
 WAPER_MAX_SCALAR_VALUE = 100
 WAPER_MAX_NODE_DISTANCE = 1000
@@ -76,8 +76,11 @@ def compute_association_graph(max_points, min_points, iso_contour, scalar_name):
             cluster_min_point[int(min_cluster_ids[i])][1] = point_coords[1]
             cluster_min_spherical_coord[min_cluster_ids[i]][:] = min_points.points[i]
 
+    contour_points = iso_contour.points
+    min_points_array = min_points.points
+    max_points_array = max_points.points
     for i in range(num_contour_pts):
-        contour_point = iso_contour.points[i]
+        contour_point = contour_points[i]
         max_dist = WAPER_MAX_NODE_DISTANCE
         min_dist = WAPER_MAX_NODE_DISTANCE
         max_id = -1
@@ -89,7 +92,7 @@ def compute_association_graph(max_points, min_points, iso_contour, scalar_name):
         # curr_min_scalar = 0
 
         for j in range(num_max_pts):
-            max_point = max_points.points[j]
+            max_point = max_points_array[j]
             curr_max_id = max_cluster_ids[j]
             max_dir_vector = [max_point[0] - contour_point[0], max_point[1] - contour_point[1]]
             # max_dir_deriv = (
@@ -109,7 +112,7 @@ def compute_association_graph(max_points, min_points, iso_contour, scalar_name):
         #         point_tuple_max = (point_cords_max, max_id, cluster_max_arr[max_id])
 
         for j in range(num_min_pts):
-            min_point = min_points.points[j]
+            min_point = min_points_array[j]
             curr_min_id = min_cluster_ids[j]
             min_dir_vector = [min_point[0] - contour_point[0], min_point[1] - contour_point[1]]
             # min_dir_deriv = (
@@ -344,7 +347,7 @@ def prune_association_graph_edges(assoc_graph, threshold, max_weight):
     return pruned_graph
 
 
-def get_ranked_paths(assoc_graph):
+def get_ranked_paths(assoc_graph, max_weight):
 
     # H = nx.Graph()
     # H = assoc_graph
@@ -359,14 +362,22 @@ def get_ranked_paths(assoc_graph):
         # print(source)
         for sink in end_leaves:
             # eliminate sinks to the west of source node
-            if is_to_the_west(
+            if is_to_the_east(
                 assoc_graph.nodes[source]["coords"][0], assoc_graph.nodes[sink]["coords"][0]
             ):
                 continue
 
             if nx.has_path(assoc_graph, source=source, target=sink):
                 for path in nx.all_simple_paths(assoc_graph, source=source, target=sink):
-                    path_list.append(path)
+                    consistent = True
+                    for node in path[:-1]:
+                        if is_to_the_east(
+                            assoc_graph.nodes[node]["coords"][0], assoc_graph.nodes[path[-1]]["coords"][0]
+                        ):
+                            consistent = False
+                    
+                    if consistent:
+                        path_list.append(path)
 
     path_wt_dict = {}
 
@@ -374,7 +385,9 @@ def get_ranked_paths(assoc_graph):
 
     for path in path_list:
         curr_wt = 0
+        # print(path)
         for i in range(len(path) - 1):
+            # print(assoc_graph.nodes[path[i]]["coords"][0], assoc_graph.nodes[path[i+1]]["coords"][0])
             curr_wt += assoc_graph[path[i]][path[i + 1]]["weight"]
         path_wt_dict[tuple(path)] = curr_wt
 

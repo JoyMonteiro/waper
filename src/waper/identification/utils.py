@@ -66,7 +66,7 @@ def haversine_distance(lat1, lon1, lat2, lon2):
 
     return distance
 
-def is_to_the_west(lon1, lon2):
+def is_to_the_east(lon1, lon2):
     
     delta_lat = lon1 - lon2
     

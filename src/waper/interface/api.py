@@ -92,11 +92,11 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
             scalars=config.vtk_latitude_label, invert=True, value=config.max_latitude
         )
 
-    clipped_cell_data_with_maxima = max_min.clip_dataset(
-        data_with_maxima, scalar_name=config.scalar_name, threshold=config.clip_value
+    clipped_data_with_maxima = data_with_maxima.clip_scalar(
+        scalars=config.scalar_name, invert=False, value=config.clip_value
     )
 
-    connectivity = topology.identify_connected_regions(clipped_cell_data_with_maxima)
+    connectivity = topology.identify_connected_regions(clipped_data_with_maxima)
 
     max_point_ids = max_min.extract_position_ids_maxima(
         connectivity, config.extrema_threshold, config.scalar_name
@@ -135,14 +135,11 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
             scalars=config.vtk_latitude_label, invert=False, value=config.min_latitude
         )
 
-    clipped_cell_data_with_minima = max_min.clip_dataset(
-        data_with_minima,
-        scalar_name=config.scalar_name,
-        threshold=config.clip_value,
-        invert=True,
+    clipped_data_with_minima = data_with_minima.clip_scalar(
+        scalars=config.scalar_name, value=-config.clip_value, invert=True
     )
 
-    connectivity = topology.identify_connected_regions(clipped_cell_data_with_minima)
+    connectivity = topology.identify_connected_regions(clipped_data_with_minima)
 
     min_point_ids = max_min.extract_position_ids_minima(
         connectivity, -config.extrema_threshold, config.scalar_name
@@ -181,11 +178,17 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
     )
 
     time_step_data.identified_rwp_paths = rwp_graph.get_ranked_paths(
-        time_step_data.pruned_graph
+        time_step_data.pruned_graph, config.max_edge_weight
     )
 
     for index, path in enumerate(time_step_data.identified_rwp_paths):
-        polygon, rwp_id, sample_points, weighted_lon, weighted_lat = rwp_polygon.get_polygon_for_rwp_path(
+        (
+            polygon,
+            rwp_id,
+            sample_points,
+            weighted_lon,
+            weighted_lat,
+        ) = rwp_polygon.get_polygon_for_rwp_path(
             path, time_step_data.pruned_graph, time_step_data.vtk_data, config.scalar_name
         )
         time_step_data.rwp_info[index] = {
@@ -193,7 +196,7 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
             "rwp_id": rwp_id,
             "sample_points": sample_points,
             "weighted_longitude": weighted_lon,
-            "weighted_latitude": weighted_lat
+            "weighted_latitude": weighted_lat,
         }
 
     return time_step_data
@@ -253,14 +256,20 @@ class Waper:
             self._config.vtk_longitude_label,
             self._config.vtk_latitude_label,
             self._config.vtk_region_label,
+            self._config.clip_value,
         )
+
+    def plot_association_graph(self, time_index):
+        time_step_data = self._time_step_data[time_index]
+
+        return _plot_graph(time_step_data.association_graph, time_step_data.input_data)
 
     def plot_rwp_graphs(self, time_index):
         time_step_data = self._time_step_data[time_index]
 
-        return _plot_graph(time_step_data.pruned_graph, time_step_data.input_data)
+        return _plot_graph(time_step_data.pruned_graph, time_step_data.identified_rwp_paths, time_step_data.input_data)
 
-    def plot_rwp_polygons(self, time_index):
+    def plot_rwp_polygons(self, time_index, plot_samples=False):
         time_step_data = self._time_step_data[time_index]
 
         poly_list = [rwp_info["polygon"] for rwp_info in time_step_data.rwp_info.values()]
@@ -268,4 +277,6 @@ class Waper:
             rwp_info["sample_points"] for rwp_info in time_step_data.rwp_info.values()
         ]
 
-        return _plot_polygons(poly_list, time_step_data.input_data, sample_points_list)
+        return _plot_polygons(
+            poly_list, time_step_data.input_data, sample_points_list, plot_samples=plot_samples
+        )

@@ -17,12 +17,13 @@ def get_consistent_longitudes(longitude_array, min_lon):
     """
 
     final_array = np.array(longitude_array)
+    # print(np.max(longitude_array), np.min(longitude_array))
     if (np.max(longitude_array) - np.min(longitude_array)) > WAPER_CLUSTER_WIDTH:
-        print("Inconsistent, fixing")
+        # print("Inconsistent, fixing")
         for i in range(len(final_array)):
-            print(final_array[i])
+            # print(final_array[i])
             if final_array[i] < min_lon:
-                print("*" * 10)
+                # print("*" * 10)
                 final_array[i] += 360
 
         # final_array[np.where(final_array < min_lon)] += 360
@@ -97,7 +98,7 @@ def get_polygon_for_rwp_path(path, assoc_graph, scalar_data, scalar_name):
     list_lats = []
     list_values = []
 
-    min_lon = 0
+    min_lon = 360
     for node in path:
         if node > 0:
             out = get_region_points_and_values(
@@ -106,7 +107,7 @@ def get_polygon_for_rwp_path(path, assoc_graph, scalar_data, scalar_name):
             if out:
                 lons, lats, values = out
 
-                if node == path[0]:  # store location of most westward cluster.
+                if min_lon > np.min(lons):  # store location of most westward cluster.
                     min_lon = np.min(lons)
 
                 lons = get_consistent_longitudes(lons, min_lon)

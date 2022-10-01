@@ -5,7 +5,8 @@ import pyvista as pv
 
 def _plot_clusters(input_data, maxima_points, 
                    minima_points, max_pt_dict, min_pt_dict,
-                   vtk_lon_label, vtk_lat_label, vtk_region_label
+                   vtk_lon_label, vtk_lat_label, vtk_region_label,
+                   clip_value
                    ):
 
     ax = plt.subplot(211, projection=ccrs.PlateCarree())
@@ -19,18 +20,35 @@ def _plot_clusters(input_data, maxima_points,
         linewidth=1,
         zorder=1,
     )
+    
+    input_data.plot.contour(
+        ax=ax,
+        levels=[-clip_value, clip_value],
+        transform=ccrs.PlateCarree(central_longitude=180),
+        labels=True,
+        colors="r",
+        linewidth=3,
+        zorder=1,
+    )
 
     out = pv.wrap(maxima_points)
     for lon, lat, region_id in zip(
         out[vtk_lon_label], out[vtk_lat_label], out[vtk_region_label]
     ):
 
-        ax.scatter(
-            lon,
-            lat,
-            color=plt.cm.tab20b.colors[region_id % 20],
-            transform=ccrs.PlateCarree(central_longitude=180),
-            zorder=10,
+        # ax.scatter(
+        #     lon,
+        #     lat,
+        #     color=plt.cm.tab20.colors[region_id % 20],
+        #     transform=ccrs.PlateCarree(central_longitude=180),
+        #     zorder=10,
+        # )
+        
+        ax.annotate(
+            str(region_id+1),
+            (lon, lat),
+            bbox=dict(boxstyle="round", fc="white", ec="b"), transform=ccrs.PlateCarree(central_longitude=180),
+            
         )
 
     out = pv.wrap(minima_points)
@@ -38,13 +56,19 @@ def _plot_clusters(input_data, maxima_points,
         out[vtk_lon_label], out[vtk_lat_label], out[vtk_region_label]
     ):
 
-        ax.scatter(
-            lon,
-            lat,
-            color=plt.cm.tab20b.colors[region_id % 20],
-            marker="*",
-            transform=ccrs.PlateCarree(central_longitude=180),
-            zorder=10,
+        # ax.scatter(
+        #     lon,
+        #     lat,
+        #     color=plt.cm.tab20.colors[region_id % 20],
+        #     marker="*",
+        #     transform=ccrs.PlateCarree(central_longitude=180),
+        #     zorder=10,
+        # )
+        
+        ax.annotate(
+            str(-region_id-1),
+            (lon, lat),
+            bbox=dict(boxstyle="round", fc="white", ec="b"), transform=ccrs.PlateCarree(central_longitude=180),
         )
 
     ax = plt.subplot(212, projection=ccrs.PlateCarree())
@@ -59,28 +83,40 @@ def _plot_clusters(input_data, maxima_points,
 
     for cluster_id, points in max_pt_dict.items():
 
-        if len(points) > 1:
-            for point in points:
-                ax.scatter(
-                    point[0],
-                    point[1],
-                    color=plt.cm.tab20.colors[int(cluster_id) % 20],
-                    transform=ccrs.PlateCarree(central_longitude=180),
-                    zorder=10,
-                )
+    
+        for point in points:
+            # ax.scatter(
+            #     point[0],
+            #     point[1],
+            #     color=plt.cm.tab20.colors[int(cluster_id) % 20],
+            #     transform=ccrs.PlateCarree(central_longitude=180),
+            #     zorder=10,
+            # )
+            ax.annotate(
+                str(cluster_id),
+                (point[0], point[1]),
+                bbox=dict(boxstyle="round", fc="white", ec="b"), transform=ccrs.PlateCarree(central_longitude=180),
+            )
 
     for cluster_id, points in min_pt_dict.items():
 
-        if len(points) > 1:
-            for point in points:
-                ax.scatter(
-                    point[0],
-                    point[1],
-                    marker="*",
-                    color=plt.cm.tab20.colors[int(cluster_id) % 20],
-                    transform=ccrs.PlateCarree(central_longitude=180),
-                    zorder=10,
-                )
+    
+        for point in points:
+            # ax.scatter(
+            #     point[0],
+            #     point[1],
+            #     marker="*",
+            #     color=plt.cm.tab20.colors[int(cluster_id) % 20],
+            #     transform=ccrs.PlateCarree(central_longitude=180),
+            #     zorder=10,
+            # )
+            if cluster_id == 0:
+                cluster_id = 100
+            ax.annotate(
+                str(-cluster_id),
+                (point[0], point[1]),
+                bbox=dict(boxstyle="round", fc="white", ec="b"), transform=ccrs.PlateCarree(central_longitude=180),
+            )
                 
     plt.tight_layout()
     return ax
@@ -97,7 +133,7 @@ def _plot_graph(rwp_graph, scalar_data):
     
     for node in rwp_graph.nodes:
         coords = rwp_graph.nodes[node]['coords']
-        ax.scatter(coords[0], coords[1],  color='k', transform=ccrs.PlateCarree(central_longitude=180))
+        ax.scatter(coords[0], coords[1],  color='r', transform=ccrs.PlateCarree(central_longitude=180))
     
     for edge in rwp_graph.edges:
         node1_coords = rwp_graph.nodes[edge[0]]['coords']
@@ -105,7 +141,7 @@ def _plot_graph(rwp_graph, scalar_data):
         
         ax.plot([node1_coords[0], node2_coords[0]],
                 [node1_coords[1], node2_coords[1]],
-                color='k', transform=ccrs.PlateCarree(central_longitude=180)
+                color='b', transform=ccrs.PlateCarree(central_longitude=180)
             )
         
     plt.tight_layout()
