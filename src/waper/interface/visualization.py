@@ -9,12 +9,12 @@ def _plot_clusters(input_data, maxima_points,
                    clip_value
                    ):
 
-    ax = plt.subplot(211, projection=ccrs.PlateCarree())
+    ax = plt.subplot(211, projection=ccrs.PlateCarree(central_longitude=180))
 
     input_data.plot.contour(
         ax=ax,
         levels=12,
-        transform=ccrs.PlateCarree(central_longitude=180),
+        transform=ccrs.PlateCarree(central_longitude=0),
         labels=True,
         colors="k",
         linewidth=1,
@@ -24,7 +24,7 @@ def _plot_clusters(input_data, maxima_points,
     input_data.plot.contour(
         ax=ax,
         levels=[-clip_value, clip_value],
-        transform=ccrs.PlateCarree(central_longitude=180),
+        transform=ccrs.PlateCarree(central_longitude=0),
         labels=True,
         colors="r",
         linewidth=3,
@@ -47,7 +47,7 @@ def _plot_clusters(input_data, maxima_points,
         ax.annotate(
             str(region_id+1),
             (lon, lat),
-            bbox=dict(boxstyle="round", fc="white", ec="b"), transform=ccrs.PlateCarree(central_longitude=180),
+            bbox=dict(boxstyle="round", fc="white", ec="b"), transform=ccrs.PlateCarree(central_longitude=0),
             
         )
 
@@ -68,16 +68,16 @@ def _plot_clusters(input_data, maxima_points,
         ax.annotate(
             str(-region_id-1),
             (lon, lat),
-            bbox=dict(boxstyle="round", fc="white", ec="b"), transform=ccrs.PlateCarree(central_longitude=180),
+            bbox=dict(boxstyle="round", fc="white", ec="b"), transform=ccrs.PlateCarree(central_longitude=0),
         )
 
-    ax = plt.subplot(212, projection=ccrs.PlateCarree())
+    ax = plt.subplot(212, projection=ccrs.PlateCarree(central_longitude=180))
 
     input_data.plot.contour(
         ax=ax,
         levels=12,
         colors="k",
-        transform=ccrs.PlateCarree(central_longitude=180),
+        transform=ccrs.PlateCarree(central_longitude=0),
         labels=True,
     )
 
@@ -95,7 +95,7 @@ def _plot_clusters(input_data, maxima_points,
             ax.annotate(
                 str(cluster_id),
                 (point[0], point[1]),
-                bbox=dict(boxstyle="round", fc="white", ec="b"), transform=ccrs.PlateCarree(central_longitude=180),
+                bbox=dict(boxstyle="round", fc="white", ec="b"), transform=ccrs.PlateCarree(central_longitude=0),
             )
 
     for cluster_id, points in min_pt_dict.items():
@@ -115,7 +115,7 @@ def _plot_clusters(input_data, maxima_points,
             ax.annotate(
                 str(-cluster_id),
                 (point[0], point[1]),
-                bbox=dict(boxstyle="round", fc="white", ec="b"), transform=ccrs.PlateCarree(central_longitude=180),
+                bbox=dict(boxstyle="round", fc="white", ec="b"), transform=ccrs.PlateCarree(central_longitude=0),
             )
                 
     plt.tight_layout()
@@ -123,17 +123,17 @@ def _plot_clusters(input_data, maxima_points,
 
 def _plot_graph(rwp_graph, scalar_data):
     
-    ax = plt.subplot(projection=ccrs.PlateCarree())
+    ax = plt.subplot(projection=ccrs.Orthographic(central_longitude=180, central_latitude=90))
 
 
     scalar_data.plot.contour(ax=ax, levels=12,
-                                   transform=ccrs.PlateCarree(central_longitude=180), labels=True, colors='k',
-                                    linewidth=1, zorder=1
+                                   transform=ccrs.PlateCarree(central_longitude=0), labels=True, colors='k',
+                                    linewidths=2, zorder=1
                                   )
     
     for node in rwp_graph.nodes:
         coords = rwp_graph.nodes[node]['coords']
-        ax.scatter(coords[0], coords[1],  color='r', transform=ccrs.PlateCarree(central_longitude=180))
+        ax.scatter(coords[0], coords[1],  color='r', transform=ccrs.PlateCarree(central_longitude=0))
     
     for edge in rwp_graph.edges:
         node1_coords = rwp_graph.nodes[edge[0]]['coords']
@@ -141,14 +141,45 @@ def _plot_graph(rwp_graph, scalar_data):
         
         ax.plot([node1_coords[0], node2_coords[0]],
                 [node1_coords[1], node2_coords[1]],
-                color='b', transform=ccrs.PlateCarree(central_longitude=180)
+                color='b', transform=ccrs.PlateCarree(central_longitude=0)
             )
+        
+    plt.tight_layout()
+    return ax
+
+def _plot_rwp_paths(rwp_graph, paths, scalar_data):
+    
+    ax = plt.subplot(projection=ccrs.Orthographic(central_longitude=180, central_latitude=90))
+
+
+    scalar_data.plot.contour(ax=ax, levels=12,
+                                   transform=ccrs.PlateCarree(central_longitude=0), labels=True, colors='k',
+                                    linewidths=2, zorder=1
+                                  )
+    
+    for path in paths:
+        for node in path:
+            coords = rwp_graph.nodes[node]['coords']
+            ax.scatter(coords[0], coords[1],  color='r', transform=ccrs.PlateCarree(central_longitude=0))
+    
+        for edge in [(path[i], path[i+1]) for i in range(len(path)-1)]:
+            node1_coords = rwp_graph.nodes[edge[0]]['coords']
+            node2_coords = rwp_graph.nodes[edge[1]]['coords']
+            
+            delta_coord = 0
+            if node1_coords[0] - node2_coords[0] > 180:
+                delta_coord = 360
+            
+            ax.plot([node1_coords[0], node2_coords[0] + delta_coord],
+                    [node1_coords[1], node2_coords[1]],
+                    color='b', transform=ccrs.PlateCarree(central_longitude=0)
+                )
         
     plt.tight_layout()
     return ax
         
 def _plot_polygons(poly_list, scalar_data, sample_points_list, plot_samples=False):
-    ax = plt.subplot(projection=ccrs.PlateCarree(central_longitude=180))
+    ax = plt.subplot(projection=ccrs.Stereographic(central_longitude=0, central_latitude=90))
     
     scalar_data.plot.contour(ax=ax, levels=12,
                                    transform=ccrs.PlateCarree(central_longitude=0), labels=True, colors='k',
@@ -159,14 +190,14 @@ def _plot_polygons(poly_list, scalar_data, sample_points_list, plot_samples=Fals
         
         lons, lats = poly.exterior.coords.xy
 
-        ax.plot(lons, lats, transform=ccrs.PlateCarree(central_longitude=0))
+        ax.plot(lons, lats)
     
         for lon, lat in zip(lons, lats):
-            ax.scatter(lon, lat, transform=ccrs.PlateCarree(central_longitude=0), color='r', s=30, zorder=100)
+            ax.scatter(lon, lat, color='r', s=30, zorder=100)
         
         if plot_samples:
             for lon, lat in sample_points:
-                ax.scatter(lon, lat, transform=ccrs.PlateCarree(central_longitude=0), color='b', s=5)
+                ax.scatter(lon, lat, color='b', s=5)
             
     plt.tight_layout()
     return ax

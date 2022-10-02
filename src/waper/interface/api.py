@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from ..identification import max_min, topology, rwp_graph, utils
 from ..tracking import rwp_polygon
-from .visualization import _plot_clusters, _plot_graph, _plot_polygons
+from .visualization import _plot_clusters, _plot_graph, _plot_polygons, _plot_rwp_paths
 
 
 @dataclass(eq=False, frozen=True)
@@ -191,7 +191,8 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
         ) = rwp_polygon.get_polygon_for_rwp_path(
             path, time_step_data.pruned_graph, time_step_data.vtk_data, config.scalar_name
         )
-        time_step_data.rwp_info[index] = {
+        time_step_data.rwp_info[tuple(path)] = {
+            # "path": path,
             "polygon": polygon,
             "rwp_id": rwp_id,
             "sample_points": sample_points,
@@ -263,11 +264,16 @@ class Waper:
         time_step_data = self._time_step_data[time_index]
 
         return _plot_graph(time_step_data.association_graph, time_step_data.input_data)
+    
+    def plot_pruned_graph(self, time_index):
+        time_step_data = self._time_step_data[time_index]
+
+        return _plot_graph(time_step_data.pruned_graph, time_step_data.input_data)
 
     def plot_rwp_graphs(self, time_index):
         time_step_data = self._time_step_data[time_index]
 
-        return _plot_graph(time_step_data.pruned_graph, time_step_data.identified_rwp_paths, time_step_data.input_data)
+        return _plot_rwp_paths(time_step_data.pruned_graph, time_step_data.identified_rwp_paths, time_step_data.input_data)
 
     def plot_rwp_polygons(self, time_index, plot_samples=False):
         time_step_data = self._time_step_data[time_index]

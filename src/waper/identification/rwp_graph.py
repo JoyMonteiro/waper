@@ -376,7 +376,7 @@ def get_ranked_paths(assoc_graph, max_weight):
                         ):
                             consistent = False
                     
-                    if consistent:
+                    if True:
                         path_list.append(path)
 
     path_wt_dict = {}

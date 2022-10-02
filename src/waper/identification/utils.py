@@ -71,7 +71,7 @@ def is_to_the_east(lon1, lon2):
     delta_lat = lon1 - lon2
     
     if abs(delta_lat) > 180:
-        delta_lat = delta_lat%180
+        delta_lat = -delta_lat
     
     if delta_lat > 0:
         return True
