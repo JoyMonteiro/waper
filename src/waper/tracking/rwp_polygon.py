@@ -9,6 +9,7 @@ from rasterio import features, Affine
 WAPER_SUBSAMPLE = 5
 WAPER_IMAGE_SIZE = 512
 WAPER_CLUSTER_WIDTH = 60
+WAPER_NUM_PIXELS = WAPER_IMAGE_SIZE*WAPER_IMAGE_SIZE
 
 WAPER_X_BOUNDS = (12712833.087371958, -12712833.087371958)
 WAPER_Y_BOUNDS = (12710532.145483922, -12713600.098850505)
@@ -194,28 +195,19 @@ def get_polygon_for_rwp_path(path, assoc_graph, scalar_data, scalar_name):
     )
 
 
-def rasterize_all_rwps(paths, assoc_graph, scalar_data):
+def rasterize_all_rwps(polygon_list):
     """Get a rasterized image containing all rwp polygons
 
     Args:
-        paths (list): list of all rwp representative paths
-        assoc_graph (nx.Graph): association graph
-        scalar_data (pv.PolyData): scalar data corresponding to association graph
+        polygon_list (list): list of tuples of rwp polygons and rwp id
 
     Returns:
-        tuple: raster image of all polygons and the list of polygons itself
+        np.ndarray: raster image of all polygons
     """
 
-    polygon_list = []
-
-    for path in paths:
-        polygon_list.append(get_polygon_for_rwp_path(path, assoc_graph, scalar_data))
-
-    return (
-        features.rasterize(
-            ((g, i) for g, i in polygon_list),
-            out_shape=(WAPER_IMAGE_SIZE, WAPER_IMAGE_SIZE),
-            all_touched=True, transform=WAPER_RASTER_TRANSFORM
-        ),
-        polygon_list,
+    return features.rasterize(
+        ((g, i) for g, i in polygon_list),
+        out_shape=(WAPER_IMAGE_SIZE, WAPER_IMAGE_SIZE),
+        all_touched=True,
+        transform=WAPER_RASTER_TRANSFORM,
     )

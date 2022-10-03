@@ -4,10 +4,21 @@ from pyvista import PolyData
 from networkx import Graph
 from xarray import DataArray
 from tqdm import tqdm
+from numpy import ndarray
+import numpy as np
+
+from waper.tracking import quadtree
 
 from ..identification import max_min, topology, rwp_graph, utils
 from ..tracking import rwp_polygon
-from .visualization import _plot_clusters, _plot_graph, _plot_polygons, _plot_rwp_paths
+from .visualization import (
+    _plot_clusters,
+    _plot_graph,
+    _plot_polygons,
+    _plot_rwp_paths,
+    _plot_raster,
+)
+from ..tracking import quadtree
 
 
 @dataclass(eq=False, frozen=True)
@@ -55,6 +66,9 @@ class WaperSingleTimestepData:
     identified_rwp_paths: list
 
     rwp_info: dict
+
+    raster_data: ndarray
+    quadtree: Graph
 
     def __init__(self, input_data: DataArray, config: WaperConfig) -> None:
         self.input_data = input_data
@@ -200,8 +214,29 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
             "weighted_latitude": weighted_lat,
         }
 
+    list_polygons = []
+    for path in time_step_data.identified_rwp_paths:
+        list_polygons.append(
+            (
+                time_step_data.rwp_info[tuple(path)]["polygon"],
+                time_step_data.rwp_info[tuple(path)]["rwp_id"],
+            )
+        )
+
+    time_step_data.raster_data = rwp_polygon.rasterize_all_rwps(list_polygons)
+    
+    features = set(np.unique(time_step_data.raster_data))
+    features.add(0)
+    
+    time_step_data.raster_features = features
+    
+    time_step_data.quadtree = quadtree.create_quadtree(time_step_data.raster_data)
+
     return time_step_data
 
+def _track_rwps(time_step_data, num_time_steps):
+    
+    pass
 
 class Waper:
     def __init__(
@@ -244,6 +279,11 @@ class Waper:
             self._time_step_data.append(
                 _identify_rwps(self.data_array[self._config.scalar_name][i], self._config)
             )
+            
+    def track_rwps(self):
+        
+        _track_rwps(self._time_step_data, self._num_time_steps)
+        
 
     def plot_clusters(self, time_index):
 
@@ -264,7 +304,7 @@ class Waper:
         time_step_data = self._time_step_data[time_index]
 
         return _plot_graph(time_step_data.association_graph, time_step_data.input_data)
-    
+
     def plot_pruned_graph(self, time_index):
         time_step_data = self._time_step_data[time_index]
 
@@ -273,7 +313,11 @@ class Waper:
     def plot_rwp_graphs(self, time_index):
         time_step_data = self._time_step_data[time_index]
 
-        return _plot_rwp_paths(time_step_data.pruned_graph, time_step_data.identified_rwp_paths, time_step_data.input_data)
+        return _plot_rwp_paths(
+            time_step_data.pruned_graph,
+            time_step_data.identified_rwp_paths,
+            time_step_data.input_data,
+        )
 
     def plot_rwp_polygons(self, time_index, plot_samples=False):
         time_step_data = self._time_step_data[time_index]
@@ -286,3 +330,8 @@ class Waper:
         return _plot_polygons(
             poly_list, time_step_data.input_data, sample_points_list, plot_samples=plot_samples
         )
+
+    def plot_raster(self, time_index):
+        time_step_data = self._time_step_data[time_index]
+
+        return _plot_raster(time_step_data.raster_data)

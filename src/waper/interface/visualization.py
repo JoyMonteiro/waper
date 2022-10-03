@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import pyvista as pv
+import numpy as np
+
+from ..tracking.rwp_polygon import WAPER_X_BOUNDS, WAPER_Y_BOUNDS
 
 
 def _plot_clusters(input_data, maxima_points, 
@@ -199,5 +202,19 @@ def _plot_polygons(poly_list, scalar_data, sample_points_list, plot_samples=Fals
             for lon, lat in sample_points:
                 ax.scatter(lon, lat, color='b', s=5)
             
+    plt.tight_layout()
+    return ax
+
+def _plot_raster(raster_data):
+    ax = plt.subplot(projection=ccrs.Stereographic(central_longitude=0, central_latitude=90))
+    
+    ax.imshow(np.ma.array(raster_data, mask=(raster_data==0)),
+              origin='lower', cmap='tab20b',
+              extent=(WAPER_X_BOUNDS[1], WAPER_X_BOUNDS[0],
+                      WAPER_Y_BOUNDS[1], WAPER_Y_BOUNDS[0]),
+              alpha=0.7
+              )
+    
+    # ax.set_global()
     plt.tight_layout()
     return ax
