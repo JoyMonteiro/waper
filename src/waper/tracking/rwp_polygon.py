@@ -175,8 +175,8 @@ def get_polygon_for_rwp_path(path, assoc_graph, scalar_data, scalar_name):
 
     xs, ys = transform_to_stereographic(list_lons, list_lats)
 
-    weighted_ys = np.average(ys, weights=list_values)
-    weighted_xs = np.average(xs, weights=list_values)
+    weighted_ys = np.average(ys, weights=np.abs(np.array(list_values)))
+    weighted_xs = np.average(xs, weights=np.abs(np.array(list_values)))
 
     weighted_longitude, weighted_latitude = transform_to_stereographic(
         weighted_xs, weighted_ys, inverse=True

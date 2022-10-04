@@ -6,8 +6,7 @@ from xarray import DataArray
 from tqdm import tqdm
 from numpy import ndarray
 import numpy as np
-
-from waper.tracking import quadtree
+import cartopy.crs as ccrs
 
 from ..identification import max_min, topology, rwp_graph, utils
 from ..tracking import rwp_polygon
@@ -18,7 +17,8 @@ from .visualization import (
     _plot_rwp_paths,
     _plot_raster,
 )
-from ..tracking import quadtree
+from ..tracking import quadtree, tracking_graph
+from waper import tracking
 
 
 @dataclass(eq=False, frozen=True)
@@ -68,6 +68,7 @@ class WaperSingleTimestepData:
     rwp_info: dict
 
     raster_data: ndarray
+    raster_features: list
     quadtree: Graph
 
     def __init__(self, input_data: DataArray, config: WaperConfig) -> None:
@@ -236,7 +237,7 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
 
 def _track_rwps(time_step_data, num_time_steps):
     
-    pass
+    return tracking_graph.build_tracking_graph(time_step_data, num_time_steps)
 
 class Waper:
     def __init__(
@@ -280,9 +281,9 @@ class Waper:
                 _identify_rwps(self.data_array[self._config.scalar_name][i], self._config)
             )
             
-    def track_rwps(self):
+    def track_rwps(self, num_time_steps=None):
         
-        _track_rwps(self._time_step_data, self._num_time_steps)
+        self._tracking_graph = _track_rwps(self._time_step_data, num_time_steps)
         
 
     def plot_clusters(self, time_index):
@@ -335,3 +336,7 @@ class Waper:
         time_step_data = self._time_step_data[time_index]
 
         return _plot_raster(time_step_data.raster_data)
+    
+    def plot_tracks(self):
+        paths = tracking_graph.get_track_paths(self._tracking_graph)
+        return _plot_rwp_paths(self._tracking_graph, paths, None, path_transform=ccrs.Geodetic(), map_projection=ccrs.PlateCarree())

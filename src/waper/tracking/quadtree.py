@@ -176,40 +176,57 @@ def contains_one_feature(node):
 # G represents quadtree who has the smaller feature; i is the leaf node(feature node) in the other quadtree
 # Returns merged quadtree Q with the branch rooted at i same as that of the input quadtree G
 
+
 def construct(merged_quadtree, test_quadtree, node_number, larger_feature):
 
     for j in range(1, 5):
         if contains_no_features(test_quadtree.nodes[(4 * node_number) + j]):
-            merged_quadtree.add_node((4 * node_number) + j, features=[0], level=test_quadtree.nodes[(4 * node_number) + j]["level"],
-                       start_pixel=test_quadtree.nodes[(4 * node_number) + j]["start_pixel"])
+            merged_quadtree.add_node(
+                (4 * node_number) + j,
+                features=[0],
+                level=test_quadtree.nodes[(4 * node_number) + j]["level"],
+                start_pixel=test_quadtree.nodes[(4 * node_number) + j]["start_pixel"],
+            )
         else:
             merged_quadtree.add_node(
                 (4 * node_number) + j,
-                features=np.sort(np.concatenate([test_quadtree.nodes[(4 * node_number) + j]["features"], larger_feature])),
-                level=test_quadtree.nodes[(4 * node_number) + j]["level"], start_pixel=test_quadtree.nodes[(4 * node_number) + j]["start_pixel"]
+                features=np.sort(
+                    np.concatenate(
+                        [
+                            test_quadtree.nodes[(4 * node_number) + j]["features"],
+                            larger_feature,
+                        ]
+                    )
+                ),
+                level=test_quadtree.nodes[(4 * node_number) + j]["level"],
+                start_pixel=test_quadtree.nodes[(4 * node_number) + j]["start_pixel"],
             )
         merged_quadtree.add_edge(node_number, (4 * node_number) + j)
 
     for j in range(1, 5):
         if len(test_quadtree.nodes[(4 * node_number) + j]["features"]) > 1:
-            merged_quadtree = construct(merged_quadtree, test_quadtree, (4 * node_number) + j, larger_feature)
+            merged_quadtree = construct(
+                merged_quadtree, test_quadtree, (4 * node_number) + j, larger_feature
+            )
     return merged_quadtree
 
 
 # function to merge two quadtrees G and H; Q represents the merged quadtree
 # returns the merged quadtree Q
-def merge(prev_time_quadtree, curr_time_quadtree):
-    
+def merge(curr_time_quadtree, prev_time_quadtree):
+
     merged_quadtree = nx.DiGraph()
     common_nodes = set(curr_time_quadtree).intersection(prev_time_quadtree)
     for node_number in common_nodes:
         if node_number not in list(merged_quadtree):
-            if contains_no_features(prev_time_quadtree.nodes[node_number]) or contains_no_features(
-                curr_time_quadtree.nodes[node_number]
-            ):
+            if contains_no_features(
+                prev_time_quadtree.nodes[node_number]
+            ) or contains_no_features(curr_time_quadtree.nodes[node_number]):
                 merged_quadtree.add_node(
-                    node_number, features=[0], level=prev_time_quadtree.nodes[node_number]["level"],
-                    start_pixel=prev_time_quadtree.nodes[node_number]["start_pixel"]
+                    node_number,
+                    features=[0],
+                    level=prev_time_quadtree.nodes[node_number]["level"],
+                    start_pixel=prev_time_quadtree.nodes[node_number]["start_pixel"],
                 )
                 if math.ceil((node_number / 4) - 1) >= 0:
                     merged_quadtree.add_edge(math.ceil((node_number / 4) - 1), node_number)
@@ -217,12 +234,22 @@ def merge(prev_time_quadtree, curr_time_quadtree):
             elif contains_more_than_one_feature(
                 prev_time_quadtree.nodes[node_number]
             ) and contains_one_feature(curr_time_quadtree.nodes[node_number]):
-                merged_quadtree = construct(merged_quadtree, prev_time_quadtree, node_number, curr_time_quadtree.nodes[node_number]["features"])
+                merged_quadtree = construct(
+                    merged_quadtree,
+                    prev_time_quadtree,
+                    node_number,
+                    curr_time_quadtree.nodes[node_number]["features"],
+                )
 
             elif contains_more_than_one_feature(
                 curr_time_quadtree.nodes[node_number]
             ) and contains_one_feature(prev_time_quadtree.nodes[node_number]):
-                merged_quadtree = construct(merged_quadtree, curr_time_quadtree, node_number, prev_time_quadtree.nodes[node_number]["features"])
+                merged_quadtree = construct(
+                    merged_quadtree,
+                    curr_time_quadtree,
+                    node_number,
+                    prev_time_quadtree.nodes[node_number]["features"],
+                )
 
             else:
                 features = np.concatenate(
@@ -235,12 +262,37 @@ def merge(prev_time_quadtree, curr_time_quadtree):
                     node_number,
                     features=np.sort(features),
                     level=prev_time_quadtree.nodes[node_number]["level"],
-                    start_pixel=prev_time_quadtree.nodes[node_number]["start_pixel"]
+                    start_pixel=prev_time_quadtree.nodes[node_number]["start_pixel"],
                 )
                 if math.ceil((node_number / 4) - 1) >= 0:
                     merged_quadtree.add_edge(math.ceil((node_number / 4) - 1), node_number)
-                    
+
     return merged_quadtree
+
+
+# function to compute the number of pixels corresponding to each feature in a particular quadtree
+# returns a dictionary "pixel_dict" whose - key:feature values, values:number of pixels
+
+
+def compute_size_features(quadtree):
+
+    pixel_dict = defaultdict(float)
+    leaf_nodes = [
+        node
+        for node in quadtree.nodes()
+        if quadtree.in_degree(node) != 0 and quadtree.out_degree(node) == 0
+    ]
+    for i in range(len(leaf_nodes)):
+        f = quadtree.nodes[leaf_nodes[i]]["features"]
+        f = tuple(f)
+        if 0 in f:
+            continue
+        if f in pixel_dict:
+            pixel_dict[f] += WAPER_NUM_PIXELS / (4 ** (quadtree.nodes[leaf_nodes[i]]["level"]))
+        else:
+            pixel_dict[f] = WAPER_NUM_PIXELS / (4 ** (quadtree.nodes[leaf_nodes[i]]["level"]))
+    return pixel_dict
+
 
 def reconstruct_image(quadtree):
 
@@ -256,6 +308,9 @@ def reconstruct_image(quadtree):
         feature = quadtree.nodes[node]["features"][0]
         level = quadtree.nodes[node]["level"]
         x_pixel, y_pixel = quadtree.nodes[node]["start_pixel"]
-        image[x_pixel:x_pixel + int(WAPER_IMAGE_SIZE/(2**level)), y_pixel:y_pixel + int(WAPER_IMAGE_SIZE/(2**level))] = feature
-        
+        image[
+            x_pixel : x_pixel + int(WAPER_IMAGE_SIZE / (2**level)),
+            y_pixel : y_pixel + int(WAPER_IMAGE_SIZE / (2**level)),
+        ] = feature
+
     return image
