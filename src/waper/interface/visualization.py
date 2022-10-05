@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
+from pyproj import transform
 import pyvista as pv
 import numpy as np
 
@@ -177,6 +178,8 @@ def _plot_rwp_paths(
 
     ax = plt.subplot(projection=map_projection)
 
+    colors = plt.cm.tab20.colors
+
     if scalar_data != None:
         scalar_data.plot.contour(
             ax=ax,
@@ -188,7 +191,7 @@ def _plot_rwp_paths(
             zorder=1,
         )
 
-    for path in paths:
+    for index, path in enumerate(paths):
         for node in path:
             coords = rwp_graph.nodes[node]["coords"]
             ax.scatter(coords[0], coords[1], color="r", transform=path_transform)
@@ -204,7 +207,7 @@ def _plot_rwp_paths(
             ax.plot(
                 [node1_coords[0], node2_coords[0] + delta_coord],
                 [node1_coords[1], node2_coords[1]],
-                color="b",
+                color=colors[index%20],
                 transform=path_transform,
             )
 
@@ -212,20 +215,28 @@ def _plot_rwp_paths(
     return ax
 
 
-def _plot_polygons(poly_list, scalar_data, sample_points_list, plot_samples=False):
+def _plot_polygons(
+    poly_list,
+    scalar_data,
+    sample_points_list,
+    weighted_lon_list=None,
+    weighted_lat_list=None,
+    plot_samples=False,
+):
     ax = plt.subplot(projection=ccrs.Stereographic(central_longitude=0, central_latitude=90))
 
-    scalar_data.plot.contour(
-        ax=ax,
-        levels=12,
-        transform=ccrs.PlateCarree(central_longitude=0),
-        labels=True,
-        colors="k",
-        linewidth=1,
-        zorder=1,
-    )
+    if not (scalar_data is None):
+        scalar_data.plot.contour(
+            ax=ax,
+            levels=12,
+            transform=ccrs.PlateCarree(central_longitude=0),
+            labels=True,
+            colors="k",
+            linewidth=1,
+            zorder=1,
+        )
 
-    for poly, sample_points in zip(poly_list, sample_points_list):
+    for poly in poly_list:
 
         lons, lats = poly.exterior.coords.xy
 
@@ -234,7 +245,27 @@ def _plot_polygons(poly_list, scalar_data, sample_points_list, plot_samples=Fals
         for lon, lat in zip(lons, lats):
             ax.scatter(lon, lat, color="r", s=30, zorder=100)
 
-        if plot_samples:
+    if not (weighted_lat_list is None):
+        for index, coords in enumerate(list(zip(weighted_lon_list, weighted_lat_list))):
+            lon, lat = coords
+            ax.scatter(
+                lon,
+                lat,
+                transform=ccrs.PlateCarree(central_longitude=0),
+                s=50,
+                color="green",
+                zorder=100,
+            )
+            
+            ax.annotate(
+                str(index),
+                (lon, lat),
+                bbox=dict(boxstyle="round", fc="white", ec="b"),
+                transform=ccrs.PlateCarree(central_longitude=0), zorder=1000
+            )
+
+    if plot_samples:
+        for sample_points in sample_points_list:
             for lon, lat in sample_points:
                 ax.scatter(lon, lat, color="b", s=5)
 

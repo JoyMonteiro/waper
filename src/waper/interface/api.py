@@ -39,6 +39,8 @@ class WaperConfig:
     edge_pruning_threshold: float
     max_edge_weight: float
 
+    track_pruning_threshold: float
+
     vtk_latitude_label: str = "Latitude"
     vtk_longitude_label: str = "Longitude"
     vtk_region_label: str = "RegionId"
@@ -225,19 +227,21 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
         )
 
     time_step_data.raster_data = rwp_polygon.rasterize_all_rwps(list_polygons)
-    
+
     features = set(np.unique(time_step_data.raster_data))
     features.add(0)
-    
+
     time_step_data.raster_features = features
-    
+
     time_step_data.quadtree = quadtree.create_quadtree(time_step_data.raster_data)
 
     return time_step_data
 
+
 def _track_rwps(time_step_data, num_time_steps):
-    
+
     return tracking_graph.build_tracking_graph(time_step_data, num_time_steps)
+
 
 class Waper:
     def __init__(
@@ -253,6 +257,7 @@ class Waper:
         min_latitude=None,
         node_pruning_threshold=20,
         edge_pruning_threshold=3e-5,
+        track_pruning_threshold=0.3,
         max_edge_weight=1,
     ) -> None:
 
@@ -267,6 +272,7 @@ class Waper:
             min_latitude=min_latitude,
             node_pruning_threshold=node_pruning_threshold,
             edge_pruning_threshold=edge_pruning_threshold,
+            track_pruning_threshold=track_pruning_threshold,
             max_edge_weight=max_edge_weight,
         )
 
@@ -280,11 +286,13 @@ class Waper:
             self._time_step_data.append(
                 _identify_rwps(self.data_array[self._config.scalar_name][i], self._config)
             )
-            
+
     def track_rwps(self, num_time_steps=None):
-        
+
         self._tracking_graph = _track_rwps(self._time_step_data, num_time_steps)
-        
+        self._pruned_tracking_graph = tracking_graph.prune_tracking_graph(
+            self._tracking_graph, self._config.track_pruning_threshold
+        )
 
     def plot_clusters(self, time_index):
 
@@ -328,15 +336,62 @@ class Waper:
             rwp_info["sample_points"] for rwp_info in time_step_data.rwp_info.values()
         ]
 
+        weighted_lon_list = [
+            rwp_info["weighted_longitude"] for rwp_info in time_step_data.rwp_info.values()
+        ]
+
+        weighted_lat_list = [
+            rwp_info["weighted_latitude"] for rwp_info in time_step_data.rwp_info.values()
+        ]
+
         return _plot_polygons(
-            poly_list, time_step_data.input_data, sample_points_list, plot_samples=plot_samples
+            poly_list,
+            time_step_data.input_data,
+            sample_points_list,
+            weighted_lon_list,
+            weighted_lat_list,
+            plot_samples=plot_samples,
         )
 
     def plot_raster(self, time_index):
         time_step_data = self._time_step_data[time_index]
 
         return _plot_raster(time_step_data.raster_data)
-    
-    def plot_tracks(self):
-        paths = tracking_graph.get_track_paths(self._tracking_graph)
-        return _plot_rwp_paths(self._tracking_graph, paths, None, path_transform=ccrs.Geodetic(), map_projection=ccrs.PlateCarree())
+
+    def plot_tracks(self, threshold=None):
+        pruned = tracking_graph.prune_tracking_graph(
+            self._tracking_graph, threshold=threshold
+        )
+        paths = tracking_graph.get_track_paths(pruned)
+        return _plot_rwp_paths(
+            pruned,
+            paths,
+            None,
+            path_transform=ccrs.Geodetic(),
+            map_projection=ccrs.PlateCarree(),
+        )
+
+    def plot_track_polygons(self, path, plot_samples=False):
+
+        poly_list = []
+        sample_points_list = []
+        weighted_lon_list = []
+        weighted_lat_list = []
+        for node in path:
+            time_step_data = self._time_step_data[node[0]]
+
+            for rwp in time_step_data.rwp_info.values():
+                if abs(rwp["rwp_id"] - node[1]) < 1e-2:
+                    poly_list.append(rwp["polygon"])
+                    sample_points_list.append(rwp["sample_points"])
+                    weighted_lon_list.append(rwp["weighted_longitude"])
+                    weighted_lat_list.append(rwp["weighted_latitude"])
+
+        return _plot_polygons(
+            poly_list,
+            None,
+            sample_points_list,
+            weighted_lon_list,
+            weighted_lat_list,
+            plot_samples=plot_samples,
+        )
