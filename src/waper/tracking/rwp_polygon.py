@@ -31,7 +31,11 @@ def transform_to_stereographic(input_xs, input_ys, inverse=False):
     else:
         transformer = Transformer.from_crs(from_crs, to_crs, always_xy="True")
 
-    return transformer.transform(input_xs, input_ys, errcheck=True)
+    try:
+        return transformer.transform(input_xs, input_ys, errcheck=True)
+    except:
+        print(input_xs, input_ys)
+        raise ValueError()
 
 
 def get_consistent_longitudes(longitude_array, min_lon):
@@ -85,11 +89,19 @@ def get_region_points_and_values(
     values = clipped_region.point_data[scalar_name][
         clipped_region.point_data["RegionId"] == region_id_node
     ]
+    
+    # node_latitude = assoc_graph.nodes[node]["coords"][1]
+    
+    # #TODO 3 should be a paramter
+    # valid_region = np.logical_and(lats >= node_latitude-3, lats <= node_latitude+3)
+    # lons = lons[valid_region]
+    # lats = lats[valid_region]
+    # values = values[valid_region]
 
     return lons, lats, values
 
 
-def get_polygon_for_rwp_path(path, assoc_graph, scalar_data, scalar_name):
+def get_polygon_for_rwp_path(path, assoc_graph, scalar_data, scalar_name, min_latitude, max_latitude):
     """Get bounding polygon for an identified RWP
 
     Args:
@@ -108,7 +120,7 @@ def get_polygon_for_rwp_path(path, assoc_graph, scalar_data, scalar_name):
         if max_value > path_max:
             path_max = max_value
 
-    clip_threshold = path_max / 2.0
+    clip_threshold = path_max / 3.0
 
     max_clipped_region = topology.identify_connected_regions(
         scalar_data.clip_scalar(
@@ -135,11 +147,16 @@ def get_polygon_for_rwp_path(path, assoc_graph, scalar_data, scalar_name):
             )
             if out:
                 lons, lats, values = out
+                
+                valid_region = np.logical_and(lats >= min_latitude, lats <= max_latitude)
+                lons = lons[valid_region]
+                lats = lats[valid_region]
+                values = values[valid_region]
 
                 if min_lon > np.min(lons):  # store location of most westward cluster.
                     min_lon = np.min(lons)
 
-                lons = get_consistent_longitudes(lons, min_lon)
+                # lons = get_consistent_longitudes(lons, min_lon)
                 list_lons.extend(lons)
                 list_lats.extend(lats)
                 list_values.extend(values)
@@ -155,11 +172,16 @@ def get_polygon_for_rwp_path(path, assoc_graph, scalar_data, scalar_name):
             )
             if out:
                 lons, lats, values = out
+                
+                valid_region = np.logical_and(lats >= min_latitude, lats <= max_latitude)
+                lons = lons[valid_region]
+                lats = lats[valid_region]
+                values = values[valid_region]
 
-                if node == path[0]:  # store location of most westward cluster.
+                if min_lon > np.min(lons):  # store location of most westward cluster.
                     min_lon = np.min(lons)
 
-                lons = get_consistent_longitudes(lons, min_lon)
+                # lons = get_consistent_longitudes(lons, min_lon)
                 list_lons.extend(lons)
                 list_lats.extend(lats)
                 list_values.extend(values)
@@ -204,6 +226,8 @@ def rasterize_all_rwps(polygon_list):
     Returns:
         np.ndarray: raster image of all polygons
     """
+    if len(polygon_list) == 0:
+        return None
 
     return features.rasterize(
         ((g, i) for g, i in polygon_list),

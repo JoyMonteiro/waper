@@ -206,7 +206,8 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
             weighted_lon,
             weighted_lat,
         ) = rwp_polygon.get_polygon_for_rwp_path(
-            path, time_step_data.pruned_graph, time_step_data.vtk_data, config.scalar_name
+            path, time_step_data.pruned_graph, time_step_data.vtk_data, config.scalar_name,
+            config.min_latitude, config.max_latitude
         )
         time_step_data.rwp_info[tuple(path)] = {
             # "path": path,
@@ -225,7 +226,10 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
                 time_step_data.rwp_info[tuple(path)]["rwp_id"],
             )
         )
-
+        
+    if len(list_polygons) == 0:
+        print('No RWPs found, change thresholds')
+        
     time_step_data.raster_data = rwp_polygon.rasterize_all_rwps(list_polygons)
 
     features = set(np.unique(time_step_data.raster_data))
@@ -233,7 +237,10 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
 
     time_step_data.raster_features = features
 
-    time_step_data.quadtree = quadtree.create_quadtree(time_step_data.raster_data)
+    if time_step_data.raster_data is None:
+        time_step_data.quadtree = None
+    else:
+        time_step_data.quadtree = quadtree.create_quadtree(time_step_data.raster_data)
 
     return time_step_data
 

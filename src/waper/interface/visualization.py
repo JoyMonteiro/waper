@@ -3,6 +3,7 @@ import cartopy.crs as ccrs
 from pyproj import transform
 import pyvista as pv
 import numpy as np
+from xarray import DataArray
 
 from ..tracking.rwp_polygon import WAPER_X_BOUNDS, WAPER_Y_BOUNDS
 
@@ -180,7 +181,7 @@ def _plot_rwp_paths(
 
     colors = plt.cm.tab20.colors
 
-    if scalar_data != None:
+    if isinstance(scalar_data, DataArray):
         scalar_data.plot.contour(
             ax=ax,
             levels=12,
