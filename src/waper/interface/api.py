@@ -7,6 +7,7 @@ from tqdm import tqdm
 from numpy import ndarray
 import numpy as np
 import cartopy.crs as ccrs
+import matplotlib.pyplot as plt
 
 from ..identification import max_min, topology, rwp_graph, utils
 from ..tracking import rwp_polygon
@@ -19,11 +20,10 @@ from .visualization import (
 )
 from ..tracking import quadtree, tracking_graph
 from waper import tracking
-
-
 @dataclass(eq=False, frozen=True)
 class WaperConfig:
 
+    debug: bool
     scalar_name: str
     latitude_label: str
     longitude_label: str
@@ -83,6 +83,10 @@ class WaperSingleTimestepData:
         )
         self.rwp_info = {}
         return
+
+def logging(log_info, config: WaperConfig):
+    if config.debug:
+        print(log_info)
 
 
 def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTimestepData:
@@ -266,6 +270,7 @@ class Waper:
         edge_pruning_threshold=3e-5,
         track_pruning_threshold=0.3,
         max_edge_weight=1,
+        debug=False
     ) -> None:
 
         self._config = WaperConfig(
@@ -281,6 +286,7 @@ class Waper:
             edge_pruning_threshold=edge_pruning_threshold,
             track_pruning_threshold=track_pruning_threshold,
             max_edge_weight=max_edge_weight,
+            debug=debug
         )
 
         self.data_array = data_array
@@ -316,26 +322,27 @@ class Waper:
             self._config.clip_value,
         )
 
-    def plot_association_graph(self, time_index):
+    def plot_association_graph(self, time_index, ax=None):
         time_step_data = self._time_step_data[time_index]
 
-        return _plot_graph(time_step_data.association_graph, time_step_data.input_data)
+        return _plot_graph(time_step_data.association_graph, time_step_data.input_data, ax=ax)
 
-    def plot_pruned_graph(self, time_index):
+    def plot_pruned_graph(self, time_index, ax=None):
         time_step_data = self._time_step_data[time_index]
 
-        return _plot_graph(time_step_data.pruned_graph, time_step_data.input_data)
+        return _plot_graph(time_step_data.pruned_graph, time_step_data.input_data, ax=ax)
 
-    def plot_rwp_graphs(self, time_index):
+    def plot_rwp_graphs(self, time_index, ax=None):
         time_step_data = self._time_step_data[time_index]
 
         return _plot_rwp_paths(
             time_step_data.pruned_graph,
             time_step_data.identified_rwp_paths,
             time_step_data.input_data,
+            ax=ax
         )
 
-    def plot_rwp_polygons(self, time_index, plot_samples=False):
+    def plot_rwp_polygons(self, time_index, plot_samples=False, ax=None):
         time_step_data = self._time_step_data[time_index]
 
         poly_list = [rwp_info["polygon"] for rwp_info in time_step_data.rwp_info.values()]
@@ -358,6 +365,7 @@ class Waper:
             weighted_lon_list,
             weighted_lat_list,
             plot_samples=plot_samples,
+            ax=ax
         )
 
     def plot_raster(self, time_index):
@@ -378,7 +386,7 @@ class Waper:
             map_projection=ccrs.PlateCarree(),
         )
 
-    def plot_track_polygons(self, path, plot_samples=False):
+    def plot_track_polygons(self, path, plot_samples=False, ax=None):
 
         poly_list = []
         sample_points_list = []
@@ -401,4 +409,26 @@ class Waper:
             weighted_lon_list,
             weighted_lat_list,
             plot_samples=plot_samples,
+            ax=ax
         )
+
+    def plot_track_rwps(self, path, ax=None):
+
+        rwp_list = []
+        
+        if ax is None:
+            ax = plt.subplot(
+                projection=ccrs.Orthographic(central_longitude=180, central_latitude=90)
+            )
+        
+        for node in path:
+            time_step_data = self._time_step_data[node[0]]
+
+            for path, rwp_info in time_step_data.rwp_info.items():
+                if abs(rwp_info["rwp_id"] - node[1]) < 1e-2:
+                    rwp_list.append(([path], time_step_data.pruned_graph))
+
+        for path, pruned_graph in rwp_list:
+            _plot_rwp_paths(paths=path, rwp_graph=pruned_graph, ax=ax)
+            
+        return ax

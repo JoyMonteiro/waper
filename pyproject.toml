@@ -10,7 +10,7 @@ build-backend = "poetry.core.masonry.api"
 ## Also renders on pypi as 'subtitle'
 [tool.poetry]
 name = "waper"
-version = "0.0.1"
+version = "0.1.0"
 description = "Rossby wave packet tracker"
 authors = ["Malavika Biju, Joy Monteiro and Karran Pandey"]
 maintainers = ["Joy Monteiro <joy.merwin@gmail.com>"]

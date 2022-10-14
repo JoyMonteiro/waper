@@ -134,19 +134,23 @@ def _plot_clusters(
     return ax
 
 
-def _plot_graph(rwp_graph, scalar_data):
+def _plot_graph(rwp_graph, scalar_data=None, ax=None):
 
-    ax = plt.subplot(projection=ccrs.Orthographic(central_longitude=180, central_latitude=90))
+    if ax is None:
+        ax = plt.subplot(
+            projection=ccrs.Orthographic(central_longitude=180, central_latitude=90)
+        )
 
-    scalar_data.plot.contour(
-        ax=ax,
-        levels=12,
-        transform=ccrs.PlateCarree(central_longitude=0),
-        labels=True,
-        colors="k",
-        linewidths=2,
-        zorder=1,
-    )
+    if isinstance(scalar_data, DataArray):
+        scalar_data.plot.contour(
+            ax=ax,
+            levels=12,
+            transform=ccrs.PlateCarree(central_longitude=0),
+            labels=True,
+            colors="k",
+            linewidths=2,
+            zorder=1,
+        )
 
     for node in rwp_graph.nodes:
         coords = rwp_graph.nodes[node]["coords"]
@@ -169,15 +173,12 @@ def _plot_graph(rwp_graph, scalar_data):
     return ax
 
 
-def _plot_rwp_paths(
-    rwp_graph,
-    paths,
-    scalar_data=None,
-    path_transform=ccrs.PlateCarree(),
-    map_projection=ccrs.Orthographic(central_longitude=180, central_latitude=90),
-):
+def _plot_rwp_paths(rwp_graph, paths, scalar_data=None, ax=None):
 
-    ax = plt.subplot(projection=map_projection)
+    if ax is None:
+        ax = plt.subplot(
+            projection=ccrs.Orthographic(central_longitude=180, central_latitude=90)
+        )
 
     colors = plt.cm.tab20.colors
 
@@ -195,7 +196,11 @@ def _plot_rwp_paths(
     for index, path in enumerate(paths):
         for node in path:
             coords = rwp_graph.nodes[node]["coords"]
-            ax.scatter(coords[0], coords[1], color="r", transform=path_transform)
+            color = 'r'
+            if node < 0:
+                color = 'b'
+            
+            ax.scatter(coords[0], coords[1], color=color, transform=ccrs.PlateCarree())
 
         for edge in [(path[i], path[i + 1]) for i in range(len(path) - 1)]:
             node1_coords = rwp_graph.nodes[edge[0]]["coords"]
@@ -208,8 +213,8 @@ def _plot_rwp_paths(
             ax.plot(
                 [node1_coords[0], node2_coords[0] + delta_coord],
                 [node1_coords[1], node2_coords[1]],
-                color=colors[index%20],
-                transform=path_transform,
+                color=colors[index % 20],
+                transform=ccrs.PlateCarree(),
             )
 
     plt.tight_layout()
@@ -223,8 +228,13 @@ def _plot_polygons(
     weighted_lon_list=None,
     weighted_lat_list=None,
     plot_samples=False,
+    ax=None,
 ):
-    ax = plt.subplot(projection=ccrs.Stereographic(central_longitude=0, central_latitude=90))
+
+    if ax is None:
+        ax = plt.subplot(
+            projection=ccrs.Stereographic(central_longitude=0, central_latitude=90)
+        )
 
     if not (scalar_data is None):
         scalar_data.plot.contour(
@@ -241,10 +251,19 @@ def _plot_polygons(
 
         lons, lats = poly.exterior.coords.xy
 
-        ax.plot(lons, lats)
+        ax.plot(
+            lons, lats, transform=ccrs.Stereographic(central_longitude=0, central_latitude=90)
+        )
 
         for lon, lat in zip(lons, lats):
-            ax.scatter(lon, lat, color="r", s=30, zorder=100)
+            ax.scatter(
+                lon,
+                lat,
+                color="r",
+                s=30,
+                zorder=100,
+                transform=ccrs.Stereographic(central_longitude=0, central_latitude=90),
+            )
 
     if not (weighted_lat_list is None):
         for index, coords in enumerate(list(zip(weighted_lon_list, weighted_lat_list))):
@@ -257,18 +276,25 @@ def _plot_polygons(
                 color="green",
                 zorder=100,
             )
-            
+
             ax.annotate(
                 str(index),
                 (lon, lat),
                 bbox=dict(boxstyle="round", fc="white", ec="b"),
-                transform=ccrs.PlateCarree(central_longitude=0), zorder=1000
+                transform=ccrs.PlateCarree(central_longitude=0),
+                zorder=1000,
             )
 
     if plot_samples:
         for sample_points in sample_points_list:
             for lon, lat in sample_points:
-                ax.scatter(lon, lat, color="b", s=5)
+                ax.scatter(
+                    lon,
+                    lat,
+                    color="b",
+                    s=5,
+                    transform=ccrs.Stereographic(central_longitude=0, central_latitude=90),
+                )
 
     plt.tight_layout()
     return ax
