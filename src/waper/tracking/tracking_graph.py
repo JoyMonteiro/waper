@@ -105,6 +105,15 @@ def prune_tracking_graph(tracking_graph, threshold) -> Graph:
             
     return pruned_graph
 
+def get_path_weight(track_graph, path):
+
+    curr_wt = 0
+    # print(path)
+    for i in range(len(path) - 1):
+        # print(assoc_graph.nodes[path[i]]["coords"][0], assoc_graph.nodes[path[i+1]]["coords"][0])
+        curr_wt += track_graph[path[i]][path[i + 1]]["weight"]
+    
+    return curr_wt
 
 def get_track_paths(tracking_graph):
 
@@ -125,11 +134,42 @@ def get_track_paths(tracking_graph):
     all_combinations = product(start_nodes, end_nodes)
 
     for start_end in all_combinations:
-
+        
         if nx.has_path(tracking_graph, source=start_end[0], target=start_end[1]):
+            best_path = []
+            max_weight = 0
             for path in nx.all_simple_paths(
                 tracking_graph, source=start_end[0], target=start_end[1]
             ):
-                track_paths.append(path)
+                
+                curr_weight = get_path_weight(tracking_graph, path)
+                if curr_weight > max_weight:
+                    max_weight = curr_weight
+                    best_path = path
+                
+            if len(best_path) > 0:
+                track_paths.append(best_path)
+                
+    path_wt_dict = {}
 
-    return track_paths
+    for path in track_paths:
+        path_wt_dict[tuple(path)] = get_path_weight(tracking_graph, path)
+
+    top_paths = list(
+        filter(
+            lambda f: not any(
+                [
+                    (  # Condition reduces to "True if path weight is less than reference and both are part of the same path"
+                        path_wt_dict[tuple(f)] < path_wt_dict[tuple(g)]
+                        and len(set(f) & set(g)) != 0
+                    )
+                    for g in track_paths
+                ]
+            ),
+            track_paths,
+        )
+    )
+
+    return top_paths
+
+    # return track_paths

@@ -4,9 +4,43 @@ from pyproj import transform
 import pyvista as pv
 import numpy as np
 from xarray import DataArray
+from matplotlib.colors import LinearSegmentedColormap
 
 from ..tracking.rwp_polygon import WAPER_X_BOUNDS, WAPER_Y_BOUNDS
 
+cdictDivergeNL = {'red' : (
+                  (0.,0.455,0.455),
+                  (0.25,0.670,0.670),
+                  (0.4,0.878,0.878),
+                  (0.5,1.000,1.000),
+                  (0.6,0.996,0.996),
+                  (0.75,0.992,0.992),
+                  (1.,0.957,0.957),
+                  ),
+
+        'green' : (
+                  (0.,0.678,0.678),
+                  (0.25,0.851,0.851),
+                  (0.4,0.953,0.953),
+                  (0.5,1.000,1.000),
+                  (0.6,0.878,0.878),
+                  (0.75,0.682,0.682),
+                  (1.,0.427,0.427),
+                  ),
+
+        'blue' : (
+                  (0.,0.820,0.820),
+                  (0.25,0.914,0.914),
+                  (0.4,0.973,0.973),
+                  (0.5,1.,1.),
+                  (0.6,0.565,0.565),
+                  (0.75,0.380,0.380),
+                  (1.,0.263,0.263),
+                  ),
+
+    }
+
+NLDivCmap = LinearSegmentedColormap('NLDCmap',cdictDivergeNL)
 
 def _plot_clusters(
     input_data,
@@ -148,10 +182,24 @@ def _plot_graph(rwp_graph, scalar_data=None, ax=None):
             transform=ccrs.PlateCarree(central_longitude=0),
             labels=True,
             colors="k",
-            linewidths=2,
+            linewidths=1,
             zorder=1,
         )
-
+        
+        scalar_data.plot.contourf(
+            ax=ax,
+            levels=12,
+            transform=ccrs.PlateCarree(central_longitude=0),
+            zorder=1,
+            cmap=NLDivCmap,
+            add_colorbar=True,
+            cbar_kwargs=dict(
+                orientation='horizontal',
+                shrink=0.6,
+                aspect=30
+            )
+        )
+        
     for node in rwp_graph.nodes:
         coords = rwp_graph.nodes[node]["coords"]
         ax.scatter(
@@ -191,6 +239,20 @@ def _plot_rwp_paths(rwp_graph, paths, scalar_data=None, ax=None):
             colors="k",
             linewidths=2,
             zorder=1,
+        )
+        
+        scalar_data.plot.contourf(
+            ax=ax,
+            levels=11,
+            transform=ccrs.PlateCarree(central_longitude=0),
+            zorder=1,
+            cmap=NLDivCmap,
+            add_colorbar=True,
+            cbar_kwargs=dict(
+                orientation='horizontal',
+                shrink=0.6,
+                aspect=30
+            )
         )
 
     for index, path in enumerate(paths):

@@ -332,13 +332,17 @@ class Waper:
 
         return _plot_graph(time_step_data.pruned_graph, time_step_data.input_data, ax=ax)
 
-    def plot_rwp_graphs(self, time_index, ax=None):
+    def plot_rwp_graphs(self, time_index, ax=None, plot_scalar_data=True):
         time_step_data = self._time_step_data[time_index]
+        
+        field = None
+        if plot_scalar_data:
+            field = time_step_data.input_data
 
         return _plot_rwp_paths(
             time_step_data.pruned_graph,
             time_step_data.identified_rwp_paths,
-            time_step_data.input_data,
+            field,
             ax=ax
         )
 

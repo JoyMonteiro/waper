@@ -6,6 +6,8 @@ from .utils import haversine_distance, is_to_the_east
 WAPER_MAX_SCALAR_VALUE = 100
 WAPER_MAX_NODE_DISTANCE = 1000
 
+WAPER_MIN_LON_DELTA = 6
+
 
 def compute_association_graph(max_points, min_points, iso_contour, scalar_name):
     """Compute the association graph by identifying the closest maxima/minima to a point on the
@@ -320,6 +322,13 @@ def prune_association_graph_edges(assoc_graph, threshold, max_weight):
     for e in edges:
         start_node = e[0]
         end_node = e[1]
+        
+        lon_0 = assoc_graph.nodes[start_node]["coords"][0]
+        lon_1 = assoc_graph.nodes[end_node]["coords"][0]
+        
+        if abs(lon_0 - lon_1) <= WAPER_MIN_LON_DELTA:
+            continue
+        
         if start_node >= 0:
             weight = edge_weight(assoc_graph, start_node, end_node)
         else:
@@ -346,7 +355,6 @@ def prune_association_graph_edges(assoc_graph, threshold, max_weight):
             pruned_graph.add_edge(start_node, end_node, weight=weight)
     return pruned_graph
 
-
 def get_ranked_paths(assoc_graph, max_weight):
 
     # H = nx.Graph()
@@ -368,20 +376,33 @@ def get_ranked_paths(assoc_graph, max_weight):
                 continue
 
             if nx.has_path(assoc_graph, source=source, target=sink):
+                # best_path = None
+                # max_weight = 0
                 for path in nx.all_simple_paths(assoc_graph, source=source, target=sink):
-                    consistent = True
-                    for node in path[:-1]:
-                        if is_to_the_east(
-                            assoc_graph.nodes[node]["coords"][0], assoc_graph.nodes[path[-1]]["coords"][0]
-                        ):
-                            consistent = False
+                    # consistent = True
+                    # for node in path[:-1]:
+                    #     if is_to_the_east(
+                    #         assoc_graph.nodes[node]["coords"][0], assoc_graph.nodes[path[-1]]["coords"][0]
+                    #     ):
+                    #         consistent = False
                     
-                    if True:
-                        path_list.append(path)
+                #     path_weight = get_path_weight(assoc_graph, path)
+                    
+                #     if path_weight > max_weight:
+                #         max_weight = path_weight
+                #         best_path = path
+                  
+                # if isinstance(best_path, list):
+                #     # print(source, sink, best_path)
+                #     path_list.append(best_path)
+                
+                    path_list.append(path)
+                
+    # return path_list
 
     path_wt_dict = {}
 
-    # print(len(path_list), "number of paths found")
+    # # print(len(path_list), "number of paths found")
 
     for path in path_list:
         curr_wt = 0

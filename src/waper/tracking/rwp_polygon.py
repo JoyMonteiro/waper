@@ -139,7 +139,7 @@ def get_polygon_for_rwp_path(path, assoc_graph, scalar_data, scalar_name, min_la
     list_lats = []
     list_values = []
 
-    min_lon = 360
+    # min_lon = 360
     for node in path:
         if node > 0:
             out = get_region_points_and_values(
@@ -153,8 +153,8 @@ def get_polygon_for_rwp_path(path, assoc_graph, scalar_data, scalar_name, min_la
                 lats = lats[valid_region]
                 values = values[valid_region]
 
-                if min_lon > np.min(lons):  # store location of most westward cluster.
-                    min_lon = np.min(lons)
+                # if min_lon > np.min(lons):  # store location of most westward cluster.
+                #     min_lon = np.min(lons)
 
                 # lons = get_consistent_longitudes(lons, min_lon)
                 list_lons.extend(lons)
@@ -178,8 +178,8 @@ def get_polygon_for_rwp_path(path, assoc_graph, scalar_data, scalar_name, min_la
                 lats = lats[valid_region]
                 values = values[valid_region]
 
-                if min_lon > np.min(lons):  # store location of most westward cluster.
-                    min_lon = np.min(lons)
+                # if min_lon > np.min(lons):  # store location of most westward cluster.
+                #     min_lon = np.min(lons)
 
                 # lons = get_consistent_longitudes(lons, min_lon)
                 list_lons.extend(lons)
