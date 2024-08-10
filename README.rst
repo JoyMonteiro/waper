@@ -69,13 +69,13 @@ License
 
 |gh-lic|
 
-* `GNU Affero General Public License v3.0`_
+* `BSD 3-Clause License`_
 
 
 License
 =======
 
-* Free software: GNU Affero General Public License v3.0
+* Free software: BSD 3-Clause License
 
 
 
@@ -99,7 +99,7 @@ License
 
 .. _Github Actions: https://github.com/JoyMonteiro/waper/actions
 
-.. _GNU Affero General Public License v3.0: https://github.com/JoyMonteiro/waper/blob/master/LICENSE
+.. _BSD 3-Clause License: https://github.com/JoyMonteiro/waper/blob/master/LICENSE
 
 
 .. BADGE ALIASES
