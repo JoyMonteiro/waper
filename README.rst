@@ -52,6 +52,7 @@ Prerequisites
 You need to have `Python` installed. The code has been tested only with `Python=3.10`
 
 You will also need the following packages, all of which must be installed from the `conda-forge channel` (in a fresh environment preferably)
+
 * `geovista` (also installs `pyvista`)
 * `vtk`
 * `xarray`
