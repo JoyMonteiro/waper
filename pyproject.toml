@@ -1,7 +1,7 @@
 # BUILD
 
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
+requires = ["setuptools>=61.2", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 
@@ -16,14 +16,10 @@ description = "Rossby wave packet tracker"
 authors = [{name="Malavika Biju"}, 
             {name="Joy Monteiro"},
             {name="Karran Pandey"}]
-maintainers = [{name="Joy Monteiro", email="joy.merwin@gmail.com>"}]
+maintainers = [{name="Joy Monteiro", email="joy.merwin@gmail.com"}]
 license = {file= "LICENSE"}
 readme = "README.rst"
 requires-python = ">= 3.9"
-
-homepage = "https://github.com/JoyMonteiro/waper"
-repository = "https://github.com/JoyMonteiro/waper"
-documentation = "https://waper.readthedocs.io/"
 
 keywords = [
     "python package",
@@ -48,58 +44,48 @@ classifiers = [
     "Typing :: Typed"
 ]
 
-packages = [
-    { include = "waper", from = "src" },
-]
+[tool.setuptools]
+packages=["waper", "waper.identification", "waper.tracking", "waper.interface"]
 
-include = [
-    { path = "tests", format = "sdist" },
-    { path = "docs/**/*.rst", format = "sdist" },
-    { path = "docs/conf.py", format = "sdist" },
-    { path = "src/**/*.typed", format = "sdist" },
-    { path = "src/stubs/*.pyi", format = "sdist" },
-    "pyproject.toml",
-    "LICENSE",
-    "README.rst",
-    "CONTRIBUTING.md",
-    "CHANGELOG.rst",
-]
-
-exclude = [
-    "docs/*",
-    "requirements/*",
-    "scripts/*.py",
-    "tox.ini",
-    ".bettercodehub.yml",
-    ".circleci/config.yml",
-    ".coveragerc",
-    ".DS_Store",
-    ".gitignore",
-    ".prospector.yml",
-    ".pylintrc",
-    ".readthedocs.yml",
-    ".scrutinizer.yml",
-    ".travis.yml"
-]
-
-[tool.poetry.dependencies]
-python = "^3.8"
+#  [tool.setuptools.packages.find]
+# {include = ["tests", 
+#     "docs/**/*.rst",
+#     "docs/conf.py", 
+#     "src/**/*.typed", 
+#     "src/stubs/*.pyi",
+#     "pyproject.toml",
+#     "LICENSE",
+#     "README.rst",
+#     "CONTRIBUTING.md",
+#     "CHANGELOG.rst",
+# ]},
+# {exclude = [
+#     ".github/*",
+#     "docs/*",
+#     "requirements/*",
+#     "scripts/*.py",
+#     "tox.ini",
+#     ".bettercodehub.yml",
+#     ".circleci/config.yml",
+#     ".coveragerc",
+#     ".DS_Store",
+#     ".gitignore",
+#     ".prospector.yml",
+#     ".pylintrc",
+#     ".readthedocs.yml",
+#     ".scrutinizer.yml",
+#     ".travis.yml"
+# ]}]
 
 # A list of all of the optional dependencies, some of which are included in the
 # below `extras`. They can be opted into by apps.
 
 
 # PyPi url links, that appear in 'Project Links' section
-[tool.poetry.urls]
+[project.urls]
 "Bug Tracker" = "https://github.com/waper/issues"
 "CI: Github Actions" = "https://github.com/JoyMonteiro/waper/actions"
 "Documentation" = "https://waper.readthedocs.io/"
 "Source Code" = "https://github.com/JoyMonteiro/waper"
 "Changelog" = "https://github.com/JoyMonteiro/waper/blob/master/CHANGELOG.rst"
 "Code of Conduct" = "https://github.com/JoyMonteiro/waper/blob/master/CONTRIBUTING.rst"
-
-
-# TOOLS
-
-[tool.software-release]
-version_variable = "src/my_new_project/__init__.py:__version__"
