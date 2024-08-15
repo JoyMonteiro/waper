@@ -1,21 +1,25 @@
 # BUILD
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
 
 # Poetry
 
 # Information required for building (sdist/wheel)
 ## Also renders on pypi as 'subtitle'
-[tool.poetry]
+[project]
 name = "waper"
 version = "0.1.0"
 description = "Rossby wave packet tracker"
-authors = ["Malavika Biju, Joy Monteiro and Karran Pandey"]
-maintainers = ["Joy Monteiro <joy.merwin@gmail.com>"]
-license = "BSD 3 clause"
+authors = [{name="Malavika Biju"}, 
+            {name="Joy Monteiro"},
+            {name="Karran Pandey"}]
+maintainers = [{name="Joy Monteiro", email="joy.merwin@gmail.com>"}]
+license = {file= "LICENSE"}
 readme = "README.rst"
+requires-python = ">= 3.9"
 
 homepage = "https://github.com/JoyMonteiro/waper"
 repository = "https://github.com/JoyMonteiro/waper"
