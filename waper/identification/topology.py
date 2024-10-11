@@ -115,7 +115,7 @@ def cluster_max(base_field, connectivity_clipped_scalar_field, max_points, scala
             continue
 
         num_cluster = int(len(region_array[k]))
-        new_dist = np.full((num_cluster, num_cluster), 0)
+        new_dist = np.full((num_cluster, num_cluster), 0.0)
 
         for i in range(num_cluster):
             for j in range(i + 1, num_cluster):
@@ -254,7 +254,7 @@ def cluster_min(base_field, connectivity_clipped_scalar_field, min_points, scala
             continue
 
         num_cluster = int(len(region_array[k]))
-        new_dist = np.full((num_cluster, num_cluster), 0)
+        new_dist = np.full((num_cluster, num_cluster), 0.0)
 
         for i in range(num_cluster):
             for j in range(i + 1, num_cluster):

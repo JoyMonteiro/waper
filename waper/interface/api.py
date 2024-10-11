@@ -91,12 +91,13 @@ def logging(log_info, config: WaperConfig):
 
 def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTimestepData:
 
+    print('here 1')
     input_data = scalar_data
     latitude = input_data[config.latitude_label].values
     longitude = input_data[config.longitude_label].values
 
     time_step_data = WaperSingleTimestepData(input_data=input_data, config=config)
-
+    print('here 2')
     # Identify and cluster maxima
 
     data_with_maxima = max_min.add_maxima_data(
@@ -116,15 +117,21 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
     clipped_data_with_maxima = data_with_maxima.clip_scalar(
         scalars=config.scalar_name, invert=False, value=config.clip_value
     )
+    
+    print('here 3')
 
     connectivity = topology.identify_connected_regions(clipped_data_with_maxima)
 
-    max_point_ids = max_min.extract_position_ids_maxima(
-        connectivity, config.extrema_threshold, config.scalar_name
-    )
+    # max_point_ids = max_min.extract_position_ids_maxima(
+    #     connectivity, config.extrema_threshold, config.scalar_name
+    # )
+    # print('here 4.1')
+    # maxima_points = max_min.extract_selection_ids_maxima(connectivity, max_point_ids)
 
-    maxima_points = max_min.extract_selection_ids_maxima(connectivity, max_point_ids)
-
+    # print('here 4')
+    
+    maxima_points = max_min.extract_maxima_points(connectivity, config.extrema_threshold, config.scalar_name)
+    
     clustered_points = topology.cluster_max(
         data_with_maxima, connectivity, maxima_points, config.scalar_name
     )
@@ -145,6 +152,7 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
     data_with_minima = max_min.add_minima_data(
         input_data, config.scalar_name, longitude, latitude
     )
+    
 
     if config.max_latitude:
         data_with_minima = data_with_minima.clip_scalar(
@@ -162,11 +170,11 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
 
     connectivity = topology.identify_connected_regions(clipped_data_with_minima)
 
-    min_point_ids = max_min.extract_position_ids_minima(
+    minima_points = max_min.extract_minima_points(
         connectivity, -config.extrema_threshold, config.scalar_name
     )
 
-    minima_points = max_min.extract_selection_ids_minima(connectivity, min_point_ids)
+    # minima_points = max_min.extract_selection_ids_minima(connectivity, min_point_ids)
 
     clustered_points = topology.cluster_min(
         data_with_minima, connectivity, minima_points, config.scalar_name
@@ -179,11 +187,15 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
         num_min_clusters,
     ) = topology.min_cluster_assign(clustered_points, config.scalar_name)
 
+    print('here 4')
+    
     time_step_data.all_minima = minima_points
     time_step_data.number_min_clusters = num_min_clusters
     time_step_data.min_cluster_info = min_pt_dict
 
     # Compute and Prune Association Graph
+    
+    print('here 1')
 
     zero_isocontour = time_step_data.vtk_data.contour([0], scalars=config.scalar_name)
     time_step_data.association_graph = rwp_graph.compute_association_graph(

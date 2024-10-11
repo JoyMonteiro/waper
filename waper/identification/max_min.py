@@ -8,7 +8,7 @@ def add_maxima_data(scalar_values, scalar_name, longitudes, latitudes):
     """Identify maxima in scalar field
 
     Args:
-        scalar_values (dataArray): the scalar field
+        scalar_values (DataArray): the scalar field
         scalar_name (string): name of the scalar
         longitudes (np.array): longitude coordinates
         latitudes (np.array): latitude coordinates
@@ -87,7 +87,7 @@ def add_minima_data(scalar_values, scalar_name, longitudes, latitudes):
     """Identify minima in scalar field
 
     Args:
-        scalar_values (dataArray): the scalar field
+        scalar_values (DataArray): the scalar field
         scalar_name (string): name of the scalar
         longitudes (np.array): longitude coordinates
         latitudes (np.array): latitude coordinates
@@ -163,6 +163,42 @@ def add_minima_data(scalar_values, scalar_name, longitudes, latitudes):
     grid_vtk.cell_data["{} Cell ID".format(scalar_name)] = cell_id
     # print("min points", count)
     return grid_vtk
+
+
+def extract_maxima_points(scalar_field, threshold, scalar_name):
+    """Get data corresponding to identified maxima
+
+    Args:
+        scalar_field (vtk.vtkUnstructuredGrid): vtk object containing clipped dataset
+        threshold (float): discard maxima below threshold
+        scalar_name (string): name of variable in scalar_field
+
+    Returns:
+        vtk.vtkUnstructuredGrid: array containing identified maxima
+    """
+        
+    return scalar_field.extract_points(
+        ((scalar_field.point_data['is max'] == 1)
+         & (scalar_field.point_data[scalar_name] > threshold)),
+        include_cells=False)
+    
+    
+def extract_minima_points(scalar_field, threshold, scalar_name):
+    """Get data corresponding to identified minima
+
+    Args:
+        scalar_field (vtk.vtkUnstructuredGrid): vtk object containing clipped dataset
+        threshold (float): discard minima above threshold
+        scalar_name (string): name of variable in scalar_field
+
+    Returns:
+        vtk.vtkUnstructuredGrid: array containing identified minima
+    """
+        
+    return scalar_field.extract_points(
+        ((scalar_field.point_data['is min'] == 1)
+         & (scalar_field.point_data[scalar_name] < threshold)),
+        include_cells=False)
 
 
 def interpolate_cell_values(dataset, scalar_name):
@@ -265,96 +301,108 @@ def clip_dataset(dataset, scalar_name, threshold, invert=False):
 #     clip_dataset.Update()
 #     return clip_dataset.GetOutput()
 
-def extract_position_ids_minima(scalar_field, threshold, scalar_name):
-    """extract position IDs of identified minima
+# def extract_position_ids_minima(scalar_field, threshold, scalar_name):
+#     """extract position IDs of identified minima
 
-    Args:
-        scalar_field (pv.PolyData): vtk object with clipped dataset
-        threshold (float): discard minima above threshold
-        scalar_name (string): name of variable in scalar_field
+#     Args:
+#         scalar_field (pv.PolyData): vtk object with clipped dataset
+#         threshold (float): discard minima above threshold
+#         scalar_name (string): name of variable in scalar_field
 
-    Returns:
-        vtk.vtkIdTypeArray: list of position IDs
-    """
+#     Returns:
+#         vtk.vtkIdTypeArray: list of position IDs
+#     """
 
-    pos_min_ids = vtk.vtkIdTypeArray()
-    num_pts = scalar_field.GetNumberOfPoints()
-    is_min_arr = scalar_field.GetPointData().GetArray("is min")
-    scalar_arr = scalar_field.GetPointData().GetArray(scalar_name)
+#     pos_min_ids = vtk.vtkIdTypeArray()
+#     num_pts = scalar_field.GetNumberOfPoints()
+#     is_min_arr = scalar_field.GetPointData().GetArray("is min")
+#     scalar_arr = scalar_field.GetPointData().GetArray(scalar_name)
     
-    for i in range(num_pts):
-        if is_min_arr.GetTuple1(i) == 1 and scalar_arr.GetTuple1(i) <= threshold:
-            pos_min_ids.InsertNextValue(i)
-    return pos_min_ids
+#     for i in range(num_pts):
+#         if is_min_arr.GetTuple1(i) == 1 and scalar_arr.GetTuple1(i) <= threshold:
+#             pos_min_ids.InsertNextValue(i)
+#     return pos_min_ids
 
 
-def extract_position_ids_maxima(scalar_field, threshold, scalar_name):
-    """extract position IDs of identified maxima
+# def extract_position_ids_maxima(scalar_field, threshold, scalar_name):
+#     """extract position IDs of identified maxima
 
-    Args:
-        scalar_field (vtk): vtk object with clipped dataset
-        threshold (float): discard minima below threshold
-        scalar_name (string): name of variable in scalar_field
+#     Args:
+#         scalar_field (vtk): vtk object with clipped dataset
+#         threshold (float): discard minima below threshold
+#         scalar_name (string): name of variable in scalar_field
 
-    Returns:
-        vtk.vtkIdTypeArray: list of position IDs
-    """
+#     Returns:
+#         vtk.vtkIdTypeArray: list of position IDs
+#     """
     
-    pos_max_ids = vtk.vtkIdTypeArray()
-    num_pts = scalar_field.GetNumberOfPoints()
-    is_max_arr = scalar_field.GetPointData().GetArray("is max")
-    scalar_arr = scalar_field.GetPointData().GetArray(scalar_name)
+#     pos_max_ids = vtk.vtkIdTypeArray()
+#     num_pts = scalar_field.GetNumberOfPoints()
+#     is_max_arr = scalar_field.GetPointData().GetArray("is max")
+#     scalar_arr = scalar_field.GetPointData().GetArray(scalar_name)
     
-    for i in range(num_pts):
-        if is_max_arr.GetTuple1(i) == 1 and scalar_arr.GetTuple1(i) >= threshold:
-            pos_max_ids.InsertNextValue(i)
-    return pos_max_ids
+#     for i in range(num_pts):
+#         if is_max_arr.GetTuple1(i) == 1 and scalar_arr.GetTuple1(i) >= threshold:
+#             pos_max_ids.InsertNextValue(i)
+            
+#     print(pos_max_ids)
+#     return pos_max_ids
 
-def extract_selection_ids_maxima(scalar_field, id_list):
-    """Get data corresponding to identified maxima
+# def extract_selection_ids_maxima(scalar_field, id_list):
+#     """Get data corresponding to identified maxima
 
-    Args:
-        scalar_field (vtk.vtkUnstructuredGrid): vtk object containing clipped dataset
-        id_list (list): list of ids selected
+#     Args:
+#         scalar_field (vtk.vtkUnstructuredGrid): vtk object containing clipped dataset
+#         id_list (list): list of ids selected
 
-    Returns:
-        vtk.vtkUnstructuredGrid: array containing identified maxima
-    """
+#     Returns:
+#         vtk.vtkUnstructuredGrid: array containing identified maxima
+#     """
     
-    selection_node = vtk.vtkSelectionNode()
-    selection_node.SetFieldType(1)
-    selection_node.SetContentType(4)
-    selection_node.SetSelectionList(id_list)
-    selection = vtk.vtkSelection()
-    selection.AddNode(selection_node)
+#     print('here 4.11')
     
-    extract_selection = vtk.vtkExtractSelection()
-    extract_selection.SetInputData(0, scalar_field)
-    extract_selection.SetInputData(1, selection)
-    extract_selection.Update()
+#     selection_node = vtk.vtkSelectionNode()
+#     selection_node.SetFieldType(1)
+#     selection_node.SetContentType(4)
+#     selection_node.SetSelectionList(id_list)
+#     selection = vtk.vtkSelection()
+#     selection.AddNode(selection_node)
     
-    return pv.wrap(extract_selection.GetOutput())
+#     print('here 4.12')
+    
+#     extract_selection = vtk.vtkExtractSelection()
+    
 
-def extract_selection_ids_minima(scalar_field, id_list):
-    """Get data corresponding to identified minima
-
-    Args:
-        scalar_field (vtk.vtkUnstructuredGrid): vtk object containing clipped dataset
-        id_list (list): list of ids selected
-
-    Returns:
-        vtk.vtkUnstructuredGrid: array containing identified minima
-    """
+#     extract_selection.SetInputData(0, scalar_field)
+#     print('here 4.13')
+#     extract_selection.SetInputData(1, selection)
+#     print('here 4.14')
+#     extract_selection.Update()
+#     print('here 4.15')
     
-    selection_node=vtk.vtkSelectionNode()
-    selection_node.SetFieldType(1)
-    selection_node.SetContentType(4)
-    selection_node.SetSelectionList(id_list)
-    selection=vtk.vtkSelection()
-    selection.AddNode(selection_node)
+
+#     return pv.wrap(extract_selection.GetOutput())
+
+# def extract_selection_ids_minima(scalar_field, id_list):
+#     """Get data corresponding to identified minima
+
+#     Args:
+#         scalar_field (vtk.vtkUnstructuredGrid): vtk object containing clipped dataset
+#         id_list (list): list of ids selected
+
+#     Returns:
+#         vtk.vtkUnstructuredGrid: array containing identified minima
+#     """
     
-    extract_selection=vtk.vtkExtractSelection()
-    extract_selection.SetInputData(0,scalar_field)
-    extract_selection.SetInputData(1,selection)
-    extract_selection.Update()
-    return pv.wrap(extract_selection.GetOutput())
+#     selection_node=vtk.vtkSelectionNode()
+#     selection_node.SetFieldType(1)
+#     selection_node.SetContentType(4)
+#     selection_node.SetSelectionList(id_list)
+#     selection=vtk.vtkSelection()
+#     selection.AddNode(selection_node)
+    
+#     extract_selection=vtk.vtkExtractSelection()
+#     extract_selection.SetInputData(0,scalar_field)
+#     extract_selection.SetInputData(1,selection)
+#     extract_selection.Update()
+#     return pv.wrap(extract_selection.GetOutput())
