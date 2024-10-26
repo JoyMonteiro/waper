@@ -91,13 +91,11 @@ def logging(log_info, config: WaperConfig):
 
 def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTimestepData:
 
-    print('here 1')
     input_data = scalar_data
     latitude = input_data[config.latitude_label].values
     longitude = input_data[config.longitude_label].values
 
     time_step_data = WaperSingleTimestepData(input_data=input_data, config=config)
-    print('here 2')
     # Identify and cluster maxima
 
     data_with_maxima = max_min.add_maxima_data(
@@ -118,8 +116,6 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
         scalars=config.scalar_name, invert=False, value=config.clip_value
     )
     
-    print('here 3')
-
     connectivity = topology.identify_connected_regions(clipped_data_with_maxima)
 
     # max_point_ids = max_min.extract_position_ids_maxima(
@@ -186,8 +182,6 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
         min_pt_dict,
         num_min_clusters,
     ) = topology.min_cluster_assign(clustered_points, config.scalar_name)
-
-    print('here 4')
     
     time_step_data.all_minima = minima_points
     time_step_data.number_min_clusters = num_min_clusters
@@ -195,8 +189,6 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
 
     # Compute and Prune Association Graph
     
-    print('here 1')
-
     zero_isocontour = time_step_data.vtk_data.contour([0], scalars=config.scalar_name)
     time_step_data.association_graph = rwp_graph.compute_association_graph(
         maxima_points, minima_points, zero_isocontour, config.scalar_name

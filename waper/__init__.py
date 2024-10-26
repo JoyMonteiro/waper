@@ -1,1 +1,1 @@
-from .interface import (Waper, WaperSingleTimestepData, max_min, topology)
+from .interface import (Waper, WaperSingleTimestepData, max_min, topology, WaperConfig)
