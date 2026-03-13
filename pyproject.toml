@@ -4,6 +4,8 @@
 requires = ["setuptools>=61.2", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools_scm]
+
 
 # Poetry
 
@@ -13,7 +15,7 @@ build-backend = "setuptools.build_meta"
 name = "waper"
 version = "0.1.0"
 description = "Rossby wave packet tracker"
-authors = [{name="Malavika Biju"}, 
+authors = [{name="Malavika Biju"},
             {name="Joy Monteiro"},
             {name="Karran Pandey"}]
 maintainers = [{name="Joy Monteiro", email="joy.merwin@gmail.com"}]
@@ -35,23 +37,44 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Software Development",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: Software Distribution",
     "Typing :: Typed"
 ]
 
+dependencies = [
+    "numpy >= 1.22",
+    "scipy >= 1.9",
+    "xarray >= 2022.6",
+    "networkx >= 2.8",
+    "pyvista >= 0.36",
+    "geovista >= 0.4",
+    "vtk >= 9.1",
+    "scikit-learn >= 1.1",
+    "shapely >= 1.8",
+    "rasterio >= 1.3",
+    "pyproj >= 3.4",
+    "cartopy >= 0.21",
+    "matplotlib >= 3.6",
+    "tqdm >= 4.64"
+]
+
+[project.optional-dependencies]
+dev = ["pytest >= 7.0", "pytest-cov", "mypy", "ruff"]
+
 [tool.setuptools]
 packages=["waper", "waper.identification", "waper.tracking", "waper.interface"]
 
 #  [tool.setuptools.packages.find]
-# {include = ["tests", 
+# {include = ["tests",
 #     "docs/**/*.rst",
-#     "docs/conf.py", 
-#     "src/**/*.typed", 
+#     "docs/conf.py",
+#     "src/**/*.typed",
 #     "src/stubs/*.pyi",
 #     "pyproject.toml",
 #     "LICENSE",

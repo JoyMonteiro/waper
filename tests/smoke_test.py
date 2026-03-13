@@ -1,4 +1,11 @@
-def test_smoke_is_not_risingfrom_module():
-    import my_new_project
+def test_smoke_import():
+    import waper
 
-    assert my_new_project is not None
+    assert waper is not None
+
+
+def test_smoke_classes_exist():
+    from waper import Waper, WaperConfig
+
+    assert Waper is not None
+    assert WaperConfig is not None

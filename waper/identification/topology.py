@@ -1,9 +1,10 @@
 import math
+from collections import defaultdict
+
 import numpy as np
 import pyvista as pv
 import vtk
 from sklearn import cluster
-from collections import defaultdict
 
 CLUSTER_MAX_DISTANCE = 150
 
@@ -20,11 +21,20 @@ def cluster_max(base_field, connectivity_clipped_scalar_field, max_points, scala
     Returns:
         object: list of maxima points with cluster IDs
     """
+    if max_points.GetNumberOfPoints() == 0:
+        import pyvista as pv
+        import vtk
+        cluster_id = vtk.vtkIntArray()
+        cluster_id.SetNumberOfComponents(1)
+        cluster_id.SetNumberOfTuples(0)
+        cluster_id.SetName("Cluster ID")
+        max_points.GetPointData().AddArray(cluster_id)
+        return pv.wrap(max_points)
+
     # import scalar field and critical point data objects
     maxima_points = max_points
     # base_field = scalar_field
     scalar_field = connectivity_clipped_scalar_field
-
 
     geometry_filter = vtk.vtkGeometryFilter()
     geometry_filter.SetInputData(scalar_field)
@@ -82,12 +92,14 @@ def cluster_max(base_field, connectivity_clipped_scalar_field, max_points, scala
                 dist += math.sqrt(vtk.vtkMath.Distance2BetweenPoints(p0, p1))
             dist_matrix[i][j] = dist
             dist_matrix[j][i] = dist
-            
-            locator.FindCellsAlongLine(point_coords[i], point_coords[j], 0.001, cell_ids)
+
+            locator.FindCellsAlongLine(
+                point_coords[i], point_coords[j], 0.001, cell_ids
+            )
             for k in range(cell_ids.GetNumberOfIds()):
                 if cell_v.GetTuple1(cell_ids.GetId(k)) < min_v:
                     min_v = cell_v.GetTuple1(cell_ids.GetId(k))
-                    
+
             dist_matrix[i][j] = dist_matrix[i][j] - min_v
             dist_matrix[j][i] = dist_matrix[i][j]
 
@@ -95,12 +107,12 @@ def cluster_max(base_field, connectivity_clipped_scalar_field, max_points, scala
     cluster_assign = np.full(num_points, 0)
 
     median_dist = -np.median(dist_matrix)
-    
+
     for i in range(num_points):
-        region_array[int(point_region_id.GetTuple1(int(maxima_point_id.GetTuple1(i))))].append(
-            i
-        )
-        
+        region_array[
+            int(point_region_id.GetTuple1(int(maxima_point_id.GetTuple1(i))))
+        ].append(i)
+
     prev_max = 0
 
     for k in range(num_regions):
@@ -126,7 +138,7 @@ def cluster_max(base_field, connectivity_clipped_scalar_field, max_points, scala
             continue
 
         sim_matrix = np.negative(new_dist)
-                
+
         af_clustering = cluster.AffinityPropagation(
             preference=np.full(num_cluster, median_dist / 5.0), affinity="precomputed"
         )
@@ -153,13 +165,23 @@ def cluster_min(base_field, connectivity_clipped_scalar_field, min_points, scala
     """Cluster all the minima in the scalar field
 
     Args:
-        scalar_field (object): vtk object containing the scalar field data
+        base_field (object): vtk object containing the scalar field data
         connectivity_clipped_scalar_field (object): vtk object containing connectivity information of the clipped scalar field
         min_points (object): vtk object containing all the minima available in the field
+        scalar_name (string): name of the variable
 
     Returns:
         object: list of minima points with cluster IDs
     """
+    if min_points.GetNumberOfPoints() == 0:
+        import pyvista as pv
+        import vtk
+        cluster_id = vtk.vtkIntArray()
+        cluster_id.SetNumberOfComponents(1)
+        cluster_id.SetNumberOfTuples(0)
+        cluster_id.SetName("Cluster ID")
+        min_points.GetPointData().AddArray(cluster_id)
+        return pv.wrap(min_points)
 
     scalar_field = connectivity_clipped_scalar_field
     minima_points = min_points
@@ -236,9 +258,9 @@ def cluster_min(base_field, connectivity_clipped_scalar_field, min_points, scala
     median_dist = -np.median(dist_matrix)
 
     for i in range(num_points):
-        region_array[int(point_region_id.GetTuple1(int(minima_point_id.GetTuple1(i))))].append(
-            i
-        )
+        region_array[
+            int(point_region_id.GetTuple1(int(minima_point_id.GetTuple1(i))))
+        ].append(i)
 
     prev_min = 0
 
@@ -299,12 +321,6 @@ def identify_connected_regions(dataset):
     """
 
     return dataset.connectivity(largest=False)
-    # connectivity_filter = vtk.vtkConnectivityFilter()
-    # connectivity_filter.SetInputData(dataset)
-    # connectivity_filter.SetExtractionModeToAllRegions()
-    # connectivity_filter.ColorRegionsOn()
-    # connectivity_filter.Update()
-    # return connectivity_filter.GetOutput()
 
 
 def add_connectivity_data_min(dataset):
@@ -316,7 +332,7 @@ def add_connectivity_data_min(dataset):
     Returns:
         vtk.UnstructuredGrid: scalar field labeled by connected regions
     """
-    
+
     connectivity_filter = vtk.vtkConnectivityFilter()
     connectivity_filter.SetInputData(dataset)
     connectivity_filter.SetExtractionModeToAllRegions()
@@ -334,6 +350,9 @@ def min_cluster_assign(min_points, scalar_name):
     """
 
     num_points_min = min_points.n_points
+    if num_points_min == 0:
+        return (np.array([]), np.array([]), defaultdict(list), 0)
+
     cluster_id_min = min_points["Cluster ID"]
     num_min_clusters = np.max(cluster_id_min) + 1
 
@@ -343,15 +362,15 @@ def min_cluster_assign(min_points, scalar_name):
     min_scalars = min_points[scalar_name]
 
     for i in range(num_points_min):
-        x, y = min_points['Longitude'][i], min_points['Latitude'][i]
+        x, y = min_points["Longitude"][i], min_points["Latitude"][i]
         coords = [x, y]
         min_pt_dict[cluster_id_min[i]].append(coords)
 
         # Identify the most negative point in the cluster
         if cluster_min_arr[cluster_id_min[i]] > min_scalars[i]:
             cluster_min_arr[cluster_id_min[i]] = min_scalars[i]
-            cluster_min_point[cluster_id_min[i]][0] = min_points['Longitude'][i]
-            cluster_min_point[cluster_id_min[i]][1] = min_points['Latitude'][i]
+            cluster_min_point[cluster_id_min[i]][0] = min_points["Longitude"][i]
+            cluster_min_point[cluster_id_min[i]][1] = min_points["Latitude"][i]
 
     # most negative point in each cluster, its coordinates,
     # dictionary with key = cluster ID and values = all points in cluster, total number of min clusters
@@ -367,6 +386,9 @@ def max_cluster_assign(max_points, scalar_name):
     """
 
     num_points_max = max_points.n_points
+    if num_points_max == 0:
+        return (np.array([]), np.array([]), defaultdict(list), 0)
+
     cluster_id_max = max_points["Cluster ID"]
     num_max_clusters = np.max(cluster_id_max) + 1
 
@@ -375,15 +397,15 @@ def max_cluster_assign(max_points, scalar_name):
     cluster_max_point = np.full((num_max_clusters, 2), 0.0)
     max_scalars = max_points[scalar_name]
 
-    #Identify largest point in each cluster
+    # Identify largest point in each cluster
     for i in range(num_points_max):
-        x, y = max_points['Longitude'][i], max_points['Latitude'][i]
+        x, y = max_points["Longitude"][i], max_points["Latitude"][i]
         coords = [x, y]
         max_pt_dict[cluster_id_max[i]].append(coords)
         if cluster_max_arr[cluster_id_max[i]] < max_scalars[i]:
             cluster_max_arr[cluster_id_max[i]] = max_scalars[i]
-            cluster_max_point[cluster_id_max[i]][0] = max_points['Longitude'][i]
-            cluster_max_point[cluster_id_max[i]][1] = max_points['Latitude'][i]
+            cluster_max_point[cluster_id_max[i]][0] = max_points["Longitude"][i]
+            cluster_max_point[cluster_id_max[i]][1] = max_points["Latitude"][i]
 
     # largest point in each cluster, its coordinates,
     # dictionary with key = cluster ID and values = all points in cluster, total number of max clusters

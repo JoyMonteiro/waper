@@ -1,15 +1,19 @@
-from ..identification import topology
-import numpy as np
-from pyproj.transformer import Transformer
-import pyproj
+import logging
 
+import numpy as np
+import pyproj
+from pyproj.transformer import Transformer
+from rasterio import Affine, features
 from shapely.geometry import MultiPoint
-from rasterio import features, Affine
+
+from ..identification import topology
+
+logger = logging.getLogger(__name__)
 
 WAPER_SUBSAMPLE = 5
 WAPER_IMAGE_SIZE = 512
 WAPER_CLUSTER_WIDTH = 60
-WAPER_NUM_PIXELS = WAPER_IMAGE_SIZE*WAPER_IMAGE_SIZE
+WAPER_NUM_PIXELS = WAPER_IMAGE_SIZE * WAPER_IMAGE_SIZE
 
 WAPER_X_BOUNDS = (12712833.087371958, -12712833.087371958)
 WAPER_Y_BOUNDS = (12710532.145483922, -12713600.098850505)
@@ -21,11 +25,14 @@ WAPER_RASTER_TRANSFORM = Affine.translation(
     WAPER_X_BOUNDS[1] - WAPER_X_RES / 2, WAPER_Y_BOUNDS[1] - WAPER_Y_RES / 2
 ) * Affine.scale(WAPER_X_RES, WAPER_Y_RES)
 
+
 # TODO this must handle both north and south poles
 def transform_to_stereographic(input_xs, input_ys, inverse=False):
 
     from_crs = pyproj.crs.CRS(4326)  # standard lat-lon
-    to_crs = pyproj.crs.CRS("+proj=stere +lat_0=90 +lon_0=0")  # north pole stereographic
+    to_crs = pyproj.crs.CRS(
+        "+proj=stere +lat_0=90 +lon_0=0"
+    )  # north pole stereographic
     if inverse:
         transformer = Transformer.from_crs(to_crs, from_crs, always_xy="True")
     else:
@@ -34,7 +41,9 @@ def transform_to_stereographic(input_xs, input_ys, inverse=False):
     try:
         return transformer.transform(input_xs, input_ys, errcheck=True)
     except:
-        print(input_xs, input_ys)
+        logger.error(
+            "Stereographic transform failed for xs=%s, ys=%s", input_xs, input_ys
+        )
         raise ValueError()
 
 
@@ -84,14 +93,18 @@ def get_region_points_and_values(
     )
     region_id_node = clipped_region.point_data["RegionId"][closest_point]
 
-    lons = clipped_region["Longitude"][clipped_region.point_data["RegionId"] == region_id_node]
-    lats = clipped_region["Latitude"][clipped_region.point_data["RegionId"] == region_id_node]
+    lons = clipped_region["Longitude"][
+        clipped_region.point_data["RegionId"] == region_id_node
+    ]
+    lats = clipped_region["Latitude"][
+        clipped_region.point_data["RegionId"] == region_id_node
+    ]
     values = clipped_region.point_data[scalar_name][
         clipped_region.point_data["RegionId"] == region_id_node
     ]
-    
+
     # node_latitude = assoc_graph.nodes[node]["coords"][1]
-    
+
     # #TODO 3 should be a paramter
     # valid_region = np.logical_and(lats >= node_latitude-3, lats <= node_latitude+3)
     # lons = lons[valid_region]
@@ -101,7 +114,9 @@ def get_region_points_and_values(
     return lons, lats, values
 
 
-def get_polygon_for_rwp_path(path, assoc_graph, scalar_data, scalar_name, min_latitude, max_latitude):
+def get_polygon_for_rwp_path(
+    path, assoc_graph, scalar_data, scalar_name, min_latitude, max_latitude
+):
     """Get bounding polygon for an identified RWP
 
     Args:
@@ -147,8 +162,10 @@ def get_polygon_for_rwp_path(path, assoc_graph, scalar_data, scalar_name, min_la
             )
             if out:
                 lons, lats, values = out
-                
-                valid_region = np.logical_and(lats >= min_latitude, lats <= max_latitude)
+
+                valid_region = np.logical_and(
+                    lats >= min_latitude, lats <= max_latitude
+                )
                 lons = lons[valid_region]
                 lats = lats[valid_region]
                 values = values[valid_region]
@@ -172,8 +189,10 @@ def get_polygon_for_rwp_path(path, assoc_graph, scalar_data, scalar_name, min_la
             )
             if out:
                 lons, lats, values = out
-                
-                valid_region = np.logical_and(lats >= min_latitude, lats <= max_latitude)
+
+                valid_region = np.logical_and(
+                    lats >= min_latitude, lats <= max_latitude
+                )
                 lons = lons[valid_region]
                 lats = lats[valid_region]
                 values = values[valid_region]

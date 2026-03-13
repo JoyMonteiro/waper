@@ -1,28 +1,27 @@
 from dataclasses import dataclass
 
-from pyvista import PolyData
-from networkx import Graph
-from xarray import DataArray
-from tqdm import tqdm
-from numpy import ndarray
-import numpy as np
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
+import numpy as np
+from networkx import Graph
+from numpy import ndarray
+from pyvista import PolyData
+from tqdm import tqdm
+from xarray import DataArray
 
-from ..identification import max_min, topology, rwp_graph, utils
-from ..tracking import rwp_polygon
+from ..identification import max_min, rwp_graph, topology, utils
+from ..tracking import quadtree, rwp_polygon, tracking_graph
 from .visualization import (
     _plot_clusters,
     _plot_graph,
     _plot_polygons,
-    _plot_rwp_paths,
     _plot_raster,
+    _plot_rwp_paths,
 )
-from ..tracking import quadtree, tracking_graph
-from waper import tracking
+
+
 @dataclass(eq=False, frozen=True)
 class WaperConfig:
-
     debug: bool
     scalar_name: str
     latitude_label: str
@@ -48,7 +47,6 @@ class WaperConfig:
 
 @dataclass(eq=False)
 class WaperSingleTimestepData:
-
     input_data: DataArray
 
     vtk_data: PolyData
@@ -84,12 +82,15 @@ class WaperSingleTimestepData:
         self.rwp_info = {}
         return
 
-def logging(log_info, config: WaperConfig):
-    if config.debug:
-        print(log_info)
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTimestepData:
+def _identify_rwps(
+    scalar_data: DataArray, config: WaperConfig
+) -> WaperSingleTimestepData:
 
     input_data = scalar_data
     latitude = input_data[config.latitude_label].values
@@ -115,7 +116,7 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
     clipped_data_with_maxima = data_with_maxima.clip_scalar(
         scalars=config.scalar_name, invert=False, value=config.clip_value
     )
-    
+
     connectivity = topology.identify_connected_regions(clipped_data_with_maxima)
 
     # max_point_ids = max_min.extract_position_ids_maxima(
@@ -125,9 +126,11 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
     # maxima_points = max_min.extract_selection_ids_maxima(connectivity, max_point_ids)
 
     # print('here 4')
-    
-    maxima_points = max_min.extract_maxima_points(connectivity, config.extrema_threshold, config.scalar_name)
-    
+
+    maxima_points = max_min.extract_maxima_points(
+        connectivity, config.extrema_threshold, config.scalar_name
+    )
+
     clustered_points = topology.cluster_max(
         data_with_maxima, connectivity, maxima_points, config.scalar_name
     )
@@ -148,7 +151,6 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
     data_with_minima = max_min.add_minima_data(
         input_data, config.scalar_name, longitude, latitude
     )
-    
 
     if config.max_latitude:
         data_with_minima = data_with_minima.clip_scalar(
@@ -182,13 +184,13 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
         min_pt_dict,
         num_min_clusters,
     ) = topology.min_cluster_assign(clustered_points, config.scalar_name)
-    
+
     time_step_data.all_minima = minima_points
     time_step_data.number_min_clusters = num_min_clusters
     time_step_data.min_cluster_info = min_pt_dict
 
     # Compute and Prune Association Graph
-    
+
     zero_isocontour = time_step_data.vtk_data.contour([0], scalars=config.scalar_name)
     time_step_data.association_graph = rwp_graph.compute_association_graph(
         maxima_points, minima_points, zero_isocontour, config.scalar_name
@@ -214,8 +216,12 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
             weighted_lon,
             weighted_lat,
         ) = rwp_polygon.get_polygon_for_rwp_path(
-            path, time_step_data.pruned_graph, time_step_data.vtk_data, config.scalar_name,
-            config.min_latitude, config.max_latitude
+            path,
+            time_step_data.pruned_graph,
+            time_step_data.vtk_data,
+            config.scalar_name,
+            config.min_latitude,
+            config.max_latitude,
         )
         time_step_data.rwp_info[tuple(path)] = {
             # "path": path,
@@ -234,20 +240,19 @@ def _identify_rwps(scalar_data: DataArray, config: WaperConfig) -> WaperSingleTi
                 time_step_data.rwp_info[tuple(path)]["rwp_id"],
             )
         )
-        
+
     if len(list_polygons) == 0:
-        print('No RWPs found, change thresholds')
-        
+        logger.warning("No RWPs found at this timestep. Consider adjusting thresholds.")
+
     time_step_data.raster_data = rwp_polygon.rasterize_all_rwps(list_polygons)
 
-    features = set(np.unique(time_step_data.raster_data))
-    features.add(0)
-
-    time_step_data.raster_features = features
-
     if time_step_data.raster_data is None:
+        time_step_data.raster_features = {0}
         time_step_data.quadtree = None
     else:
+        features = set(np.unique(time_step_data.raster_data))
+        features.add(0)
+        time_step_data.raster_features = features
         time_step_data.quadtree = quadtree.create_quadtree(time_step_data.raster_data)
 
     return time_step_data
@@ -274,7 +279,7 @@ class Waper:
         edge_pruning_threshold=3e-5,
         track_pruning_threshold=0.3,
         max_edge_weight=1,
-        debug=False
+        debug=False,
     ) -> None:
 
         self._config = WaperConfig(
@@ -290,18 +295,23 @@ class Waper:
             edge_pruning_threshold=edge_pruning_threshold,
             track_pruning_threshold=track_pruning_threshold,
             max_edge_weight=max_edge_weight,
-            debug=debug
+            debug=debug,
         )
 
         self.data_array = data_array
         self._num_time_steps = len(data_array[time_label])
         self._time_step_data = []
 
+        if debug:
+            logging.basicConfig(level=logging.DEBUG)
+
     def identify_rwps(self):
 
         for i in tqdm(range(self._num_time_steps)):
             self._time_step_data.append(
-                _identify_rwps(self.data_array[self._config.scalar_name][i], self._config)
+                _identify_rwps(
+                    self.data_array[self._config.scalar_name][i], self._config
+                )
             )
 
     def track_rwps(self, num_time_steps=None):
@@ -329,16 +339,20 @@ class Waper:
     def plot_association_graph(self, time_index, ax=None):
         time_step_data = self._time_step_data[time_index]
 
-        return _plot_graph(time_step_data.association_graph, time_step_data.input_data, ax=ax)
+        return _plot_graph(
+            time_step_data.association_graph, time_step_data.input_data, ax=ax
+        )
 
     def plot_pruned_graph(self, time_index, ax=None):
         time_step_data = self._time_step_data[time_index]
 
-        return _plot_graph(time_step_data.pruned_graph, time_step_data.input_data, ax=ax)
+        return _plot_graph(
+            time_step_data.pruned_graph, time_step_data.input_data, ax=ax
+        )
 
     def plot_rwp_graphs(self, time_index, ax=None, plot_scalar_data=True):
         time_step_data = self._time_step_data[time_index]
-        
+
         field = None
         if plot_scalar_data:
             field = time_step_data.input_data
@@ -347,23 +361,27 @@ class Waper:
             time_step_data.pruned_graph,
             time_step_data.identified_rwp_paths,
             field,
-            ax=ax
+            ax=ax,
         )
 
     def plot_rwp_polygons(self, time_index, plot_samples=False, ax=None):
         time_step_data = self._time_step_data[time_index]
 
-        poly_list = [rwp_info["polygon"] for rwp_info in time_step_data.rwp_info.values()]
+        poly_list = [
+            rwp_info["polygon"] for rwp_info in time_step_data.rwp_info.values()
+        ]
         sample_points_list = [
             rwp_info["sample_points"] for rwp_info in time_step_data.rwp_info.values()
         ]
 
         weighted_lon_list = [
-            rwp_info["weighted_longitude"] for rwp_info in time_step_data.rwp_info.values()
+            rwp_info["weighted_longitude"]
+            for rwp_info in time_step_data.rwp_info.values()
         ]
 
         weighted_lat_list = [
-            rwp_info["weighted_latitude"] for rwp_info in time_step_data.rwp_info.values()
+            rwp_info["weighted_latitude"]
+            for rwp_info in time_step_data.rwp_info.values()
         ]
 
         return _plot_polygons(
@@ -373,7 +391,7 @@ class Waper:
             weighted_lon_list,
             weighted_lat_list,
             plot_samples=plot_samples,
-            ax=ax
+            ax=ax,
         )
 
     def plot_raster(self, time_index):
@@ -417,18 +435,18 @@ class Waper:
             weighted_lon_list,
             weighted_lat_list,
             plot_samples=plot_samples,
-            ax=ax
+            ax=ax,
         )
 
     def plot_track_rwps(self, path, ax=None):
 
         rwp_list = []
-        
+
         if ax is None:
             ax = plt.subplot(
                 projection=ccrs.Orthographic(central_longitude=180, central_latitude=90)
             )
-        
+
         for node in path:
             time_step_data = self._time_step_data[node[0]]
 
@@ -438,5 +456,5 @@ class Waper:
 
         for path, pruned_graph in rwp_list:
             _plot_rwp_paths(paths=path, rwp_graph=pruned_graph, ax=ax)
-            
+
         return ax

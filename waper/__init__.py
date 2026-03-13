@@ -1,1 +1,3 @@
-from .interface import (Waper, WaperSingleTimestepData, max_min, topology, WaperConfig)
+from .interface.api import Waper, WaperConfig, WaperSingleTimestepData
+
+__all__ = ["Waper", "WaperConfig", "WaperSingleTimestepData"]

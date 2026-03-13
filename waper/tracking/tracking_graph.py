@@ -1,11 +1,15 @@
-from matplotlib.font_manager import weight_dict
-import networkx as nx
-from networkx import Graph
+import logging
 from itertools import product
+
+import networkx as nx
+from matplotlib.font_manager import weight_dict
+from networkx import Graph
 from tqdm import tqdm
 
-from .quadtree import merge, compute_size_features
 from ..identification.utils import haversine_distance
+from .quadtree import compute_size_features, merge
+
+logger = logging.getLogger(__name__)
 
 
 def build_tracking_graph(time_step_data, number_steps: int = None) -> Graph:
@@ -38,7 +42,7 @@ def build_tracking_graph(time_step_data, number_steps: int = None) -> Graph:
                     lat = rwp_info["weighted_latitude"]
 
             if lon == 0:
-                print(feature)
+                logger.warning("Feature %s has no matching rwp_info", feature)
 
             tracking_graph.add_node((time, feature), coords=(lon, lat))
             if time > 0:
@@ -52,17 +56,15 @@ def build_tracking_graph(time_step_data, number_steps: int = None) -> Graph:
                     time_step_data[time].quadtree, time_step_data[time - 1].quadtree
                 )
                 merge_feature_size = compute_size_features(merge_graph)
-                prev_feature_size = compute_size_features(time_step_data[time - 1].quadtree)
+                prev_feature_size = compute_size_features(
+                    time_step_data[time - 1].quadtree
+                )
                 curr_feature_size = compute_size_features(time_step_data[time].quadtree)
-                # print(prev_feature_size)
-                # print(curr_feature_size)
 
                 for edge in edge_list:
-
-                    if (edge in merge_feature_size) or (edge[::-1] in merge_feature_size):
-                        # print(edge, merge_feature_size[edge])
-                        # print(edge)
-                        # print(prev_feature_size[tuple([edge[0]])], curr_feature_size[tuple([edge[1]])])
+                    if (edge in merge_feature_size) or (
+                        edge[::-1] in merge_feature_size
+                    ):
                         weight = merge_feature_size[edge] / max(
                             prev_feature_size[tuple([edge[0]])],
                             curr_feature_size[tuple([edge[1]])],
@@ -95,25 +97,30 @@ def prune_tracking_graph(tracking_graph, threshold) -> Graph:
 
     for edge in tracking_graph.edges:
         if tracking_graph.edges[edge]["distance"] < threshold:
-            pruned_graph.add_node(edge[0], coords=tracking_graph.nodes[edge[0]]["coords"])
-            pruned_graph.add_node(edge[1], coords=tracking_graph.nodes[edge[1]]["coords"])
+            pruned_graph.add_node(
+                edge[0], coords=tracking_graph.nodes[edge[0]]["coords"]
+            )
+            pruned_graph.add_node(
+                edge[1], coords=tracking_graph.nodes[edge[1]]["coords"]
+            )
             pruned_graph.add_edge(
-                edge[0], edge[1],
+                edge[0],
+                edge[1],
                 weight=tracking_graph.edges[edge]["weight"],
                 distance=tracking_graph.edges[edge]["distance"],
             )
-            
+
     return pruned_graph
+
 
 def get_path_weight(track_graph, path):
 
     curr_wt = 0
-    # print(path)
     for i in range(len(path) - 1):
-        # print(assoc_graph.nodes[path[i]]["coords"][0], assoc_graph.nodes[path[i+1]]["coords"][0])
         curr_wt += track_graph[path[i]][path[i + 1]]["weight"]
-    
+
     return curr_wt
+
 
 def get_track_paths(tracking_graph):
 
@@ -134,22 +141,20 @@ def get_track_paths(tracking_graph):
     all_combinations = product(start_nodes, end_nodes)
 
     for start_end in all_combinations:
-        
         if nx.has_path(tracking_graph, source=start_end[0], target=start_end[1]):
             best_path = []
             max_weight = 0
             for path in nx.all_simple_paths(
                 tracking_graph, source=start_end[0], target=start_end[1]
             ):
-                
                 curr_weight = get_path_weight(tracking_graph, path)
                 if curr_weight > max_weight:
                     max_weight = curr_weight
                     best_path = path
-                
+
             if len(best_path) > 0:
                 track_paths.append(best_path)
-                
+
     path_wt_dict = {}
 
     for path in track_paths:
@@ -157,19 +162,19 @@ def get_track_paths(tracking_graph):
 
     top_paths = list(
         filter(
-            lambda f: not any(
-                [
-                    (  # Condition reduces to "True if path weight is less than reference and both are part of the same path"
-                        path_wt_dict[tuple(f)] < path_wt_dict[tuple(g)]
-                        and len(set(f) & set(g)) != 0
-                    )
-                    for g in track_paths
-                ]
+            lambda f: (
+                not any(
+                    [
+                        (  # Condition reduces to "True if path weight is less than reference and both are part of the same path"
+                            path_wt_dict[tuple(f)] < path_wt_dict[tuple(g)]
+                            and len(set(f) & set(g)) != 0
+                        )
+                        for g in track_paths
+                    ]
+                )
             ),
             track_paths,
         )
     )
 
     return top_paths
-
-    # return track_paths
