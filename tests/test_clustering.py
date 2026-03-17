@@ -5,7 +5,7 @@ import xarray as xr
 from waper.identification import max_min, topology
 
 
-def _create_and_process_field(v, lons, lats, threshold=5):
+def _create_and_process_field(v, lons, lats, threshold=5, eps_km=500):
     da = xr.DataArray(
         v,
         dims=["latitude", "longitude"],
@@ -16,7 +16,7 @@ def _create_and_process_field(v, lons, lats, threshold=5):
     clipped = max_min.clip_dataset(data_with_max, "v", threshold=threshold)
     connectivity = topology.identify_connected_regions(clipped)
     maxima_points = max_min.extract_maxima_points(connectivity, threshold, "v")
-    clustered = topology.cluster_extrema(data_with_max, connectivity, maxima_points, "v", sign=1)
+    clustered = topology.cluster_extrema(data_with_max, connectivity, maxima_points, "v", sign=1, eps_km=eps_km)
     return clustered
 
 
@@ -75,6 +75,44 @@ def test_two_distant_extrema_different_clusters():
     assert len(clusters) > 1
 
 
+def test_centroid_representative():
+    lons = np.arange(0, 360, 5)
+    lats = np.arange(20, 80.1, 5)
+    lon2d, lat2d = np.meshgrid(lons, lats)
+
+    # Asymmetric cluster connected by a broad base
+    base = 15 * np.exp(-((lon2d - 185) ** 2 + (lat2d - 50) ** 2) / 500)
+    # Main peak at lon=180, lat=50, value=30
+    v1 = 30 * np.exp(-((lon2d - 180) ** 2 + (lat2d - 50) ** 2) / 10)
+    # Secondary peak at lon=190, lat=50, value=20
+    v2 = 20 * np.exp(-((lon2d - 190) ** 2 + (lat2d - 50) ** 2) / 10)
+    
+    # They will fuse into one cluster (eps=1000km covers 10 deg at lat=50)
+    # The base ensures they are in the same connected region > threshold (5)
+    v = base + v1 + v2
+
+    clustered = _create_and_process_field(v, lons, lats, threshold=5, eps_km=1000)
+    
+    # Check max_cluster_assign
+    (
+        cluster_max_arr,
+        cluster_max_point,
+        max_pt_dict,
+        num_max_clusters,
+    ) = topology.max_cluster_assign(clustered, "v")
+
+    assert num_max_clusters == 1
+    
+    # The absolute peak is at lon=180, but the centroid should be pulled towards 190
+    centroid_lon = cluster_max_point[0][0]
+    
+    # It must be strictly greater than 180.0
+    assert centroid_lon > 180.0
+    # It must be strictly less than 190.0
+    assert centroid_lon < 190.0
+    
+    # The max value should still be strictly tracked as the peak (around 30)
+    assert cluster_max_arr[0] >= 30.0
 def test_isolated_outlier_far_from_group():
     lons = np.arange(0, 360, 2.5)
     lats = np.arange(20, 80.1, 2.5)

@@ -266,17 +266,44 @@ def min_cluster_assign(min_points, scalar_name):
     cluster_min_arr = np.full(num_min_clusters, 0.0)
     cluster_min_point = np.full((num_min_clusters, 2), 0.0)
     min_scalars = min_points[scalar_name]
+    
+    cluster_lon_sum = np.zeros(num_min_clusters)
+    cluster_lat_sum = np.zeros(num_min_clusters)
+    cluster_weight_sum = np.zeros(num_min_clusters)
+    cluster_base_lon = np.full(num_min_clusters, -1.0)
 
-    # Identify the most negative point in the cluster
     for i in range(num_points_min):
-        x, y = min_points["Longitude"][i], min_points["Latitude"][i]
-        coords = [x, y]
-        min_pt_dict[cluster_id_min[i]].append(coords)
+        cid = cluster_id_min[i]
+        lon = min_points["Longitude"][i]
+        lat = min_points["Latitude"][i]
+        val = min_scalars[i]
+        weight = abs(val)
+        
+        min_pt_dict[cid].append([lon, lat])
 
-        if cluster_min_arr[cluster_id_min[i]] > min_scalars[i]:
-            cluster_min_arr[cluster_id_min[i]] = min_scalars[i]
-            cluster_min_point[cluster_id_min[i]][0] = min_points["Longitude"][i]
-            cluster_min_point[cluster_id_min[i]][1] = min_points["Latitude"][i]
+        if cluster_min_arr[cid] > val:
+            cluster_min_arr[cid] = val
+            
+        if cluster_base_lon[cid] == -1.0:
+            cluster_base_lon[cid] = lon
+            
+        shifted_lon = lon
+        if abs(lon - cluster_base_lon[cid]) > 180:
+            if lon > cluster_base_lon[cid]:
+                shifted_lon -= 360
+            else:
+                shifted_lon += 360
+                
+        cluster_lon_sum[cid] += shifted_lon * weight
+        cluster_lat_sum[cid] += lat * weight
+        cluster_weight_sum[cid] += weight
+
+    for cid in range(num_min_clusters):
+        if cluster_weight_sum[cid] > 0:
+            avg_lon = cluster_lon_sum[cid] / cluster_weight_sum[cid]
+            avg_lat = cluster_lat_sum[cid] / cluster_weight_sum[cid]
+            cluster_min_point[cid][0] = avg_lon % 360
+            cluster_min_point[cid][1] = avg_lat
 
     return (cluster_min_arr, cluster_min_point, min_pt_dict, num_min_clusters)
 
@@ -300,15 +327,43 @@ def max_cluster_assign(max_points, scalar_name):
     cluster_max_arr = np.full(num_max_clusters, 0.0)
     cluster_max_point = np.full((num_max_clusters, 2), 0.0)
     max_scalars = max_points[scalar_name]
+    
+    cluster_lon_sum = np.zeros(num_max_clusters)
+    cluster_lat_sum = np.zeros(num_max_clusters)
+    cluster_weight_sum = np.zeros(num_max_clusters)
+    cluster_base_lon = np.full(num_max_clusters, -1.0)
 
-    # Identify largest point in each cluster
     for i in range(num_points_max):
-        x, y = max_points["Longitude"][i], max_points["Latitude"][i]
-        coords = [x, y]
-        max_pt_dict[cluster_id_max[i]].append(coords)
-        if cluster_max_arr[cluster_id_max[i]] < max_scalars[i]:
-            cluster_max_arr[cluster_id_max[i]] = max_scalars[i]
-            cluster_max_point[cluster_id_max[i]][0] = max_points["Longitude"][i]
-            cluster_max_point[cluster_id_max[i]][1] = max_points["Latitude"][i]
+        cid = cluster_id_max[i]
+        lon = max_points["Longitude"][i]
+        lat = max_points["Latitude"][i]
+        val = max_scalars[i]
+        
+        max_pt_dict[cid].append([lon, lat])
+        
+        if cluster_max_arr[cid] < val:
+            cluster_max_arr[cid] = val
+            
+        if cluster_base_lon[cid] == -1.0:
+            cluster_base_lon[cid] = lon
+            
+        # Shift longitude if it wraps around
+        shifted_lon = lon
+        if abs(lon - cluster_base_lon[cid]) > 180:
+            if lon > cluster_base_lon[cid]:
+                shifted_lon -= 360
+            else:
+                shifted_lon += 360
+                
+        cluster_lon_sum[cid] += shifted_lon * val
+        cluster_lat_sum[cid] += lat * val
+        cluster_weight_sum[cid] += val
+
+    for cid in range(num_max_clusters):
+        if cluster_weight_sum[cid] > 0:
+            avg_lon = cluster_lon_sum[cid] / cluster_weight_sum[cid]
+            avg_lat = cluster_lat_sum[cid] / cluster_weight_sum[cid]
+            cluster_max_point[cid][0] = avg_lon % 360
+            cluster_max_point[cid][1] = avg_lat
 
     return (cluster_max_arr, cluster_max_point, max_pt_dict, num_max_clusters)
