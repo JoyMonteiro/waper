@@ -5,7 +5,7 @@ import numpy as np
 import vtk
 
 RADIUS_SPHERE = 63.71
-RADIUS_EARTH = 6.371e6
+RADIUS_EARTH_KM = 6371.0
 
 
 def get_point_data_label(scalar_name):
@@ -81,13 +81,16 @@ def haversine_distance(lat1, lon1, lat2, lon2):
         math.radians(lat2)
     ) * (math.sin(dlon / 2)) ** 2
     c = 2 * np.arctan2(math.sqrt(a), math.sqrt(1 - a))
-    distance = RADIUS_EARTH * c
+    distance = RADIUS_EARTH_KM * c
 
     return distance
 
 
 def is_to_the_east(lon1, lon2):
-    delta_lon = (lon1 - lon2) % 360
-    if delta_lon > 180:
-        delta_lon -= 360
+    """Return True if lon1 is to the east of lon2, handling wraparound."""
+    delta_lon = lon1 - lon2
+
+    if abs(delta_lon) > 180:
+        delta_lon = -delta_lon
+
     return delta_lon > 0

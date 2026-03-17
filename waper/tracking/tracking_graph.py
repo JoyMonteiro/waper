@@ -37,7 +37,7 @@ def build_tracking_graph(time_step_data, number_steps: int = None) -> Graph:
             lon = 0
             lat = 0
             for rwp_info in time_step_data[time].rwp_info.values():
-                if abs(feature - rwp_info["rwp_id"]) < 1e-2:
+                if feature == rwp_info["rwp_id"]:
                     lon = rwp_info["weighted_longitude"]
                     lat = rwp_info["weighted_latitude"]
 
@@ -77,7 +77,7 @@ def build_tracking_graph(time_step_data, number_steps: int = None) -> Graph:
         lon1, lat1 = tracking_graph.nodes[edge[0]]["coords"]
         lon2, lat2 = tracking_graph.nodes[edge[1]]["coords"]
         distance = haversine_distance(lat1, lon1, lat2, lon2)
-        tracking_graph.edges[edge]["distance"] = distance / 1000
+        tracking_graph.edges[edge]["distance"] = distance
 
     return tracking_graph
 

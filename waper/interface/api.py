@@ -40,6 +40,9 @@ class WaperConfig:
 
     track_pruning_threshold: float
 
+    cluster_eps_km: float = 500.0
+    cluster_min_samples: int = 1
+
     vtk_latitude_label: str = "Latitude"
     vtk_longitude_label: str = "Longitude"
     vtk_region_label: str = "RegionId"
@@ -131,8 +134,8 @@ def _identify_rwps(
         connectivity, config.extrema_threshold, config.scalar_name
     )
 
-    clustered_points = topology.cluster_max(
-        data_with_maxima, connectivity, maxima_points, config.scalar_name
+    clustered_points = topology.cluster_extrema(
+        data_with_maxima, connectivity, maxima_points, config.scalar_name, sign=1, eps_km=config.cluster_eps_km, min_samples=config.cluster_min_samples
     )
 
     (
@@ -174,8 +177,8 @@ def _identify_rwps(
 
     # minima_points = max_min.extract_selection_ids_minima(connectivity, min_point_ids)
 
-    clustered_points = topology.cluster_min(
-        data_with_minima, connectivity, minima_points, config.scalar_name
+    clustered_points = topology.cluster_extrema(
+        data_with_minima, connectivity, minima_points, config.scalar_name, sign=-1, eps_km=config.cluster_eps_km, min_samples=config.cluster_min_samples
     )
 
     (
@@ -211,7 +214,6 @@ def _identify_rwps(
     for index, path in enumerate(time_step_data.identified_rwp_paths):
         (
             polygon,
-            rwp_id,
             sample_points,
             weighted_lon,
             weighted_lat,
@@ -223,6 +225,9 @@ def _identify_rwps(
             config.min_latitude,
             config.max_latitude,
         )
+        
+        rwp_id = index + 1
+        
         time_step_data.rwp_info[tuple(path)] = {
             # "path": path,
             "polygon": polygon,
@@ -451,7 +456,7 @@ class Waper:
             time_step_data = self._time_step_data[node[0]]
 
             for path, rwp_info in time_step_data.rwp_info.items():
-                if abs(rwp_info["rwp_id"] - node[1]) < 1e-2:
+                if rwp_info["rwp_id"] == node[1]:
                     rwp_list.append(([path], time_step_data.pruned_graph))
 
         for path, pruned_graph in rwp_list:

@@ -16,7 +16,7 @@ def _create_and_process_field(v, lons, lats, threshold=5):
     clipped = max_min.clip_dataset(data_with_max, "v", threshold=threshold)
     connectivity = topology.identify_connected_regions(clipped)
     maxima_points = max_min.extract_maxima_points(connectivity, threshold, "v")
-    clustered = topology.cluster_max(data_with_max, connectivity, maxima_points, "v")
+    clustered = topology.cluster_extrema(data_with_max, connectivity, maxima_points, "v", sign=1)
     return clustered
 
 
@@ -75,9 +75,6 @@ def test_two_distant_extrema_different_clusters():
     assert len(clusters) > 1
 
 
-@pytest.mark.xfail(
-    reason="Affinity Propagation assigns outliers incorrectly - to be fixed in Phase 3"
-)
 def test_isolated_outlier_far_from_group():
     lons = np.arange(0, 360, 2.5)
     lats = np.arange(20, 80.1, 2.5)
@@ -96,7 +93,13 @@ def test_isolated_outlier_far_from_group():
 
     clustered = _create_and_process_field(v, lons, lats, threshold=10)
 
-    # This currently fails because AP groups the outlier with the rest
-    # In Phase 3, this test will pass when DBSCAN is used.
     clusters = np.unique(clustered.point_data["Cluster ID"])
-    assert len(clusters) > 1  # It should form more than 1 cluster
+    
+    # DBSCAN shouldn't have assigned -1 to any returned points because we filter them out
+    assert -1 not in clusters
+    
+    # The outlier is far enough away that it should either be filtered as noise,
+    # or placed in its own cluster, separating it from the main group.
+    # The main group has 5 points, outlier is 1. If noise, total points < 6.
+    # If its own cluster, clusters > 1.
+    assert clustered.n_points < 6 or len(clusters) > 1
