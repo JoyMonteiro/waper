@@ -2,12 +2,10 @@ import networkx as nx
 import numpy as np
 from scipy.spatial import cKDTree
 from collections import defaultdict
-from .utils import haversine_distance, is_to_the_east
+from .utils import haversine_distance, is_to_the_east, _longitude_separation
 
 WAPER_MAX_SCALAR_VALUE = 100
 WAPER_MAX_NODE_DISTANCE = 1000
-
-WAPER_MIN_LON_DELTA = 6
 
 
 def compute_association_graph(max_points, min_points, iso_contour, scalar_name):
@@ -222,13 +220,14 @@ def edge_weight(
     return edge_weight
 
 
-def prune_association_graph_edges(assoc_graph, threshold, max_weight):
+def prune_association_graph_edges(assoc_graph, threshold, max_weight, min_longitude_separation=6.0):
     """Remove edges which fall below edge weight thresholds
 
     Args:
         assoc_graph (nx.Graph): current association graph
         threshold (float): weight threshold for pruning
         max_weight (float): maximum likely value for edge weight
+        min_longitude_separation (float): minimum angular distance between extrema
 
     Returns:
         nx.Graph: association graph with low weight edges pruned
@@ -240,13 +239,12 @@ def prune_association_graph_edges(assoc_graph, threshold, max_weight):
     for e in edges:
         start_node = e[0]
         end_node = e[1]
-        
+
         lon_0 = assoc_graph.nodes[start_node]["coords"][0]
         lon_1 = assoc_graph.nodes[end_node]["coords"][0]
-        
-        if abs(lon_0 - lon_1) <= WAPER_MIN_LON_DELTA:
-            continue
-        
+
+        if _longitude_separation(lon_0, lon_1) <= min_longitude_separation:
+            continue        
         if assoc_graph.nodes[start_node]["node_type"] == "max":
             weight = edge_weight(assoc_graph, start_node, end_node)
         else:

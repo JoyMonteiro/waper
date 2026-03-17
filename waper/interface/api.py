@@ -42,6 +42,7 @@ class WaperConfig:
 
     cluster_eps_km: float = 500.0
     cluster_min_samples: int = 1
+    min_longitude_separation: float = 6.0
 
     vtk_latitude_label: str = "Latitude"
     vtk_longitude_label: str = "Longitude"
@@ -204,7 +205,7 @@ def _identify_rwps(
     )
 
     time_step_data.pruned_graph = rwp_graph.prune_association_graph_edges(
-        node_pruned_graph, config.edge_pruning_threshold, config.max_edge_weight
+        node_pruned_graph, config.edge_pruning_threshold, config.max_edge_weight, config.min_longitude_separation
     )
 
     time_step_data.identified_rwp_paths = rwp_graph.get_ranked_paths(

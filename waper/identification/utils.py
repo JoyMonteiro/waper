@@ -94,3 +94,9 @@ def is_to_the_east(lon1, lon2):
         delta_lon = -delta_lon
 
     return delta_lon > 0
+
+
+def _longitude_separation(lon1, lon2):
+    """Compute the shortest angular separation in degrees, handling wraparound."""
+    delta = abs(lon1 - lon2) % 360
+    return min(delta, 360 - delta)
