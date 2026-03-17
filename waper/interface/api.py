@@ -145,7 +145,7 @@ def _identify_rwps(
         num_max_clusters,
     ) = topology.max_cluster_assign(clustered_points, config.scalar_name)
 
-    time_step_data.all_maxima = maxima_points
+    time_step_data.all_maxima = clustered_points
     time_step_data.number_max_clusters = num_max_clusters
     time_step_data.max_cluster_info = max_pt_dict
 
@@ -188,7 +188,7 @@ def _identify_rwps(
         num_min_clusters,
     ) = topology.min_cluster_assign(clustered_points, config.scalar_name)
 
-    time_step_data.all_minima = minima_points
+    time_step_data.all_minima = clustered_points
     time_step_data.number_min_clusters = num_min_clusters
     time_step_data.min_cluster_info = min_pt_dict
 
@@ -196,7 +196,7 @@ def _identify_rwps(
 
     zero_isocontour = time_step_data.vtk_data.contour([0], scalars=config.scalar_name)
     time_step_data.association_graph = rwp_graph.compute_association_graph(
-        maxima_points, minima_points, zero_isocontour, config.scalar_name
+        time_step_data.all_maxima, time_step_data.all_minima, zero_isocontour, config.scalar_name
     )
 
     node_pruned_graph = rwp_graph.prune_association_graph_nodes(

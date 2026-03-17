@@ -160,21 +160,15 @@ def get_track_paths(tracking_graph):
     for path in track_paths:
         path_wt_dict[tuple(path)] = get_path_weight(tracking_graph, path)
 
-    top_paths = list(
-        filter(
-            lambda f: (
-                not any(
-                    [
-                        (  # Condition reduces to "True if path weight is less than reference and both are part of the same path"
-                            path_wt_dict[tuple(f)] < path_wt_dict[tuple(g)]
-                            and len(set(f) & set(g)) != 0
-                        )
-                        for g in track_paths
-                    ]
-                )
-            ),
-            track_paths,
-        )
-    )
+    sorted_paths = sorted(track_paths, key=lambda p: path_wt_dict[tuple(p)], reverse=True)
+
+    top_paths = []
+    used_nodes = set()
+
+    for path in sorted_paths:
+        path_nodes = set(path)
+        if path_nodes.isdisjoint(used_nodes):
+            top_paths.append(path)
+            used_nodes.update(path_nodes)
 
     return top_paths

@@ -1,5 +1,6 @@
 import networkx as nx
 import numpy as np
+from scipy.spatial import cKDTree
 from collections import defaultdict
 from .utils import haversine_distance, is_to_the_east
 
@@ -81,38 +82,18 @@ def compute_association_graph(max_points, min_points, iso_contour, scalar_name):
     contour_points = iso_contour.points
     min_points_array = min_points.points
     max_points_array = max_points.points
+
+    max_tree = cKDTree(max_points_array)
+    min_tree = cKDTree(min_points_array)
+
+    _, max_indices = max_tree.query(contour_points)
+    _, min_indices = min_tree.query(contour_points)
+
     for i in range(num_contour_pts):
-        contour_point = contour_points[i]
-        max_dist = WAPER_MAX_NODE_DISTANCE
-        min_dist = WAPER_MAX_NODE_DISTANCE
-        max_id = -1
-        min_id = -1
-
-        for j in range(num_max_pts):
-            max_point = max_points_array[j]
-            curr_max_id = max_cluster_ids[j]
-            max_dir_vector = [max_point[0] - contour_point[0], max_point[1] - contour_point[1]]
-            # )
-            curr_max_dist = (max_dir_vector[0] ** 2 + max_dir_vector[1] ** 2) ** 0.5
-            if curr_max_dist < max_dist:
-                max_dist = curr_max_dist
-                max_id = curr_max_id
-
-        max_id = int(max_id)
-
-        for j in range(num_min_pts):
-            min_point = min_points_array[j]
-            curr_min_id = min_cluster_ids[j]
-            min_dir_vector = [min_point[0] - contour_point[0], min_point[1] - contour_point[1]]
-            # )
-            curr_min_dist = (min_dir_vector[0] ** 2 + min_dir_vector[1] ** 2) ** 0.5
-            if curr_min_dist < min_dist:
-                min_dist = curr_min_dist
-                min_id = curr_min_id
-
-        min_id = int(min_id)
+        max_id = int(max_cluster_ids[max_indices[i]])
+        min_id = int(min_cluster_ids[min_indices[i]])
         if max_id != -1 and min_id != -1:
-            assoc_set.add((int(max_id), int(min_id)))
+            assoc_set.add((max_id, min_id))
 
     count = 0
 
@@ -128,38 +109,29 @@ def compute_association_graph(max_points, min_points, iso_contour, scalar_name):
         max_centre_spherical = cluster_max_spherical_coord[max_id]
         min_centre_spherical = cluster_min_spherical_coord[min_id]
 
-        if min_id == 0:
-            min_id = 100
+        max_node_id = ("max", max_id)
+        min_node_id = ("min", min_id)
 
         assoc_graph.add_node(
-            max_id,
+            max_node_id,
             coords=max_centre,
             spherical_coords=max_centre_spherical,
             cluster_id=max_id,
             scalar=max_scalar,
+            node_type="max",
             cluster_extrema=cluster_max_dict[max_id],
         )
+        assoc_graph.add_node(
+            min_node_id,
+            coords=min_centre,
+            spherical_coords=min_centre_spherical,
+            cluster_id=min_id,
+            scalar=min_scalar,
+            node_type="min",
+            cluster_extrema=cluster_min_dict[min_id],
+        )
 
-        if min_id == 100:
-            assoc_graph.add_node(
-                -min_id,
-                coords=min_centre,
-                spherical_coords=min_centre_spherical,
-                cluster_id=min_id,
-                scalar=min_scalar,
-                cluster_extrema=cluster_min_dict[0],
-            )
-        else:
-            assoc_graph.add_node(
-                -min_id,
-                coords=min_centre,
-                spherical_coords=min_centre_spherical,
-                cluster_id=min_id,
-                scalar=min_scalar,
-                cluster_extrema=cluster_min_dict[min_id],
-            )
-
-        assoc_graph.add_edge(max_id, -min_id, weight=0)
+        assoc_graph.add_edge(max_node_id, min_node_id, weight=0)
     return assoc_graph
 
 
@@ -180,29 +152,22 @@ def prune_association_graph_nodes(assoc_graph, scalar_threshold):
     for e in edges:
         start_node = e[0]
         end_node = e[1]
-        # min_node = 0
-        min_scalar = 0
-
-        if start_node >= 0:
+        if assoc_graph.nodes[start_node]["node_type"] == "max":
             if (
                 assoc_graph.nodes[start_node]["scalar"]
                 < -assoc_graph.nodes[end_node]["scalar"]
             ):
-                # min_node = start_node
                 min_scalar = assoc_graph.nodes[start_node]["scalar"]
 
             else:
-                # min_node = end_node
                 min_scalar = -assoc_graph.nodes[end_node]["scalar"]
         else:
             if (
                 -assoc_graph.nodes[start_node]["scalar"]
                 < assoc_graph.nodes[end_node]["scalar"]
             ):
-                # min_node = start_node
                 min_scalar = -assoc_graph.nodes[start_node]["scalar"]
             else:
-                # min_node = end_node
                 min_scalar = assoc_graph.nodes[end_node]["scalar"]
 
         if min_scalar >= scalar_threshold and min_scalar <= WAPER_MAX_SCALAR_VALUE:
@@ -212,6 +177,7 @@ def prune_association_graph_nodes(assoc_graph, scalar_threshold):
                 spherical_coords=assoc_graph.nodes[start_node]["spherical_coords"],
                 cluster_id=assoc_graph.nodes[start_node]["cluster_id"],
                 scalar=assoc_graph.nodes[start_node]["scalar"],
+                node_type=assoc_graph.nodes[start_node]["node_type"],
                 cluster_extrema=assoc_graph.nodes[start_node]["cluster_extrema"],
             )
             pruned_graph.add_node(
@@ -220,6 +186,7 @@ def prune_association_graph_nodes(assoc_graph, scalar_threshold):
                 spherical_coords=assoc_graph.nodes[end_node]["spherical_coords"],
                 cluster_id=assoc_graph.nodes[end_node]["cluster_id"],
                 scalar=assoc_graph.nodes[end_node]["scalar"],
+                node_type=assoc_graph.nodes[end_node]["node_type"],
                 cluster_extrema=assoc_graph.nodes[end_node]["cluster_extrema"],
             )
             pruned_graph.add_edge(start_node, end_node)
@@ -242,8 +209,6 @@ def edge_weight(
 
     edge_weight = 0.0
 
-    # if max_scalar > high_value_threshold and min_scalar > high_value_threshold:
-
     curr_dist = haversine_distance(
         assoc_graph.nodes[max_id]["coords"][1],
         assoc_graph.nodes[max_id]["coords"][0],
@@ -251,13 +216,8 @@ def edge_weight(
         assoc_graph.nodes[min_id]["coords"][0],
     )
 
-    edge_weight = (max_scalar - min_scalar) / curr_dist
-
-
-    #             max_pt[0][0], max_pt[0][1], min_pt[0][0], min_pt[0][1]
-    #         )
-
-    #             edge_weight = curr_weight
+    # Ensure we don't divide by zero if centroids overlap exactly
+    edge_weight = (max_scalar - min_scalar) / max(curr_dist, 1e-6)
 
     return edge_weight
 
@@ -287,7 +247,7 @@ def prune_association_graph_edges(assoc_graph, threshold, max_weight):
         if abs(lon_0 - lon_1) <= WAPER_MIN_LON_DELTA:
             continue
         
-        if start_node >= 0:
+        if assoc_graph.nodes[start_node]["node_type"] == "max":
             weight = edge_weight(assoc_graph, start_node, end_node)
         else:
             weight = edge_weight(assoc_graph, end_node, start_node)
@@ -300,6 +260,7 @@ def prune_association_graph_edges(assoc_graph, threshold, max_weight):
                 spherical_coords=assoc_graph.nodes[start_node]["spherical_coords"],
                 cluster_id=assoc_graph.nodes[start_node]["cluster_id"],
                 scalar=assoc_graph.nodes[start_node]["scalar"],
+                node_type=assoc_graph.nodes[start_node]["node_type"],
                 cluster_extrema=assoc_graph.nodes[start_node]["cluster_extrema"],
             )
             pruned_graph.add_node(
@@ -308,6 +269,7 @@ def prune_association_graph_edges(assoc_graph, threshold, max_weight):
                 spherical_coords=assoc_graph.nodes[end_node]["spherical_coords"],
                 cluster_id=assoc_graph.nodes[end_node]["cluster_id"],
                 scalar=assoc_graph.nodes[end_node]["scalar"],
+                node_type=assoc_graph.nodes[end_node]["node_type"],
                 cluster_extrema=assoc_graph.nodes[end_node]["cluster_extrema"],
             )
             pruned_graph.add_edge(start_node, end_node, weight=weight)
@@ -331,15 +293,6 @@ def get_ranked_paths(assoc_graph, max_weight):
 
             if nx.has_path(assoc_graph, source=source, target=sink):
                 for path in nx.all_simple_paths(assoc_graph, source=source, target=sink):
-                    #     if is_to_the_east(
-                    #     ):
-                    
-                    
-                #         max_weight = path_weight
-                  
-                #     # print(source, sink, best_path)
-                #     path_list.append(best_path)
-                
                     path_list.append(path)
                 
 
@@ -352,19 +305,15 @@ def get_ranked_paths(assoc_graph, max_weight):
             curr_wt += assoc_graph[path[i]][path[i + 1]]["weight"]
         path_wt_dict[tuple(path)] = curr_wt
 
-    top_paths = list(
-        filter(
-            lambda f: not any(
-                [
-                    (  # Condition reduces to "True if path weight is less than reference and both are part of the same path"
-                        path_wt_dict[tuple(f)] < path_wt_dict[tuple(g)]
-                        and len(set(f) & set(g)) != 0
-                    )
-                    for g in path_list
-                ]
-            ),
-            path_list,
-        )
-    )
+    sorted_paths = sorted(path_list, key=lambda p: path_wt_dict[tuple(p)], reverse=True)
+
+    top_paths = []
+    used_nodes = set()
+
+    for path in sorted_paths:
+        path_nodes = set(path)
+        if path_nodes.isdisjoint(used_nodes):
+            top_paths.append(path)
+            used_nodes.update(path_nodes)
 
     return top_paths
