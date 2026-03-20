@@ -1,3 +1,5 @@
+import time as time_module
+
 import networkx as nx
 import numpy as np
 import pytest
@@ -90,6 +92,25 @@ def test_tracking_path_extraction(simple_wave_field, default_config):
             assert p[2][0] == 2
 
     assert found_long_path
+
+
+def test_dag_dp_completes_fast():
+    """DAG DP must process 20 timesteps x 5 features in under 1 second."""
+    g = nx.DiGraph()
+    for t in range(20):
+        for f in range(1, 6):
+            g.add_node((t, f), coords=(float(f * 10), 50.0))
+            if t > 0:
+                g.add_edge((t - 1, f), (t, f), weight=0.8, distance=500.0)
+                if f < 5:
+                    g.add_edge((t - 1, f), (t, f + 1), weight=0.3, distance=600.0)
+
+    start = time_module.monotonic()
+    paths = tracking_graph.get_track_paths(g)
+    elapsed = time_module.monotonic() - start
+
+    assert elapsed < 1.0, f"get_track_paths took {elapsed:.2f}s — too slow"
+    assert len(paths) > 0
 
 
 def test_quadtree_pixel_counts():

@@ -114,61 +114,61 @@ def prune_tracking_graph(tracking_graph, threshold) -> Graph:
 
 
 def get_path_weight(track_graph, path):
-
-    curr_wt = 0
-    for i in range(len(path) - 1):
-        curr_wt += track_graph[path[i]][path[i + 1]]["weight"]
-
-    return curr_wt
+    return sum(
+        track_graph[path[i]][path[i + 1]]["weight"]
+        for i in range(len(path) - 1)
+    )
 
 
-def get_track_paths(tracking_graph):
-
-    track_paths = []
-
-    end_nodes = [
-        node
-        for node in tracking_graph.nodes()
-        if tracking_graph.in_degree(node) != 0 and tracking_graph.out_degree(node) == 0
-    ]
-
-    start_nodes = [
-        node
-        for node in tracking_graph.nodes()
-        if tracking_graph.in_degree(node) == 0 and tracking_graph.out_degree(node) > 0
-    ]
-
-    all_combinations = product(start_nodes, end_nodes)
-
-    for start_end in all_combinations:
-        if nx.has_path(tracking_graph, source=start_end[0], target=start_end[1]):
-            best_path = []
-            max_weight = 0
-            for path in nx.all_simple_paths(
-                tracking_graph, source=start_end[0], target=start_end[1]
-            ):
-                curr_weight = get_path_weight(tracking_graph, path)
-                if curr_weight > max_weight:
-                    max_weight = curr_weight
-                    best_path = path
-
-            if len(best_path) > 0:
-                track_paths.append(best_path)
-
-    path_wt_dict = {}
-
-    for path in track_paths:
-        path_wt_dict[tuple(path)] = get_path_weight(tracking_graph, path)
-
-    sorted_paths = sorted(track_paths, key=lambda p: path_wt_dict[tuple(p)], reverse=True)
+def _greedy_select_independent_paths(track_paths, tracking_graph):
+    """Keep highest-weight paths that share no nodes (greedy independent set)."""
+    path_wt = {
+        tuple(p): get_path_weight(tracking_graph, p) for p in track_paths
+    }
+    sorted_paths = sorted(track_paths, key=lambda p: path_wt[tuple(p)], reverse=True)
 
     top_paths = []
     used_nodes = set()
-
     for path in sorted_paths:
         path_nodes = set(path)
         if path_nodes.isdisjoint(used_nodes):
             top_paths.append(path)
             used_nodes.update(path_nodes)
-
     return top_paths
+
+
+def get_track_paths(tracking_graph):
+    """Extract tracks as longest-weight paths in the tracking DAG.
+
+    Uses topological-sort DP: O(V + E) instead of factorial all_simple_paths.
+    """
+    if len(tracking_graph) == 0:
+        return []
+
+    topo_order = list(nx.topological_sort(tracking_graph))
+
+    best_weight = {node: 0.0 for node in topo_order}
+    predecessor = {node: None for node in topo_order}
+
+    for node in topo_order:
+        for succ in tracking_graph.successors(node):
+            edge_wt = tracking_graph[node][succ]["weight"]
+            candidate = best_weight[node] + edge_wt
+            if candidate > best_weight[succ]:
+                best_weight[succ] = candidate
+                predecessor[succ] = node
+
+    end_nodes = [n for n in tracking_graph if tracking_graph.out_degree(n) == 0]
+
+    track_paths = []
+    for end in end_nodes:
+        path = [end]
+        current = end
+        while predecessor[current] is not None:
+            current = predecessor[current]
+            path.append(current)
+        path.reverse()
+        if len(path) > 1:
+            track_paths.append(path)
+
+    return _greedy_select_independent_paths(track_paths, tracking_graph)
