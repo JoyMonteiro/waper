@@ -36,6 +36,7 @@ def test_per_node_hull_not_single_convex(simple_wave_field, default_config):
 
     for path_key, rwp_info in ts_data.rwp_info.items():
         poly = rwp_info["polygon"]
+        assert poly.area > 0, f"RWP polygon has zero area for path {path_key}"
         assert not poly.equals(poly.convex_hull), (
             "Polygon is convex — per-node union was not applied"
         )
@@ -48,4 +49,7 @@ def test_per_node_hull_smaller_than_convex(simple_wave_field, default_config):
 
     for path_key, rwp_info in ts_data.rwp_info.items():
         poly = rwp_info["polygon"]
-        assert poly.area < poly.convex_hull.area
+        assert poly.area > 0, f"RWP polygon has zero area for path {path_key}"
+        assert poly.area < poly.convex_hull.area, (
+            f"Per-node union area ({poly.area}) is not smaller than convex hull ({poly.convex_hull.area})"
+        )
