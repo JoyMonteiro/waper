@@ -32,6 +32,7 @@ def default_config():
 def test_per_node_hull_not_single_convex(simple_wave_field, default_config):
     """Per-node hull must not be a single convex hull over all points."""
     ts_data = _identify_rwps(simple_wave_field, default_config)
+    assert len(ts_data.rwp_info) > 0, "No RWPs identified — check the wave field fixture"
 
     for path_key, rwp_info in ts_data.rwp_info.items():
         poly = rwp_info["polygon"]
@@ -43,6 +44,7 @@ def test_per_node_hull_not_single_convex(simple_wave_field, default_config):
 def test_per_node_hull_smaller_than_convex(simple_wave_field, default_config):
     """Per-node hull area must be strictly smaller than single convex hull."""
     ts_data = _identify_rwps(simple_wave_field, default_config)
+    assert len(ts_data.rwp_info) > 0, "No RWPs identified — check the wave field fixture"
 
     for path_key, rwp_info in ts_data.rwp_info.items():
         poly = rwp_info["polygon"]
