@@ -45,33 +45,37 @@ def build_tracking_graph(time_step_data, number_steps: int = None) -> Graph:
                 logger.warning("Feature %s has no matching rwp_info", feature)
 
             tracking_graph.add_node((time, feature), coords=(lon, lat))
-            if time > 0:
-                edge_list = list(
-                    product(
-                        time_step_data[time - 1].raster_features,
-                        time_step_data[time].raster_features,
-                    )
-                )
-                merge_graph = merge(
-                    time_step_data[time].quadtree, time_step_data[time - 1].quadtree
-                )
-                merge_feature_size = compute_size_features(merge_graph)
-                prev_feature_size = compute_size_features(
-                    time_step_data[time - 1].quadtree
-                )
-                curr_feature_size = compute_size_features(time_step_data[time].quadtree)
 
-                for edge in edge_list:
-                    if (edge in merge_feature_size) or (
-                        edge[::-1] in merge_feature_size
-                    ):
-                        weight = merge_feature_size[edge] / max(
-                            prev_feature_size[tuple([edge[0]])],
-                            curr_feature_size[tuple([edge[1]])],
-                        )
-                        tracking_graph.add_edge(
-                            (time - 1, edge[0]), (time, edge[1]), weight=weight
-                        )
+        if time > 0:
+            prev_features = set(time_step_data[time - 1].raster_features) - {0}
+            curr_features = set(time_step_data[time].raster_features) - {0}
+
+            if not prev_features or not curr_features:
+                continue
+
+            merge_graph = merge(
+                time_step_data[time].quadtree,
+                time_step_data[time - 1].quadtree,
+            )
+            merge_feature_size = compute_size_features(merge_graph)
+            prev_feature_size = compute_size_features(
+                time_step_data[time - 1].quadtree
+            )
+            curr_feature_size = compute_size_features(time_step_data[time].quadtree)
+
+            edge_list = list(product(prev_features, curr_features))
+
+            for edge in edge_list:
+                if (edge in merge_feature_size) or (
+                    edge[::-1] in merge_feature_size
+                ):
+                    weight = merge_feature_size[edge] / max(
+                        prev_feature_size[tuple([edge[0]])],
+                        curr_feature_size[tuple([edge[1]])],
+                    )
+                    tracking_graph.add_edge(
+                        (time - 1, edge[0]), (time, edge[1]), weight=weight
+                    )
 
     for edge in tracking_graph.edges:
         lon1, lat1 = tracking_graph.nodes[edge[0]]["coords"]

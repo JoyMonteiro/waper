@@ -1,4 +1,5 @@
 import time as time_module
+from unittest.mock import patch
 
 import networkx as nx
 import numpy as np
@@ -6,6 +7,7 @@ import pytest
 
 from waper.interface.api import WaperConfig, _identify_rwps
 from waper.tracking import tracking_graph
+from waper.tracking import quadtree as qt_module
 from waper.tracking.quadtree import compute_size_features, create_quadtree
 from waper.tracking.rwp_polygon import WAPER_IMAGE_SIZE
 
@@ -125,3 +127,27 @@ def test_quadtree_pixel_counts():
 
     assert sizes[(1,)] == 100
     assert sizes[(2,)] == 400
+
+
+def test_merge_called_once_per_timestep_pair(simple_wave_field, default_config):
+    """merge() must be called exactly (number_steps - 1) times, not once per feature."""
+    ts_data = _identify_rwps(simple_wave_field, default_config)
+    ts_list = [ts_data, ts_data, ts_data]  # 3 timesteps → 2 pairs
+
+    with patch.object(tracking_graph, "merge", wraps=qt_module.merge) as mock_merge:
+        tracking_graph.build_tracking_graph(ts_list, number_steps=3)
+        assert mock_merge.call_count == 2, (
+            f"Expected merge() called 2 times (once per timestep pair), "
+            f"got {mock_merge.call_count}"
+        )
+
+
+def test_feature_zero_not_in_edges(simple_wave_field, default_config):
+    """Feature 0 (background) must never appear as an endpoint in tracking graph edges."""
+    ts_data = _identify_rwps(simple_wave_field, default_config)
+    ts_list = [ts_data, ts_data]
+
+    track_g = tracking_graph.build_tracking_graph(ts_list, 2)
+    for u, v in track_g.edges():
+        assert u[1] != 0, f"Feature 0 found as source in edge {u} -> {v}"
+        assert v[1] != 0, f"Feature 0 found as target in edge {u} -> {v}"
