@@ -45,6 +45,7 @@ class WaperConfig:
     cluster_xi: float = 0.05
     min_longitude_separation: float = 6.0
     hull_method: str = "per_node"  # "per_node" | "convex" | "concave"
+    hemisphere: str = "north"  # "north" | "south"
 
     vtk_latitude_label: str = "Latitude"
     vtk_longitude_label: str = "Longitude"
@@ -220,6 +221,7 @@ def _identify_rwps(
             config.min_latitude,
             config.max_latitude,
             hull_method=config.hull_method,
+            hemisphere=config.hemisphere,
         )
         
         rwp_id = index + 1
@@ -245,7 +247,7 @@ def _identify_rwps(
     if len(list_polygons) == 0:
         logger.warning("No RWPs found at this timestep. Consider adjusting thresholds.")
 
-    time_step_data.raster_data = rwp_polygon.rasterize_all_rwps(list_polygons)
+    time_step_data.raster_data = rwp_polygon.rasterize_all_rwps(list_polygons, hemisphere=config.hemisphere)
 
     if time_step_data.raster_data is None:
         time_step_data.raster_features = {0}

@@ -129,3 +129,26 @@ def date_line_wave_field():
         name="v",
     )
     return da
+
+
+@pytest.fixture
+def southern_hemisphere_wave_field():
+    """A synthetic wave field in the Southern Hemisphere (lats -80 to -20)."""
+    lons = np.arange(0, 360, 2.5)
+    lats = np.arange(-80, -19.9, 2.5)
+    lon2d, lat2d = np.meshgrid(lons, lats)
+
+    k = 2 * np.pi * 4 / 360
+    envelope = (
+        30
+        * np.exp(-((lon2d - 202.5) ** 2) / (2 * 90**2))
+        * np.exp(-((lat2d + 50) ** 2) / (2 * 10**2))
+    )
+    v = envelope * np.sin(k * lon2d)
+
+    return xr.DataArray(
+        v,
+        dims=["latitude", "longitude"],
+        coords={"latitude": lats, "longitude": lons},
+        name="v",
+    )

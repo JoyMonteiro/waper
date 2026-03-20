@@ -16,28 +16,50 @@ WAPER_IMAGE_SIZE = 512
 WAPER_CLUSTER_WIDTH = 60
 WAPER_NUM_PIXELS = WAPER_IMAGE_SIZE * WAPER_IMAGE_SIZE
 
-WAPER_X_BOUNDS = (12712833.087371958, -12712833.087371958)
-WAPER_Y_BOUNDS = (12710532.145483922, -12713600.098850505)
+# NH constants (kept for any external code that imports them directly)
+_NH_X_BOUNDS = (12712833.087371958, -12712833.087371958)
+_NH_Y_BOUNDS = (12710532.145483922, -12713600.098850505)
+# SH: x-range is symmetric; y-range is sign-flipped relative to NH
+_SH_X_BOUNDS = (12712833.087371958, -12712833.087371958)
+_SH_Y_BOUNDS = (-12710532.145483922, 12713600.098850505)
 
-WAPER_X_RES = (WAPER_X_BOUNDS[0] - WAPER_X_BOUNDS[1]) / WAPER_IMAGE_SIZE
-WAPER_Y_RES = (WAPER_Y_BOUNDS[0] - WAPER_Y_BOUNDS[1]) / WAPER_IMAGE_SIZE
-
-WAPER_RASTER_TRANSFORM = Affine.translation(
-    WAPER_X_BOUNDS[1] - WAPER_X_RES / 2, WAPER_Y_BOUNDS[1] - WAPER_Y_RES / 2
-) * Affine.scale(WAPER_X_RES, WAPER_Y_RES)
+WAPER_X_BOUNDS = _NH_X_BOUNDS  # backward-compat alias
+WAPER_Y_BOUNDS = _NH_Y_BOUNDS  # backward-compat alias
 
 
-# TODO this must handle both north and south poles
+def _get_bounds(hemisphere):
+    if hemisphere == "south":
+        return _SH_X_BOUNDS, _SH_Y_BOUNDS
+    return _NH_X_BOUNDS, _NH_Y_BOUNDS
+
+
+def _get_raster_transform(hemisphere="north"):
+    x_bounds, y_bounds = _get_bounds(hemisphere)
+    x_res = (x_bounds[0] - x_bounds[1]) / WAPER_IMAGE_SIZE
+    y_res = (y_bounds[0] - y_bounds[1]) / WAPER_IMAGE_SIZE
+    return (
+        Affine.translation(x_bounds[1] - x_res / 2, y_bounds[1] - y_res / 2)
+        * Affine.scale(x_res, y_res)
+    )
+
+
+# Keep for any code that uses the module-level transform constant (NH only)
+WAPER_RASTER_TRANSFORM = _get_raster_transform("north")
+
+
 def transform_to_stereographic(input_xs, input_ys, hemisphere="north", inverse=False):
-
-    from_crs = pyproj.crs.CRS(4326)  # standard lat-lon
-    to_crs = pyproj.crs.CRS(
-        "+proj=stere +lat_0=90 +lon_0=0"
-    )  # north pole stereographic
-    if inverse:
-        transformer = Transformer.from_crs(to_crs, from_crs, always_xy="True")
+    from_crs = pyproj.crs.CRS(4326)
+    if hemisphere == "north":
+        to_crs = pyproj.crs.CRS("+proj=stere +lat_0=90 +lon_0=0")
+    elif hemisphere == "south":
+        to_crs = pyproj.crs.CRS("+proj=stere +lat_0=-90 +lon_0=0")
     else:
-        transformer = Transformer.from_crs(from_crs, to_crs, always_xy="True")
+        raise ValueError(f"hemisphere must be 'north' or 'south', got '{hemisphere}'")
+
+    if inverse:
+        transformer = Transformer.from_crs(to_crs, from_crs, always_xy=True)
+    else:
+        transformer = Transformer.from_crs(from_crs, to_crs, always_xy=True)
 
     try:
         return transformer.transform(input_xs, input_ys, errcheck=True)
@@ -196,11 +218,12 @@ def get_polygon_for_rwp_path(
     )
 
 
-def rasterize_all_rwps(polygon_list):
+def rasterize_all_rwps(polygon_list, hemisphere="north"):
     """Get a rasterized image containing all rwp polygons
 
     Args:
         polygon_list (list): list of tuples of rwp polygons and rwp id
+        hemisphere (str): "north" | "south"
 
     Returns:
         np.ndarray: raster image of all polygons
@@ -212,5 +235,5 @@ def rasterize_all_rwps(polygon_list):
         ((g, i) for g, i in polygon_list),
         out_shape=(WAPER_IMAGE_SIZE, WAPER_IMAGE_SIZE),
         all_touched=True,
-        transform=WAPER_RASTER_TRANSFORM,
+        transform=_get_raster_transform(hemisphere),
     )

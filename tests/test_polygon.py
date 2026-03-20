@@ -53,3 +53,32 @@ def test_per_node_hull_smaller_than_convex(simple_wave_field, default_config):
         assert poly.area < poly.convex_hull.area, (
             f"Per-node union area ({poly.area}) is not smaller than convex hull ({poly.convex_hull.area})"
         )
+
+
+def test_southern_hemisphere_no_crash(southern_hemisphere_wave_field):
+    """Running the full pipeline on a SH field must not crash."""
+    config = WaperConfig(
+        debug=False,
+        scalar_name="v",
+        latitude_label="latitude",
+        longitude_label="longitude",
+        time_label="time",
+        clip_value=2,
+        extrema_threshold=10,
+        max_latitude=-20,
+        min_latitude=-80,
+        node_pruning_threshold=15,
+        edge_pruning_threshold=3e-5,
+        track_pruning_threshold=0.3,
+        max_edge_weight=1,
+        hemisphere="south",
+    )
+    ts_data = _identify_rwps(southern_hemisphere_wave_field, config)
+    assert ts_data is not None
+
+
+def test_northern_hemisphere_unchanged(simple_wave_field, default_config):
+    """Default NH behaviour must be unaffected after hemisphere refactor."""
+    ts_data = _identify_rwps(simple_wave_field, default_config)
+    assert ts_data is not None
+    assert len(ts_data.rwp_info) > 0
