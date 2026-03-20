@@ -4,7 +4,6 @@ import xarray as xr
 from waper.interface.api import Waper
 
 
-@pytest.mark.xfail(reason="Fails due to Phase 2/3 algorithmic bugs")
 def test_full_pipeline_synthetic(two_timestep_field):
     # Waper expects a dataset with time, lat, lon
     ds = xr.Dataset({"v": two_timestep_field})

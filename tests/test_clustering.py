@@ -5,7 +5,7 @@ import xarray as xr
 from waper.identification import max_min, topology
 
 
-def _create_and_process_field(v, lons, lats, threshold=5, eps_km=500):
+def _create_and_process_field(v, lons, lats, threshold=5, max_eps_km=1500, xi=0.05):
     da = xr.DataArray(
         v,
         dims=["latitude", "longitude"],
@@ -16,7 +16,10 @@ def _create_and_process_field(v, lons, lats, threshold=5, eps_km=500):
     clipped = max_min.clip_dataset(data_with_max, "v", threshold=threshold)
     connectivity = topology.identify_connected_regions(clipped)
     maxima_points = max_min.extract_maxima_points(connectivity, threshold, "v")
-    clustered = topology.cluster_extrema(data_with_max, connectivity, maxima_points, "v", sign=1, eps_km=eps_km)
+    clustered = topology.cluster_extrema(
+        data_with_max, connectivity, maxima_points, "v",
+        sign=1, max_eps_km=max_eps_km, xi=xi,
+    )
     return clustered
 
 
@@ -69,8 +72,8 @@ def test_two_distant_extrema_different_clusters():
     clustered = _create_and_process_field(v, lons, lats, threshold=5)
     # At least two maxima
     assert clustered.n_points >= 2
-    # Find the cluster IDs of the two main peaks
-    # The peaks should have different cluster IDs
+    # OPTICS labels distant points as noise, which get reassigned as
+    # singleton clusters — so they end up in different clusters.
     clusters = np.unique(clustered.point_data["Cluster ID"])
     assert len(clusters) > 1
 
@@ -91,7 +94,7 @@ def test_centroid_representative():
     # The base ensures they are in the same connected region > threshold (5)
     v = base + v1 + v2
 
-    clustered = _create_and_process_field(v, lons, lats, threshold=5, eps_km=1000)
+    clustered = _create_and_process_field(v, lons, lats, threshold=5, max_eps_km=1500)
     
     # Check max_cluster_assign
     (
@@ -133,11 +136,8 @@ def test_isolated_outlier_far_from_group():
 
     clusters = np.unique(clustered.point_data["Cluster ID"])
     
-    # DBSCAN shouldn't have assigned -1 to any returned points because we filter them out
+    # No noise labels should remain — noise points are reassigned as singleton clusters
     assert -1 not in clusters
-    
-    # The outlier is far enough away that it should either be filtered as noise,
-    # or placed in its own cluster, separating it from the main group.
-    # The main group has 5 points, outlier is 1. If noise, total points < 6.
-    # If its own cluster, clusters > 1.
-    assert clustered.n_points < 6 or len(clusters) > 1
+
+    # The outlier should be in its own cluster, separate from the main group
+    assert len(clusters) > 1

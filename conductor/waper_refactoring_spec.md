@@ -1025,6 +1025,43 @@ This will be superseded by Task 5.2 which replaces VTK Dijkstra with scipy spars
 
 ---
 
+### Task 3.7 — Replace DBSCAN with OPTICS for Multi-Scale Clustering
+
+**Problem:** DBSCAN with a fixed `eps_km` applies a single density scale globally. Atmospheric wavelengths vary between timesteps, between different RWPs in the same timestep, and seasonally. A fixed radius either merges distinct wave components (eps too large) or fragments large-scale ones (eps too small). With `min_samples=1`, DBSCAN reduces to single-linkage clustering with a hard cutoff, offering no density-based separation between close but distinct features.
+
+OPTICS (Ordering Points To Identify the Clustering Structure) computes a reachability ordering that discovers clusters at varying density scales without committing to a single `eps`.
+
+**Files edited:**
+- `waper/identification/topology.py`
+- `waper/interface/api.py`
+
+**Changes made:**
+
+1. In `topology.py`, replaced `DBSCAN` with `OPTICS` in `cluster_extrema`:
+   - `max_eps_km=1500.0` replaces `eps_km=500.0`
+   - Added `xi=0.05` parameter for cluster boundary detection
+   - Noise filtering (label `-1`) preserved
+
+2. In `api.py`, updated `WaperConfig`:
+   - `cluster_max_eps_km: float = 1500.0` replaces `cluster_eps_km: float = 500.0`
+   - Added `cluster_xi: float = 0.05`
+
+**Remaining investigation (requires real data):**
+
+The implementation is complete, but the default parameters (`max_eps_km`, `xi`, `min_samples`) need tuning on real data. Follow the procedure in `conductor/clustering_investigation_plan.md`:
+
+1. Run on 3–5 known synoptic events and verify results are reasonable.
+2. If `min_samples=1` produces a flat reachability plot, test `min_samples=2` with a slightly lowered `extrema_threshold`.
+3. Run the parameter sensitivity analysis (Section 3 of Pandey et al. 2020) to verify stability.
+
+**Definition of Done:**
+- [x] OPTICS implementation complete, parameters exposed in `WaperConfig`.
+- [x] Integration test passes.
+- [ ] Parameters tuned on real data failure cases.
+- [ ] Parameter sensitivity analysis shows stable results.
+
+---
+
 ## Phase 4: Algorithmic Improvements — Tracking
 
 ### Task 4.1 — Use Concave Hull (Alpha Shape) Instead of Convex Hull

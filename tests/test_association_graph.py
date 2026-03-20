@@ -24,20 +24,19 @@ def default_config():
     )
 
 
-@pytest.mark.xfail(reason="Phase 2.2: Node ID Collision")
 def test_alternating_crests_troughs_connected(simple_wave_field, default_config):
     # simple_wave_field has 3 crests and 2 troughs
-    # The association graph connects max nodes (positive IDs) to min nodes (negative IDs)
+    # The association graph connects max nodes to min nodes (tuple-based IDs)
     ts_data = _identify_rwps(simple_wave_field, default_config)
     G = ts_data.association_graph
 
     assert len(G.nodes) > 0
-    # Check it is bipartite: edges only connect positive to negative
+    # Check it is bipartite: edges only connect max to min nodes
     for u, v in G.edges():
-        assert (u > 0 and v < 0) or (u < 0 and v > 0)
+        types = {u[0], v[0]}
+        assert types == {"max", "min"}
 
 
-@pytest.mark.xfail(reason="Phase 2.1: empty dataset causes KeyError")
 def test_isolated_max_no_adjacent_min(single_maximum_field, default_config):
     # Field only has one positive bump, no minima above the threshold
     ts_data = _identify_rwps(single_maximum_field, default_config)
@@ -104,9 +103,6 @@ def test_edge_pruning_removes_low_gradient(simple_wave_field):
         assert data["weight"] >= 0.5
 
 
-@pytest.mark.xfail(
-    reason="Date line wrapping association may have bugs to fix in Phase 3"
-)
 def test_date_line_association(date_line_wave_field, default_config):
     ts_data = _identify_rwps(date_line_wave_field, default_config)
     G = ts_data.association_graph

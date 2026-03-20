@@ -40,11 +40,12 @@ def transform_to_stereographic(input_xs, input_ys, inverse=False):
 
     try:
         return transformer.transform(input_xs, input_ys, errcheck=True)
-    except:
+    except Exception as e:
         logger.error(
-            "Stereographic transform failed for xs=%s, ys=%s", input_xs, input_ys
+            "Stereographic transform failed for xs=%s, ys=%s: %s",
+            input_xs, input_ys, e,
         )
-        raise ValueError()
+        raise ValueError(f"Stereographic transform failed: {e}") from e
 
 
 def get_consistent_longitudes(longitude_array, min_lon):
@@ -55,16 +56,10 @@ def get_consistent_longitudes(longitude_array, min_lon):
     """
 
     final_array = np.array(longitude_array)
-    # print(np.max(longitude_array), np.min(longitude_array))
     if (np.max(longitude_array) - np.min(longitude_array)) > WAPER_CLUSTER_WIDTH:
-        # print("Inconsistent, fixing")
         for i in range(len(final_array)):
-            # print(final_array[i])
             if final_array[i] < min_lon:
-                # print("*" * 10)
                 final_array[i] += 360
-
-        # final_array[np.where(final_array < min_lon)] += 360
 
     return list(final_array)
 
@@ -102,14 +97,6 @@ def get_region_points_and_values(
     values = clipped_region.point_data[scalar_name][
         clipped_region.point_data["RegionId"] == region_id_node
     ]
-
-    # node_latitude = assoc_graph.nodes[node]["coords"][1]
-
-    # #TODO 3 should be a paramter
-    # valid_region = np.logical_and(lats >= node_latitude-3, lats <= node_latitude+3)
-    # lons = lons[valid_region]
-    # lats = lats[valid_region]
-    # values = values[valid_region]
 
     return lons, lats, values
 
@@ -154,9 +141,8 @@ def get_polygon_for_rwp_path(
     list_lats = []
     list_values = []
 
-    # min_lon = 360
     for node in path:
-        if node > 0:
+        if node[0] == "max":
             out = get_region_points_and_values(
                 assoc_graph, node, max_clipped_region, clip_threshold, scalar_name
             )
@@ -170,19 +156,9 @@ def get_polygon_for_rwp_path(
                 lats = lats[valid_region]
                 values = values[valid_region]
 
-                # if min_lon > np.min(lons):  # store location of most westward cluster.
-                #     min_lon = np.min(lons)
-
-                # lons = get_consistent_longitudes(lons, min_lon)
                 list_lons.extend(lons)
                 list_lats.extend(lats)
                 list_values.extend(values)
-
-                # lons = lons[::WAPER_SUBSAMPLE]
-                # lats = lats[::WAPER_SUBSAMPLE]
-                # list_rwp_points.extend(list(zip(lons, lats)))
-            else:
-                pass
         else:
             out = get_region_points_and_values(
                 assoc_graph, node, min_clipped_region, clip_threshold, scalar_name
@@ -197,22 +173,9 @@ def get_polygon_for_rwp_path(
                 lats = lats[valid_region]
                 values = values[valid_region]
 
-                # if min_lon > np.min(lons):  # store location of most westward cluster.
-                #     min_lon = np.min(lons)
-
-                # lons = get_consistent_longitudes(lons, min_lon)
                 list_lons.extend(lons)
                 list_lats.extend(lats)
                 list_values.extend(values)
-
-                # lons = lons[::WAPER_SUBSAMPLE]
-                # lats = lats[::WAPER_SUBSAMPLE]
-                # list_rwp_points.extend(list(zip(lons, lats)))
-
-            else:
-                pass
-
-    polygon_id = round(path_max, 2)
 
     xs, ys = transform_to_stereographic(list_lons, list_lats)
 
@@ -229,7 +192,6 @@ def get_polygon_for_rwp_path(
 
     return (
         rwp_poly,
-        polygon_id,
         list_rwp_points,
         weighted_longitude,
         weighted_latitude,

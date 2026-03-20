@@ -27,7 +27,6 @@ def default_config():
     )
 
 
-@pytest.mark.xfail(reason="Phase 2/4 tracking bugs")
 def test_identical_timesteps_full_overlap(simple_wave_field, default_config):
     ts_data = _identify_rwps(simple_wave_field, default_config)
     ts_list = [ts_data, ts_data]
@@ -40,7 +39,6 @@ def test_identical_timesteps_full_overlap(simple_wave_field, default_config):
         assert pytest.approx(data["weight"], 0.01) == 1.0
 
 
-@pytest.mark.xfail(reason="Phase 2/4 tracking bugs")
 def test_shifted_field_partial_overlap(two_timestep_field, default_config):
     ts_data_0 = _identify_rwps(two_timestep_field.isel(time=0), default_config)
     ts_data_1 = _identify_rwps(two_timestep_field.isel(time=1), default_config)
@@ -57,7 +55,6 @@ def test_shifted_field_partial_overlap(two_timestep_field, default_config):
     assert edges_found
 
 
-@pytest.mark.xfail(reason="Phase 2/4 tracking bugs")
 def test_no_overlap_no_edge(single_maximum_field, default_config):
     ts_data_0 = _identify_rwps(single_maximum_field, default_config)
 
@@ -77,7 +74,6 @@ def test_no_overlap_no_edge(single_maximum_field, default_config):
     assert len(track_g.edges) == 0
 
 
-@pytest.mark.xfail(reason="Phase 2/4 tracking bugs")
 def test_tracking_path_extraction(simple_wave_field, default_config):
     ts_data = _identify_rwps(simple_wave_field, default_config)
     ts_list = [ts_data, ts_data, ts_data]

@@ -81,14 +81,6 @@ def _plot_clusters(
         out[vtk_lon_label], out[vtk_lat_label], out[vtk_region_label]
     ):
 
-        # ax.scatter(
-        #     lon,
-        #     lat,
-        #     color=plt.cm.tab20.colors[region_id % 20],
-        #     transform=ccrs.PlateCarree(central_longitude=180),
-        #     zorder=10,
-        # )
-
         ax.annotate(
             str(region_id + 1),
             (lon, lat),
@@ -100,15 +92,6 @@ def _plot_clusters(
     for lon, lat, region_id in zip(
         out[vtk_lon_label], out[vtk_lat_label], out[vtk_region_label]
     ):
-
-        # ax.scatter(
-        #     lon,
-        #     lat,
-        #     color=plt.cm.tab20.colors[region_id % 20],
-        #     marker="*",
-        #     transform=ccrs.PlateCarree(central_longitude=180),
-        #     zorder=10,
-        # )
 
         ax.annotate(
             str(-region_id - 1),
@@ -130,13 +113,6 @@ def _plot_clusters(
     for cluster_id, points in max_pt_dict.items():
 
         for point in points:
-            # ax.scatter(
-            #     point[0],
-            #     point[1],
-            #     color=plt.cm.tab20.colors[int(cluster_id) % 20],
-            #     transform=ccrs.PlateCarree(central_longitude=180),
-            #     zorder=10,
-            # )
             ax.annotate(
                 str(cluster_id),
                 (point[0], point[1]),
@@ -147,16 +123,6 @@ def _plot_clusters(
     for cluster_id, points in min_pt_dict.items():
 
         for point in points:
-            # ax.scatter(
-            #     point[0],
-            #     point[1],
-            #     marker="*",
-            #     color=plt.cm.tab20.colors[int(cluster_id) % 20],
-            #     transform=ccrs.PlateCarree(central_longitude=180),
-            #     zorder=10,
-            # )
-            if cluster_id == 0:
-                cluster_id = 100
             ax.annotate(
                 str(-cluster_id),
                 (point[0], point[1]),
@@ -258,9 +224,7 @@ def _plot_rwp_paths(rwp_graph, paths, scalar_data=None, ax=None):
     for index, path in enumerate(paths):
         for node in path:
             coords = rwp_graph.nodes[node]["coords"]
-            color = 'r'
-            if node < 0:
-                color = 'b'
+            color = 'r' if node[0] == 'max' else 'b'
             
             ax.scatter(coords[0], coords[1], color=color, transform=ccrs.PlateCarree())
 
@@ -373,6 +337,5 @@ def _plot_raster(raster_data):
         alpha=0.7,
     )
 
-    # ax.set_global()
     plt.tight_layout()
     return ax

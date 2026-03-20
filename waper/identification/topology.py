@@ -17,10 +17,11 @@ def cluster_extrema(
     extrema_points,
     scalar_name,
     sign,
-    eps_km=500,
-    min_samples=1,
+    max_eps_km=1500,
+    min_samples=2,
+    xi=0.05,
 ):
-    """Cluster extrema (maxima or minima) in the scalar field using DBSCAN.
+    """Cluster extrema (maxima or minima) in the scalar field using OPTICS.
 
     Args:
         base_field (object): vtk object containing the unclipped scalar field data
@@ -28,8 +29,9 @@ def cluster_extrema(
         extrema_points (object): vtk object containing the extrema
         scalar_name (string): name of the variable
         sign (int): +1 for maxima, -1 for minima
-        eps_km (float): DBSCAN clustering radius in km
-        min_samples (int): DBSCAN minimum cluster size
+        max_eps_km (float): OPTICS maximum neighborhood radius in km
+        min_samples (int): OPTICS minimum cluster size
+        xi (float): OPTICS steepness threshold for cluster boundary detection
 
     Returns:
         object: extrema points with cluster IDs (noise points discarded)
@@ -161,59 +163,39 @@ def cluster_extrema(
                 new_dist[i][j] = dist_matrix[region_array[k][i]][region_array[k][j]]
                 new_dist[j][i] = new_dist[i][j]
 
-        # Use DBSCAN
-        # Note: the dist_matrix isn't in true km yet until Task 3.6, but we apply eps_km here
-        # Assuming eps_km mapping is handled outside or will be fixed in Task 3.6
-        dbscan = cluster.DBSCAN(
-            eps=eps_km, min_samples=min_samples, metric="precomputed"
+        optics = cluster.OPTICS(
+            max_eps=max_eps_km,
+            min_samples=min_samples,
+            xi=xi,
+            metric="precomputed",
         )
-        labels = dbscan.fit_predict(new_dist)
+        labels = optics.fit_predict(new_dist)
         
         for i in range(num_cluster):
             if labels[i] != -1:
                 cluster_assign[region_array[k][i]] = labels[i] + prev_cluster_id
-                
+
         if np.max(labels) >= 0:
             prev_cluster_id += np.max(labels) + 1
 
-    # Filter out noise points (-1)
-    valid_indices = np.where(cluster_assign != -1)[0]
-    num_valid = len(valid_indices)
+    # Reassign noise points (-1) as singleton clusters.
+    # These are extrema that passed the amplitude threshold but weren't part
+    # of any dense group — they represent isolated wave components.
+    for i in range(num_points):
+        if cluster_assign[i] == -1:
+            cluster_assign[i] = prev_cluster_id
+            prev_cluster_id += 1
 
     cluster_id = vtk.vtkIntArray()
     cluster_id.SetNumberOfComponents(1)
-    cluster_id.SetNumberOfTuples(num_valid)
+    cluster_id.SetNumberOfTuples(num_points)
     cluster_id.SetName("Cluster ID")
 
-    valid_points = vtk.vtkUnstructuredGrid()
-    points = vtk.vtkPoints()
-    
-    # Need to extract only the valid points
-    extract = vtk.vtkExtractSelection()
-    extract.SetInputData(extrema_points)
-    
-    selectionNode = vtk.vtkSelectionNode()
-    selectionNode.SetFieldType(vtk.vtkSelectionNode.POINT)
-    selectionNode.SetContentType(vtk.vtkSelectionNode.INDICES)
-    
-    idArray = vtk.vtkIdTypeArray()
-    for idx in valid_indices:
-        idArray.InsertNextValue(idx)
-        
-    selectionNode.SetSelectionList(idArray)
-    selection = vtk.vtkSelection()
-    selection.AddNode(selectionNode)
-    
-    extract.SetInputData(1, selection)
-    extract.Update()
-    
-    filtered_extrema = extract.GetOutput()
-    
-    for i, original_idx in enumerate(valid_indices):
-        cluster_id.SetTuple1(i, cluster_assign[original_idx])
-        
-    filtered_extrema.GetPointData().AddArray(cluster_id)
-    return pv.wrap(filtered_extrema)
+    for i in range(num_points):
+        cluster_id.SetTuple1(i, cluster_assign[i])
+
+    extrema_points.GetPointData().AddArray(cluster_id)
+    return pv.wrap(extrema_points)
 
 
 def identify_connected_regions(dataset):

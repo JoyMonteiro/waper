@@ -40,8 +40,9 @@ class WaperConfig:
 
     track_pruning_threshold: float
 
-    cluster_eps_km: float = 500.0
-    cluster_min_samples: int = 1
+    cluster_max_eps_km: float = 1500.0
+    cluster_min_samples: int = 2
+    cluster_xi: float = 0.05
     min_longitude_separation: float = 6.0
 
     vtk_latitude_label: str = "Latitude"
@@ -123,20 +124,13 @@ def _identify_rwps(
 
     connectivity = topology.identify_connected_regions(clipped_data_with_maxima)
 
-    # max_point_ids = max_min.extract_position_ids_maxima(
-    #     connectivity, config.extrema_threshold, config.scalar_name
-    # )
-    # print('here 4.1')
-    # maxima_points = max_min.extract_selection_ids_maxima(connectivity, max_point_ids)
-
-    # print('here 4')
-
     maxima_points = max_min.extract_maxima_points(
         connectivity, config.extrema_threshold, config.scalar_name
     )
 
     clustered_points = topology.cluster_extrema(
-        data_with_maxima, connectivity, maxima_points, config.scalar_name, sign=1, eps_km=config.cluster_eps_km, min_samples=config.cluster_min_samples
+        data_with_maxima, connectivity, maxima_points, config.scalar_name, sign=1,
+        max_eps_km=config.cluster_max_eps_km, min_samples=config.cluster_min_samples, xi=config.cluster_xi
     )
 
     (
@@ -176,10 +170,9 @@ def _identify_rwps(
         connectivity, -config.extrema_threshold, config.scalar_name
     )
 
-    # minima_points = max_min.extract_selection_ids_minima(connectivity, min_point_ids)
-
     clustered_points = topology.cluster_extrema(
-        data_with_minima, connectivity, minima_points, config.scalar_name, sign=-1, eps_km=config.cluster_eps_km, min_samples=config.cluster_min_samples
+        data_with_minima, connectivity, minima_points, config.scalar_name, sign=-1,
+        max_eps_km=config.cluster_max_eps_km, min_samples=config.cluster_min_samples, xi=config.cluster_xi
     )
 
     (
