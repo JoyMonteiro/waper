@@ -56,7 +56,7 @@ def test_per_node_hull_smaller_than_convex(simple_wave_field, default_config):
 
 
 def test_southern_hemisphere_no_crash(southern_hemisphere_wave_field):
-    """Running the full pipeline on a SH field must not crash."""
+    """Running the full pipeline on a SH field must not crash and must find RWPs in SH."""
     config = WaperConfig(
         debug=False,
         scalar_name="v",
@@ -75,6 +75,13 @@ def test_southern_hemisphere_no_crash(southern_hemisphere_wave_field):
     )
     ts_data = _identify_rwps(southern_hemisphere_wave_field, config)
     assert ts_data is not None
+    assert len(ts_data.rwp_info) > 0, "No RWPs found in SH field — hemisphere forwarding may be broken"
+    # Verify inverse transform produced SH coordinates (centroid latitude must be negative)
+    for rwp_info in ts_data.rwp_info.values():
+        assert rwp_info["weighted_latitude"] < 0, (
+            f"SH RWP centroid latitude is {rwp_info['weighted_latitude']} — "
+            "expected negative (Southern Hemisphere)"
+        )
 
 
 def test_northern_hemisphere_unchanged(simple_wave_field, default_config):
