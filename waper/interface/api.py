@@ -44,6 +44,7 @@ class WaperConfig:
     cluster_min_samples: int = 2
     cluster_xi: float = 0.05
     min_longitude_separation: float = 6.0
+    hull_method: str = "per_node"  # "per_node" | "convex" | "concave"
 
     vtk_latitude_label: str = "Latitude"
     vtk_longitude_label: str = "Longitude"
@@ -218,6 +219,7 @@ def _identify_rwps(
             config.scalar_name,
             config.min_latitude,
             config.max_latitude,
+            hull_method=config.hull_method,
         )
         
         rwp_id = index + 1

@@ -5,6 +5,7 @@ import pyproj
 from pyproj.transformer import Transformer
 from rasterio import Affine, features
 from shapely.geometry import MultiPoint
+from shapely.ops import unary_union
 
 from ..identification import topology
 
@@ -27,7 +28,7 @@ WAPER_RASTER_TRANSFORM = Affine.translation(
 
 
 # TODO this must handle both north and south poles
-def transform_to_stereographic(input_xs, input_ys, inverse=False):
+def transform_to_stereographic(input_xs, input_ys, hemisphere="north", inverse=False):
 
     from_crs = pyproj.crs.CRS(4326)  # standard lat-lon
     to_crs = pyproj.crs.CRS(
@@ -102,7 +103,8 @@ def get_region_points_and_values(
 
 
 def get_polygon_for_rwp_path(
-    path, assoc_graph, scalar_data, scalar_name, min_latitude, max_latitude
+    path, assoc_graph, scalar_data, scalar_name, min_latitude, max_latitude,
+    hull_method="per_node", hemisphere="north",
 ):
     """Get bounding polygon for an identified RWP
 
@@ -110,6 +112,8 @@ def get_polygon_for_rwp_path(
         path (list): list of nodes in each path
         assoc_graph (nx.Graph): association graph
         scalar_data (pv.PolyData): scalar field
+        hull_method (str): "per_node" | "convex" | "concave"
+        hemisphere (str): "north" | "south"
 
     Returns:
         tuple: convex hull of points and polygon ID
@@ -118,7 +122,6 @@ def get_polygon_for_rwp_path(
     path_max = -100
     for node in path:
         max_value = abs(assoc_graph.nodes[node]["scalar"])
-
         if max_value > path_max:
             path_max = max_value
 
@@ -129,64 +132,59 @@ def get_polygon_for_rwp_path(
             scalars=scalar_name, value=clip_threshold, invert=False
         ).clean()
     )
-
     min_clipped_region = topology.identify_connected_regions(
         scalar_data.clip_scalar(
             scalars=scalar_name, value=-clip_threshold, invert=True
         ).clean()
     )
 
-    list_rwp_points = []
-    list_lons = []
-    list_lats = []
-    list_values = []
+    all_lons = []
+    all_lats = []
+    all_values = []
+    per_node_polygons = []
 
     for node in path:
-        if node[0] == "max":
-            out = get_region_points_and_values(
-                assoc_graph, node, max_clipped_region, clip_threshold, scalar_name
-            )
-            if out:
-                lons, lats, values = out
+        region = max_clipped_region if node[0] == "max" else min_clipped_region
+        out = get_region_points_and_values(
+            assoc_graph, node, region, clip_threshold, scalar_name
+        )
+        if out is None:
+            continue
+        lons, lats, values = out
 
-                valid_region = np.logical_and(
-                    lats >= min_latitude, lats <= max_latitude
-                )
-                lons = lons[valid_region]
-                lats = lats[valid_region]
-                values = values[valid_region]
+        valid = np.logical_and(lats >= min_latitude, lats <= max_latitude)
+        lons, lats, values = lons[valid], lats[valid], values[valid]
 
-                list_lons.extend(lons)
-                list_lats.extend(lats)
-                list_values.extend(values)
-        else:
-            out = get_region_points_and_values(
-                assoc_graph, node, min_clipped_region, clip_threshold, scalar_name
-            )
-            if out:
-                lons, lats, values = out
+        if len(lons) < 1:
+            continue
 
-                valid_region = np.logical_and(
-                    lats >= min_latitude, lats <= max_latitude
-                )
-                lons = lons[valid_region]
-                lats = lats[valid_region]
-                values = values[valid_region]
+        all_lons.extend(lons)
+        all_lats.extend(lats)
+        all_values.extend(values)
 
-                list_lons.extend(lons)
-                list_lats.extend(lats)
-                list_values.extend(values)
+        xs_node, ys_node = transform_to_stereographic(lons, lats, hemisphere=hemisphere)
+        pts = list(zip(xs_node, ys_node))
+        if len(pts) >= 3:
+            per_node_polygons.append(MultiPoint(pts).convex_hull)
+        elif len(pts) > 0:
+            per_node_polygons.append(MultiPoint(pts).buffer(1e4))
 
-    xs, ys = transform_to_stereographic(list_lons, list_lats)
+    if hull_method == "per_node" and per_node_polygons:
+        rwp_poly = unary_union(per_node_polygons)
+    elif hull_method == "concave" and per_node_polygons:
+        from shapely import concave_hull
+        xs_all, ys_all = transform_to_stereographic(all_lons, all_lats, hemisphere=hemisphere)
+        rwp_poly = concave_hull(MultiPoint(list(zip(xs_all, ys_all))), ratio=0.3)
+    else:
+        xs_all, ys_all = transform_to_stereographic(all_lons, all_lats, hemisphere=hemisphere)
+        rwp_poly = MultiPoint(list(zip(xs_all, ys_all))).convex_hull
 
-    weighted_ys = np.average(ys, weights=np.abs(np.array(list_values)))
-    weighted_xs = np.average(xs, weights=np.abs(np.array(list_values)))
-
+    xs, ys = transform_to_stereographic(all_lons, all_lats, hemisphere=hemisphere)
+    weighted_ys = np.average(ys, weights=np.abs(np.array(all_values)))
+    weighted_xs = np.average(xs, weights=np.abs(np.array(all_values)))
     weighted_longitude, weighted_latitude = transform_to_stereographic(
-        weighted_xs, weighted_ys, inverse=True
+        weighted_xs, weighted_ys, hemisphere=hemisphere, inverse=True
     )
-
-    rwp_poly = MultiPoint(list(zip(xs, ys))).convex_hull
 
     list_rwp_points = list(zip(xs[::WAPER_SUBSAMPLE], ys[::WAPER_SUBSAMPLE]))
 
