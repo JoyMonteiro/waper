@@ -129,12 +129,29 @@ def test_quadtree_pixel_counts():
     assert sizes[(2,)] == 400
 
 
-def test_merge_called_once_per_timestep_pair(simple_wave_field, default_config):
-    """merge() must be called exactly (number_steps - 1) times, not once per feature."""
-    ts_data = _identify_rwps(simple_wave_field, default_config)
-    ts_list = [ts_data, ts_data, ts_data]  # 3 timesteps → 2 pairs
+def test_merge_called_once_per_timestep_pair():
+    """merge() must be called exactly (number_steps - 1) times total.
 
-    with patch.object(tracking_graph, "merge", wraps=qt_module.merge) as mock_merge:
+    With 2 features and 3 timesteps, buggy code calls merge 2*2=4 times;
+    correct code calls it 2 times.
+    """
+    from unittest.mock import MagicMock
+
+    # Build minimal stub objects — only quadtree and raster_features are needed
+    # by build_tracking_graph for the merge/edge logic
+    def make_ts(feature_ids):
+        ts = MagicMock()
+        ts.raster_features = set(feature_ids)
+        ts.rwp_info = {}  # no RWP info needed for this test
+        return ts
+
+    ts0 = make_ts({0, 1, 2})  # features 1 and 2 (0 = background)
+    ts1 = make_ts({0, 1, 2})
+    ts2 = make_ts({0, 1, 2})
+    ts_list = [ts0, ts1, ts2]
+
+    with patch("waper.tracking.tracking_graph.merge", return_value=MagicMock()) as mock_merge, \
+         patch("waper.tracking.tracking_graph.compute_size_features", return_value={}):
         tracking_graph.build_tracking_graph(ts_list, number_steps=3)
         assert mock_merge.call_count == 2, (
             f"Expected merge() called 2 times (once per timestep pair), "
