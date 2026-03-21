@@ -95,7 +95,7 @@ def test_centroid_representative():
     # The base ensures they are in the same connected region > threshold (5)
     v = base + v1 + v2
 
-    clustered = _create_and_process_field(v, lons, lats, threshold=5, max_eps_km=1500)
+    clustered = _create_and_process_field(v, lons, lats, threshold=5, max_eps_km=1500, penalty_length_scale_km=1000.0)
     
     # Check max_cluster_assign
     (
@@ -150,12 +150,10 @@ def test_hill_climbing_penalty_separates_dipped_maxima():
     lats = np.arange(20, 80.1, 2.5)
     lon2d, lat2d = np.meshgrid(lons, lats)
 
-    # Two strong maxima 60 degrees apart, connected by a low-amplitude bridge
-    peak1 = 30 * np.exp(-((lon2d - 160) ** 2 + (lat2d - 50) ** 2) / 50)
-    peak2 = 30 * np.exp(-((lon2d - 220) ** 2 + (lat2d - 50) ** 2) / 50)
-    # Bridge that keeps them connected (above clip=5) but dips to ~6 m/s
-    bridge = 6 * np.exp(-((lon2d - 190) ** 2 + (lat2d - 50) ** 2) / 2000)
-    v = peak1 + peak2 + bridge
+    base = 10 * np.exp(-((lon2d - 190) ** 2 + (lat2d - 50) ** 2) / 1000)
+    peak1 = 20 * np.exp(-((lon2d - 175) ** 2 + (lat2d - 50) ** 2) / 50)
+    peak2 = 20 * np.exp(-((lon2d - 205) ** 2 + (lat2d - 50) ** 2) / 50)
+    v = base + peak1 + peak2
 
     clustered = _create_and_process_field(
         v, lons, lats, threshold=5, max_eps_km=3000,
@@ -215,11 +213,10 @@ def test_hill_climbing_penalty_separates_ridged_minima():
     lats = np.arange(20, 80.1, 2.5)
     lon2d, lat2d = np.meshgrid(lons, lats)
 
-    # Two strong troughs 60 degrees apart, connected by a weak negative bridge
-    trough1 = -30 * np.exp(-((lon2d - 160) ** 2 + (lat2d - 50) ** 2) / 50)
-    trough2 = -30 * np.exp(-((lon2d - 220) ** 2 + (lat2d - 50) ** 2) / 50)
-    bridge = -6 * np.exp(-((lon2d - 190) ** 2 + (lat2d - 50) ** 2) / 2000)
-    v = trough1 + trough2 + bridge
+    base = -10 * np.exp(-((lon2d - 190) ** 2 + (lat2d - 50) ** 2) / 1000)
+    trough1 = -20 * np.exp(-((lon2d - 175) ** 2 + (lat2d - 50) ** 2) / 50)
+    trough2 = -20 * np.exp(-((lon2d - 205) ** 2 + (lat2d - 50) ** 2) / 50)
+    v = base + trough1 + trough2
 
     clustered = _create_and_process_minima_field(
         v, lons, lats, threshold=5, max_eps_km=3000,

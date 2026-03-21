@@ -79,6 +79,20 @@ def cluster_extrema(
     for i in range(num_points):
         point_coords = np.append(point_coords, [extrema_points.GetPoint(i)], axis=0)
 
+    # Extract scalar values at each extremum for hill-climbing penalty.
+    extrema_scalar_values = np.zeros(num_points)
+    # Try point data on extrema_points first
+    extrema_scalar_arr = extrema_points.GetPointData().GetArray(scalar_name)
+    if extrema_scalar_arr is not None:
+        for i in range(num_points):
+            extrema_scalar_values[i] = extrema_scalar_arr.GetTuple1(i)
+    else:
+        # Fall back: look up via original point ID in the clipped scalar field
+        sf_scalar_arr = scalar_field.GetPointData().GetArray(scalar_name)
+        for i in range(num_points):
+            orig_id = int(extrema_point_id.GetTuple1(i))
+            extrema_scalar_values[i] = sf_scalar_arr.GetTuple1(orig_id)
+
     for i in range(num_points):
         for j in range(i + 1, num_points):
             p0 = [0, 0, 0]
@@ -98,43 +112,63 @@ def cluster_extrema(
             pts = dijkstra_output.GetPoints()
             id_list = dijkstra.GetIdList()
             
-            penalty_v = 1000 * sign
+            # Track the extreme value along the Dijkstra path for hill-climbing penalty.
+            # For maxima (sign>0): find minimum along path.
+            # For minima (sign<0): find maximum along path.
+            path_extreme_v = extrema_scalar_values[i]  # initialize to endpoint value
             
             for ptId in range(pts.GetNumberOfPoints() - 1):
                 pts.GetPoint(ptId, p0)
                 pts.GetPoint(ptId + 1, p1)
                 dist += math.sqrt(vtk.vtkMath.Distance2BetweenPoints(p0, p1))
                 
+            # Look up point_scalar_arr once (moved out of inner loop — same result,
+            # since the array doesn't change per iteration).
+            point_scalar_arr = scalar_field.GetPointData().GetArray(scalar_name)
             for ptIdx in range(id_list.GetNumberOfIds()):
                 vid = id_list.GetId(ptIdx)
-                val = cell_v.GetTuple1(vid)  # Using cell_v since point to cell mapping isn't fully defined, but scalar field has PointData usually. Wait, cell_v is GetCellData().
-                
-                # To properly sample we should use the point data if it's there
-                # Let's check if scalar_name exists in point data
-                point_scalar_arr = scalar_field.GetPointData().GetArray(scalar_name)
                 if point_scalar_arr:
                     val = point_scalar_arr.GetTuple1(vid)
+                else:
+                    val = cell_v.GetTuple1(vid)
                     
                 if sign > 0:
-                    if val < penalty_v:
-                        penalty_v = val
+                    if val < path_extreme_v:
+                        path_extreme_v = val
                 else:
-                    if val > penalty_v:
-                        penalty_v = val
+                    if val > path_extreme_v:
+                        path_extreme_v = val
 
-            # Distance should be positive. If penalty is a drop in the crest, we penalize by increasing distance.
-            # If sign > 0 (maxima), smaller/negative penalty_v means a deeper valley between them.
-            # If sign < 0 (minima), larger/positive penalty_v means a higher ridge between them.
+            # Hill-climbing penalty: fractional descent from weaker endpoint.
+            #
+            # For maxima (sign>0): reference is the weaker (smaller) peak value.
+            #   descent = reference - path_minimum. Positive when path dips below
+            #   the weaker peak. Example: peaks at 30 and 25, path dips to 10.
+            #   reference=25, descent=15, f=0.6.
+            #
+            # For minima (sign<0): reference is the weaker (least negative) trough.
+            #   descent = path_maximum - reference. Positive when path rises above
+            #   the weaker trough. Example: troughs at -20 and -18, path rises to -5.
+            #   reference=-18, descent=(-5)-(-18)=13, f=13/18=0.72.
+            val_i = extrema_scalar_values[i]
+            val_j = extrema_scalar_values[j]
             
-            penalty = 0.0
             if sign > 0:
-                if penalty_v < 0:
-                    penalty = abs(penalty_v) * 100  # Scale penalty to make distance very large
+                reference = min(val_i, val_j)
+                descent = reference - path_extreme_v
             else:
-                if penalty_v > 0:
-                    penalty = abs(penalty_v) * 100
-                    
-            final_dist = (dist + penalty) * SCALE_FACTOR
+                reference = max(val_i, val_j)
+                descent = path_extreme_v - reference
+                
+            abs_ref = abs(reference)
+            if abs_ref > 0:
+                f = max(0.0, descent / abs_ref)
+            else:
+                f = 0.0
+                
+            penalty_km = f * penalty_length_scale_km
+            
+            final_dist = dist * SCALE_FACTOR + penalty_km
             dist_matrix[i][j] = final_dist
             dist_matrix[j][i] = final_dist
 
