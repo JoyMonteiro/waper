@@ -18,6 +18,7 @@ htmlcov/
 node_modules
 
 dependency-graphs/
+datasets/figures/
 test-results/
 uml-diagrams/
 pydoer-graphs/
