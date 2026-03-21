@@ -288,6 +288,7 @@ class Waper:
         track_pruning_threshold=0.3,
         max_edge_weight=1,
         debug=False,
+        penalty_length_scale_km=2000.0,
     ) -> None:
 
         self._config = WaperConfig(
@@ -304,6 +305,7 @@ class Waper:
             track_pruning_threshold=track_pruning_threshold,
             max_edge_weight=max_edge_weight,
             debug=debug,
+            penalty_length_scale_km=penalty_length_scale_km,
         )
 
         self.data_array = data_array

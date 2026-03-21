@@ -1,5 +1,5 @@
-Welcome to My New Project  documentation!
-=========================================================================================
+Welcome to WAPER documentation!
+================================
 
 .. include:: ../README.rst
 
@@ -11,6 +11,7 @@ Welcome to My New Project  documentation!
    contents/10_introduction
    contents/20_why_this_package
    contents/30_usage
+   algorithm
    contents/40_modules
 
 

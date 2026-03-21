@@ -26,9 +26,11 @@ DATASETS_DIR = os.path.dirname(os.path.abspath(__file__))
 FIGURES_DIR = os.path.join(DATASETS_DIR, "figures")
 
 DATASETS = [
-    "souders_v_1.nc",
-    "souders_v_2.nc",
-    "forecast_bust.nc",
+#    "souders_v_1.nc",
+#    "souders_v_2.nc",
+#    "forecast_bust.nc",
+    "event_winds_abs_1.nc",
+#    "event_winds_abs_2.nc",
 ]
 
 # WAPER configuration (shared across datasets)
@@ -38,13 +40,14 @@ WAPER_KWARGS = dict(
     longitude_label="longitude",
     time_label="time",
     clip_value=2,
-    extrema_threshold=11,
+    extrema_threshold=10,
     min_latitude=20,
     max_latitude=80,
     node_pruning_threshold=20,
-    edge_pruning_threshold=3e-5,
+    edge_pruning_threshold=0.02,
     max_edge_weight=1,
     track_pruning_threshold=0.3,
+    penalty_length_scale_km=4000,
 )
 
 # Use a generous distance threshold for track display (keep all plausible tracks)

@@ -31,6 +31,8 @@ def compute_association_graph(max_points, min_points, iso_contour, scalar_name):
 
     max_cluster_ids = max_points["Cluster ID"]
     min_cluster_ids = min_points["Cluster ID"]
+    max_region_ids = max_points["RegionId"]
+    min_region_ids = min_points["RegionId"]
 
     num_max_pts = max_points.n_points
     num_min_pts = min_points.n_points
@@ -43,6 +45,10 @@ def compute_association_graph(max_points, min_points, iso_contour, scalar_name):
     cluster_min_point = np.full((num_min_clusters, 2), 0.0)
     cluster_max_spherical_coord = np.full((num_max_clusters, 3), 0.0)
     cluster_min_spherical_coord = np.full((num_min_clusters, 3), 0.0)
+
+    # Map each cluster to its connected region (for wrap detection).
+    cluster_max_region = {}
+    cluster_min_region = {}
 
 
     assoc_set = set()
@@ -59,6 +65,7 @@ def compute_association_graph(max_points, min_points, iso_contour, scalar_name):
         scalar = max_scalars[i]
         point_tuple = (point_coords, cluster_id, scalar)
         cluster_max_dict[cluster_id].append(point_tuple)
+        cluster_max_region[int(cluster_id)] = int(max_region_ids[i])
         if cluster_max_arr[max_cluster_ids[i]] < max_scalars[i]:
             cluster_max_arr[max_cluster_ids[i]] = max_scalars[i]
             cluster_max_point[max_cluster_ids[i]][0] = point_coords[0]
@@ -71,6 +78,7 @@ def compute_association_graph(max_points, min_points, iso_contour, scalar_name):
         scalar = min_scalars[i]
         point_tuple = (point_coords, cluster_id, scalar)
         cluster_min_dict[cluster_id].append(point_tuple)
+        cluster_min_region[int(cluster_id)] = int(min_region_ids[i])
         if cluster_min_arr[int(min_cluster_ids[i])] > min_scalars[i]:
             cluster_min_arr[int(min_cluster_ids[i])] = min_scalars[i]
             cluster_min_point[int(min_cluster_ids[i])][0] = point_coords[0]
@@ -118,6 +126,7 @@ def compute_association_graph(max_points, min_points, iso_contour, scalar_name):
             scalar=max_scalar,
             node_type="max",
             cluster_extrema=cluster_max_dict[max_id],
+            region_id=cluster_max_region.get(max_id, -1),
         )
         assoc_graph.add_node(
             min_node_id,
@@ -127,6 +136,7 @@ def compute_association_graph(max_points, min_points, iso_contour, scalar_name):
             scalar=min_scalar,
             node_type="min",
             cluster_extrema=cluster_min_dict[min_id],
+            region_id=cluster_min_region.get(min_id, -1),
         )
 
         assoc_graph.add_edge(max_node_id, min_node_id, weight=0)
@@ -177,6 +187,7 @@ def prune_association_graph_nodes(assoc_graph, scalar_threshold):
                 scalar=assoc_graph.nodes[start_node]["scalar"],
                 node_type=assoc_graph.nodes[start_node]["node_type"],
                 cluster_extrema=assoc_graph.nodes[start_node]["cluster_extrema"],
+                region_id=assoc_graph.nodes[start_node]["region_id"],
             )
             pruned_graph.add_node(
                 end_node,
@@ -186,6 +197,7 @@ def prune_association_graph_nodes(assoc_graph, scalar_threshold):
                 scalar=assoc_graph.nodes[end_node]["scalar"],
                 node_type=assoc_graph.nodes[end_node]["node_type"],
                 cluster_extrema=assoc_graph.nodes[end_node]["cluster_extrema"],
+                region_id=assoc_graph.nodes[end_node]["region_id"],
             )
             pruned_graph.add_edge(start_node, end_node)
 
@@ -202,20 +214,21 @@ def edge_weight(
     max_scalar = assoc_graph.nodes[max_id]["scalar"]
     min_scalar = assoc_graph.nodes[min_id]["scalar"]
 
+    lon_max = assoc_graph.nodes[max_id]["coords"][0]
+    lat_max = assoc_graph.nodes[max_id]["coords"][1]
+    lon_min = assoc_graph.nodes[min_id]["coords"][0]
+    lat_min = assoc_graph.nodes[min_id]["coords"][1]
 
-    curr_dist = 0.0
+    curr_dist = haversine_distance(lat_max, lon_max, lat_min, lon_min)
 
-    edge_weight = 0.0
-
-    curr_dist = haversine_distance(
-        assoc_graph.nodes[max_id]["coords"][1],
-        assoc_graph.nodes[max_id]["coords"][0],
-        assoc_graph.nodes[min_id]["coords"][1],
-        assoc_graph.nodes[min_id]["coords"][0],
-    )
+    # Orientation penalty: downweight edges that are more N-S oriented.
+    # zonal_fraction = cos(atan(dlat/dlon)) = dlon / sqrt(dlon² + dlat²)
+    dlon = _longitude_separation(lon_max, lon_min)
+    dlat = abs(lat_max - lat_min)
+    zonal_fraction = dlon / max((dlon**2 + dlat**2)**0.5, 1e-6)
 
     # Ensure we don't divide by zero if centroids overlap exactly
-    edge_weight = (max_scalar - min_scalar) / max(curr_dist, 1e-6)
+    edge_weight = (max_scalar - min_scalar) / max(curr_dist, 1e-6) * zonal_fraction
 
     return edge_weight
 
@@ -273,6 +286,7 @@ def prune_association_graph_edges(
                 scalar=assoc_graph.nodes[start_node]["scalar"],
                 node_type=assoc_graph.nodes[start_node]["node_type"],
                 cluster_extrema=assoc_graph.nodes[start_node]["cluster_extrema"],
+                region_id=assoc_graph.nodes[start_node]["region_id"],
             )
             pruned_graph.add_node(
                 end_node,
@@ -282,6 +296,7 @@ def prune_association_graph_edges(
                 scalar=assoc_graph.nodes[end_node]["scalar"],
                 node_type=assoc_graph.nodes[end_node]["node_type"],
                 cluster_extrema=assoc_graph.nodes[end_node]["cluster_extrema"],
+                region_id=assoc_graph.nodes[end_node]["region_id"],
             )
             pruned_graph.add_edge(start_node, end_node, weight=weight)
     return pruned_graph
@@ -294,6 +309,70 @@ def _is_monotonic_east(assoc_graph, path):
         if is_to_the_east(lon_a, lon_b):
             return False
     return True
+
+
+def _has_region_wrap(assoc_graph, path):
+    """Return True if any two same-type nodes in *path* share a region_id.
+
+    This indicates the path has wrapped around to revisit the same connected
+    component of the scalar field, which is non-physical.
+    """
+    seen_max_regions = {}
+    seen_min_regions = {}
+    for node in path:
+        attrs = assoc_graph.nodes[node]
+        node_type = attrs.get("node_type")
+        region_id = attrs.get("region_id", -1)
+        if node_type is None or region_id == -1:
+            continue
+        if node_type == "max":
+            if region_id in seen_max_regions:
+                return True
+            seen_max_regions[region_id] = node
+        else:
+            if region_id in seen_min_regions:
+                return True
+            seen_min_regions[region_id] = node
+    return False
+
+
+def _split_at_weakest_edge(assoc_graph, path):
+    """Split *path* at its lowest-weight edge, returning two sub-paths.
+
+    Each sub-path must have at least 2 nodes to be valid.
+    """
+    if len(path) < 3:
+        return [path]
+
+    min_weight = float("inf")
+    min_idx = -1
+    for i in range(len(path) - 1):
+        w = assoc_graph[path[i]][path[i + 1]]["weight"]
+        if w < min_weight:
+            min_weight = w
+            min_idx = i
+
+    left = path[: min_idx + 1]
+    right = path[min_idx + 1 :]
+
+    result = []
+    if len(left) >= 2:
+        result.append(left)
+    if len(right) >= 2:
+        result.append(right)
+    return result
+
+
+def _unwrap_path(assoc_graph, path):
+    """Recursively split a path until no sub-path has a region wrap."""
+    if not _has_region_wrap(assoc_graph, path):
+        return [path]
+
+    sub_paths = _split_at_weakest_edge(assoc_graph, path)
+    result = []
+    for sp in sub_paths:
+        result.extend(_unwrap_path(assoc_graph, sp))
+    return result
 
 
 def get_ranked_paths(assoc_graph, max_weight):
@@ -314,7 +393,9 @@ def get_ranked_paths(assoc_graph, max_weight):
             if nx.has_path(assoc_graph, source=source, target=sink):
                 for path in nx.all_simple_paths(assoc_graph, source=source, target=sink):
                     if _is_monotonic_east(assoc_graph, path):
-                        path_list.append(path)
+                        # Split paths that wrap around to the same region.
+                        for unwrapped in _unwrap_path(assoc_graph, path):
+                            path_list.append(unwrapped)
 
     path_wt_dict = {}
 
