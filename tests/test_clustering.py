@@ -142,3 +142,91 @@ def test_isolated_outlier_far_from_group():
 
     # The outlier should be in its own cluster, separate from the main group
     assert len(clusters) > 1
+
+
+def test_hill_climbing_penalty_separates_dipped_maxima():
+    """Two maxima connected by a same-sign valley should be split by hill-climbing penalty."""
+    lons = np.arange(0, 360, 2.5)
+    lats = np.arange(20, 80.1, 2.5)
+    lon2d, lat2d = np.meshgrid(lons, lats)
+
+    # Two strong maxima 60 degrees apart, connected by a low-amplitude bridge
+    peak1 = 30 * np.exp(-((lon2d - 160) ** 2 + (lat2d - 50) ** 2) / 50)
+    peak2 = 30 * np.exp(-((lon2d - 220) ** 2 + (lat2d - 50) ** 2) / 50)
+    # Bridge that keeps them connected (above clip=5) but dips to ~6 m/s
+    bridge = 6 * np.exp(-((lon2d - 190) ** 2 + (lat2d - 50) ** 2) / 2000)
+    v = peak1 + peak2 + bridge
+
+    clustered = _create_and_process_field(
+        v, lons, lats, threshold=5, max_eps_km=3000,
+        penalty_length_scale_km=2000.0,
+    )
+
+    clusters = np.unique(clustered.point_data["Cluster ID"])
+    # The penalty should separate them: fractional descent ~(30-6)/30 = 0.8
+    # penalty = 0.8 * 2000 = 1600 km added to geodesic distance
+    assert len(clusters) >= 2, (
+        f"Expected >= 2 clusters (hill-climbing should separate dipped maxima), got {len(clusters)}"
+    )
+
+def test_hill_climbing_no_penalty_when_ridge_stays_high():
+    """Two maxima on the same ridge (no significant dip) should stay in one cluster."""
+    lons = np.arange(0, 360, 2.5)
+    lats = np.arange(20, 80.1, 2.5)
+    lon2d, lat2d = np.meshgrid(lons, lats)
+
+    # Two peaks close together with overlapping high-amplitude regions
+    peak1 = 30 * np.exp(-((lon2d - 180) ** 2 + (lat2d - 50) ** 2) / 80)
+    peak2 = 25 * np.exp(-((lon2d - 195) ** 2 + (lat2d - 50) ** 2) / 80)
+    v = peak1 + peak2
+
+    clustered = _create_and_process_field(
+        v, lons, lats, threshold=10, max_eps_km=3000,
+        penalty_length_scale_km=2000.0,
+    )
+
+    if clustered.n_points >= 2:
+        # If two maxima are detected, they should be in the same cluster
+        clusters = np.unique(clustered.point_data["Cluster ID"])
+        assert len(clusters) == 1, (
+            f"Expected 1 cluster (ridge stays high, no penalty), got {len(clusters)}"
+        )
+
+def _create_and_process_minima_field(v, lons, lats, threshold=5, max_eps_km=1500, xi=0.05, penalty_length_scale_km=2000.0):
+    """Like _create_and_process_field but for minima (sign=-1)."""
+    da = xr.DataArray(
+        v, dims=["latitude", "longitude"],
+        coords={"latitude": lats, "longitude": lons}, name="v",
+    )
+    data_with_min = max_min.add_minima_data(da, "v", lons, lats)
+    clipped = max_min.clip_dataset(data_with_min, "v", threshold=-threshold, invert=True)
+    connectivity = topology.identify_connected_regions(clipped)
+    minima_points = max_min.extract_minima_points(connectivity, -threshold, "v")
+    clustered = topology.cluster_extrema(
+        data_with_min, connectivity, minima_points, "v",
+        sign=-1, max_eps_km=max_eps_km, xi=xi,
+        penalty_length_scale_km=penalty_length_scale_km,
+    )
+    return clustered
+
+def test_hill_climbing_penalty_separates_ridged_minima():
+    """Two minima connected by a same-sign ridge should be split by hill-climbing penalty."""
+    lons = np.arange(0, 360, 2.5)
+    lats = np.arange(20, 80.1, 2.5)
+    lon2d, lat2d = np.meshgrid(lons, lats)
+
+    # Two strong troughs 60 degrees apart, connected by a weak negative bridge
+    trough1 = -30 * np.exp(-((lon2d - 160) ** 2 + (lat2d - 50) ** 2) / 50)
+    trough2 = -30 * np.exp(-((lon2d - 220) ** 2 + (lat2d - 50) ** 2) / 50)
+    bridge = -6 * np.exp(-((lon2d - 190) ** 2 + (lat2d - 50) ** 2) / 2000)
+    v = trough1 + trough2 + bridge
+
+    clustered = _create_and_process_minima_field(
+        v, lons, lats, threshold=5, max_eps_km=3000,
+        penalty_length_scale_km=2000.0,
+    )
+
+    clusters = np.unique(clustered.point_data["Cluster ID"])
+    assert len(clusters) >= 2, (
+        f"Expected >= 2 clusters (hill-climbing should separate ridged minima), got {len(clusters)}"
+    )
