@@ -5,7 +5,7 @@ import xarray as xr
 from waper.identification import max_min, topology
 
 
-def _create_and_process_field(v, lons, lats, threshold=5, max_eps_km=1500, xi=0.05):
+def _create_and_process_field(v, lons, lats, threshold=5, max_eps_km=1500, xi=0.05, penalty_length_scale_km=2000.0):
     da = xr.DataArray(
         v,
         dims=["latitude", "longitude"],
@@ -19,6 +19,7 @@ def _create_and_process_field(v, lons, lats, threshold=5, max_eps_km=1500, xi=0.
     clustered = topology.cluster_extrema(
         data_with_max, connectivity, maxima_points, "v",
         sign=1, max_eps_km=max_eps_km, xi=xi,
+        penalty_length_scale_km=penalty_length_scale_km,
     )
     return clustered
 

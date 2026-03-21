@@ -20,6 +20,7 @@ def cluster_extrema(
     max_eps_km=1500,
     min_samples=2,
     xi=0.05,
+    penalty_length_scale_km=2000.0,
 ):
     """Cluster extrema (maxima or minima) in the scalar field using OPTICS.
 
@@ -163,14 +164,11 @@ def cluster_extrema(
                 new_dist[i][j] = dist_matrix[region_array[k][i]][region_array[k][j]]
                 new_dist[j][i] = new_dist[i][j]
 
-        optics = cluster.OPTICS(
-            max_eps=max_eps_km,
-            min_samples=min_samples,
-            xi=xi,
-            metric="precomputed",
+        dbscan = cluster.DBSCAN(
+            eps=max_eps_km, min_samples=1, metric="precomputed",
         )
-        labels = optics.fit_predict(new_dist)
-        
+        labels = dbscan.fit_predict(new_dist)
+
         for i in range(num_cluster):
             if labels[i] != -1:
                 cluster_assign[region_array[k][i]] = labels[i] + prev_cluster_id
@@ -178,9 +176,7 @@ def cluster_extrema(
         if np.max(labels) >= 0:
             prev_cluster_id += np.max(labels) + 1
 
-    # Reassign noise points (-1) as singleton clusters.
-    # These are extrema that passed the amplitude threshold but weren't part
-    # of any dense group — they represent isolated wave components.
+    # Reassign any remaining unassigned points as singleton clusters.
     for i in range(num_points):
         if cluster_assign[i] == -1:
             cluster_assign[i] = prev_cluster_id

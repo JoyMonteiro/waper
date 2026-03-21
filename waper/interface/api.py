@@ -40,12 +40,14 @@ class WaperConfig:
 
     track_pruning_threshold: float
 
-    cluster_max_eps_km: float = 1500.0
+    cluster_max_eps_km: float = 3000.0
     cluster_min_samples: int = 2
-    cluster_xi: float = 0.05
+    cluster_xi: float = 0.15
     min_longitude_separation: float = 6.0
+    max_aspect_ratio: float = 1.5
     hull_method: str = "per_node"  # "per_node" | "convex" | "concave"
     hemisphere: str = "north"  # "north" | "south"
+    penalty_length_scale_km: float = 2000.0
 
     vtk_latitude_label: str = "Latitude"
     vtk_longitude_label: str = "Longitude"
@@ -132,7 +134,8 @@ def _identify_rwps(
 
     clustered_points = topology.cluster_extrema(
         data_with_maxima, connectivity, maxima_points, config.scalar_name, sign=1,
-        max_eps_km=config.cluster_max_eps_km, min_samples=config.cluster_min_samples, xi=config.cluster_xi
+        max_eps_km=config.cluster_max_eps_km, min_samples=config.cluster_min_samples,
+        xi=config.cluster_xi, penalty_length_scale_km=config.penalty_length_scale_km,
     )
 
     (
@@ -174,7 +177,8 @@ def _identify_rwps(
 
     clustered_points = topology.cluster_extrema(
         data_with_minima, connectivity, minima_points, config.scalar_name, sign=-1,
-        max_eps_km=config.cluster_max_eps_km, min_samples=config.cluster_min_samples, xi=config.cluster_xi
+        max_eps_km=config.cluster_max_eps_km, min_samples=config.cluster_min_samples,
+        xi=config.cluster_xi, penalty_length_scale_km=config.penalty_length_scale_km,
     )
 
     (
@@ -200,7 +204,8 @@ def _identify_rwps(
     )
 
     time_step_data.pruned_graph = rwp_graph.prune_association_graph_edges(
-        node_pruned_graph, config.edge_pruning_threshold, config.max_edge_weight, config.min_longitude_separation
+        node_pruned_graph, config.edge_pruning_threshold, config.max_edge_weight,
+        config.min_longitude_separation, config.max_aspect_ratio,
     )
 
     time_step_data.identified_rwp_paths = rwp_graph.get_ranked_paths(
@@ -411,8 +416,6 @@ class Waper:
             pruned,
             paths,
             None,
-            path_transform=ccrs.Geodetic(),
-            map_projection=ccrs.PlateCarree(),
         )
 
     def plot_track_polygons(self, path, plot_samples=False, ax=None):
@@ -421,6 +424,7 @@ class Waper:
         sample_points_list = []
         weighted_lon_list = []
         weighted_lat_list = []
+        time_indices = []
         for node in path:
             time_step_data = self._time_step_data[node[0]]
 
@@ -430,6 +434,16 @@ class Waper:
                     sample_points_list.append(rwp["sample_points"])
                     weighted_lon_list.append(rwp["weighted_longitude"])
                     weighted_lat_list.append(rwp["weighted_latitude"])
+                    time_indices.append(node[0])
+
+        cmap = plt.cm.viridis
+        if len(time_indices) > 1:
+            t_min, t_max = min(time_indices), max(time_indices)
+            poly_colors = [
+                cmap((t - t_min) / max(t_max - t_min, 1)) for t in time_indices
+            ]
+        else:
+            poly_colors = [cmap(0.5)] * len(poly_list)
 
         return _plot_polygons(
             poly_list,
@@ -439,6 +453,7 @@ class Waper:
             weighted_lat_list,
             plot_samples=plot_samples,
             ax=ax,
+            poly_colors=poly_colors,
         )
 
     def plot_track_rwps(self, path, ax=None):
@@ -447,7 +462,7 @@ class Waper:
 
         if ax is None:
             ax = plt.subplot(
-                projection=ccrs.Orthographic(central_longitude=180, central_latitude=90)
+                projection=ccrs.PlateCarree(central_longitude=180)
             )
 
         for node in path:
