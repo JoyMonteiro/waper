@@ -220,7 +220,10 @@ def edge_weight(
     return edge_weight
 
 
-def prune_association_graph_edges(assoc_graph, threshold, max_weight, min_longitude_separation=6.0):
+def prune_association_graph_edges(
+    assoc_graph, threshold, max_weight,
+    min_longitude_separation=6.0, max_aspect_ratio=1.5,
+):
     """Remove edges which fall below edge weight thresholds
 
     Args:
@@ -228,6 +231,8 @@ def prune_association_graph_edges(assoc_graph, threshold, max_weight, min_longit
         threshold (float): weight threshold for pruning
         max_weight (float): maximum likely value for edge weight
         min_longitude_separation (float): minimum angular distance between extrema
+        max_aspect_ratio (float): maximum |Δlat|/|Δlon| — edges steeper than
+            this are discarded as nearly-vertical connections
 
     Returns:
         nx.Graph: association graph with low weight edges pruned
@@ -242,9 +247,17 @@ def prune_association_graph_edges(assoc_graph, threshold, max_weight, min_longit
 
         lon_0 = assoc_graph.nodes[start_node]["coords"][0]
         lon_1 = assoc_graph.nodes[end_node]["coords"][0]
+        lat_0 = assoc_graph.nodes[start_node]["coords"][1]
+        lat_1 = assoc_graph.nodes[end_node]["coords"][1]
 
-        if _longitude_separation(lon_0, lon_1) <= min_longitude_separation:
-            continue        
+        dlon = _longitude_separation(lon_0, lon_1)
+        if dlon <= min_longitude_separation:
+            continue
+
+        dlat = abs(lat_0 - lat_1)
+        if dlat / max(dlon, 1e-6) > max_aspect_ratio:
+            continue
+
         if assoc_graph.nodes[start_node]["node_type"] == "max":
             weight = edge_weight(assoc_graph, start_node, end_node)
         else:
@@ -273,13 +286,22 @@ def prune_association_graph_edges(assoc_graph, threshold, max_weight, min_longit
             pruned_graph.add_edge(start_node, end_node, weight=weight)
     return pruned_graph
 
+def _is_monotonic_east(assoc_graph, path):
+    """Return True if every successive node in *path* is east of the previous."""
+    for i in range(len(path) - 1):
+        lon_a = assoc_graph.nodes[path[i]]["coords"][0]
+        lon_b = assoc_graph.nodes[path[i + 1]]["coords"][0]
+        if is_to_the_east(lon_a, lon_b):
+            return False
+    return True
+
+
 def get_ranked_paths(assoc_graph, max_weight):
 
     path_list = []
 
     start_leaves = [x for x in assoc_graph.nodes()]
     end_leaves = [x for x in assoc_graph.nodes()]
-
 
     for source in start_leaves:
         for sink in end_leaves:
@@ -291,11 +313,10 @@ def get_ranked_paths(assoc_graph, max_weight):
 
             if nx.has_path(assoc_graph, source=source, target=sink):
                 for path in nx.all_simple_paths(assoc_graph, source=source, target=sink):
-                    path_list.append(path)
-                
+                    if _is_monotonic_east(assoc_graph, path):
+                        path_list.append(path)
 
     path_wt_dict = {}
-
 
     for path in path_list:
         curr_wt = 0

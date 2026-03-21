@@ -158,26 +158,35 @@ def test_get_ranked_paths_independent_set():
     # We will build a graph where all candidate paths are extracted.
     # To test the ranking/filtering logic specifically, we can see if get_ranked_paths works.
     
-    # Let's just create a star graph from a central node 0
+    # Star graph from a central node 0.
+    # Coords are assigned so intended paths go monotonically east:
+    #   Path 1→0→2: lon 180→181→182 (east)
+    #   Path 3→0→4: lon 179→181→183 (east, but overlaps at 0)
+    #   Path 5→6→7: lon 190→191→192 (east, disjoint)
     G_star = nx.Graph()
-    for i in range(8):
-        G_star.add_node(i, coords=(180 + i, 50))  # dummy coords so is_to_the_east works, left to right
-    
+    east_coords = {
+        0: (181, 50), 1: (180, 50), 2: (182, 50),
+        3: (179, 50), 4: (183, 50),
+        5: (190, 50), 6: (191, 50), 7: (192, 50),
+    }
+    for nid, coord in east_coords.items():
+        G_star.add_node(nid, coords=coord)
+
     G_star.add_edge(1, 0, weight=10)
     G_star.add_edge(0, 2, weight=10)  # Path 1-0-2 (w=20)
-    
+
     G_star.add_edge(3, 0, weight=5)
     G_star.add_edge(0, 4, weight=5)   # Path 3-0-4 (w=10)
-    
+
     G_star.add_edge(5, 6, weight=15)
     G_star.add_edge(6, 7, weight=15)  # Path 5-6-7 (w=30, disjoint)
-    
+
     # All paths from leaves to leaves.
     paths = get_ranked_paths(G_star, max_weight=100)
-    
+
     # Expected: 5-6-7 (w=30) and 1-0-2 (w=20) should be selected.
     # 3-0-4 (w=10) overlaps with 1-0-2 at node 0, so it should be dropped.
-    
+
     # Check that 5-6-7 is in there
     assert [5, 6, 7] in paths or [7, 6, 5] in paths
     # Check that 1-0-2 is in there

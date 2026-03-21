@@ -1,10 +1,10 @@
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
-from pyproj import transform
 import pyvista as pv
 import numpy as np
 from xarray import DataArray
 from matplotlib.colors import LinearSegmentedColormap
+from shapely.geometry import MultiPolygon
 
 from ..tracking.rwp_polygon import WAPER_X_BOUNDS, WAPER_Y_BOUNDS
 
@@ -42,6 +42,10 @@ cdictDivergeNL = {'red' : (
 
 NLDivCmap = LinearSegmentedColormap('NLDCmap',cdictDivergeNL)
 
+_PLATE_CARREE = ccrs.PlateCarree(central_longitude=0)
+_STEREO_NH = ccrs.Stereographic(central_longitude=0, central_latitude=90)
+
+
 def _plot_clusters(
     input_data,
     maxima_points,
@@ -55,25 +59,26 @@ def _plot_clusters(
 ):
 
     ax = plt.subplot(211, projection=ccrs.PlateCarree(central_longitude=180))
+    ax.coastlines(linewidth=0.5, color="gray")
 
-    input_data.plot.contour(
+    input_data.plot.contourf(
         ax=ax,
         levels=12,
-        transform=ccrs.PlateCarree(central_longitude=0),
-        labels=True,
-        colors="k",
-        linewidth=1,
+        transform=_PLATE_CARREE,
         zorder=1,
+        cmap=NLDivCmap,
+        add_colorbar=False,
+        add_labels=False,
     )
 
     input_data.plot.contour(
         ax=ax,
         levels=[-clip_value, clip_value],
-        transform=ccrs.PlateCarree(central_longitude=0),
-        labels=True,
+        transform=_PLATE_CARREE,
         colors="r",
-        linewidth=3,
-        zorder=1,
+        linewidths=2,
+        zorder=2,
+        add_labels=False,
     )
 
     out = pv.wrap(maxima_points)
@@ -84,8 +89,9 @@ def _plot_clusters(
         ax.annotate(
             str(region_id + 1),
             (lon, lat),
-            bbox=dict(boxstyle="round", fc="white", ec="b"),
-            transform=ccrs.PlateCarree(central_longitude=0),
+            fontsize=6,
+            bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="b", alpha=0.7),
+            transform=_PLATE_CARREE,
         )
 
     out = pv.wrap(minima_points)
@@ -96,40 +102,47 @@ def _plot_clusters(
         ax.annotate(
             str(-region_id - 1),
             (lon, lat),
-            bbox=dict(boxstyle="round", fc="white", ec="b"),
-            transform=ccrs.PlateCarree(central_longitude=0),
+            fontsize=6,
+            bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="r", alpha=0.7),
+            transform=_PLATE_CARREE,
         )
 
-    ax = plt.subplot(212, projection=ccrs.PlateCarree(central_longitude=180))
+    ax.set_title("Extrema by region", fontsize=9)
 
-    input_data.plot.contour(
+    ax = plt.subplot(212, projection=ccrs.PlateCarree(central_longitude=180))
+    ax.coastlines(linewidth=0.5, color="gray")
+
+    input_data.plot.contourf(
         ax=ax,
         levels=12,
-        colors="k",
-        transform=ccrs.PlateCarree(central_longitude=0),
-        labels=True,
+        transform=_PLATE_CARREE,
+        zorder=1,
+        cmap=NLDivCmap,
+        add_colorbar=False,
+        add_labels=False,
     )
 
     for cluster_id, points in max_pt_dict.items():
-
         for point in points:
             ax.annotate(
                 str(cluster_id),
                 (point[0], point[1]),
-                bbox=dict(boxstyle="round", fc="white", ec="b"),
-                transform=ccrs.PlateCarree(central_longitude=0),
+                fontsize=6,
+                bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="b", alpha=0.7),
+                transform=_PLATE_CARREE,
             )
 
     for cluster_id, points in min_pt_dict.items():
-
         for point in points:
             ax.annotate(
                 str(-cluster_id),
                 (point[0], point[1]),
-                bbox=dict(boxstyle="round", fc="white", ec="b"),
-                transform=ccrs.PlateCarree(central_longitude=0),
+                fontsize=6,
+                bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="r", alpha=0.7),
+                transform=_PLATE_CARREE,
             )
 
+    ax.set_title("Extrema by cluster", fontsize=9)
     plt.tight_layout()
     return ax
 
@@ -137,39 +150,41 @@ def _plot_clusters(
 def _plot_graph(rwp_graph, scalar_data=None, ax=None):
 
     if ax is None:
-        ax = plt.subplot(
-            projection=ccrs.Orthographic(central_longitude=180, central_latitude=90)
-        )
+        ax = plt.subplot(projection=ccrs.PlateCarree(central_longitude=180))
+
+    ax.coastlines(linewidth=0.5, color="gray")
 
     if isinstance(scalar_data, DataArray):
-        scalar_data.plot.contour(
-            ax=ax,
-            levels=12,
-            transform=ccrs.PlateCarree(central_longitude=0),
-            labels=True,
-            colors="k",
-            linewidths=1,
-            zorder=1,
-        )
-        
         scalar_data.plot.contourf(
             ax=ax,
             levels=12,
-            transform=ccrs.PlateCarree(central_longitude=0),
+            transform=_PLATE_CARREE,
             zorder=1,
             cmap=NLDivCmap,
             add_colorbar=True,
+            add_labels=False,
             cbar_kwargs=dict(
                 orientation='horizontal',
                 shrink=0.6,
                 aspect=30
             )
         )
-        
+
+        scalar_data.plot.contour(
+            ax=ax,
+            levels=12,
+            transform=_PLATE_CARREE,
+            colors="k",
+            linewidths=0.5,
+            zorder=2,
+            add_labels=False,
+        )
+
     for node in rwp_graph.nodes:
         coords = rwp_graph.nodes[node]["coords"]
         ax.scatter(
-            coords[0], coords[1], color="r", transform=ccrs.PlateCarree(central_longitude=0)
+            coords[0], coords[1], color="r", s=20, zorder=5,
+            transform=_PLATE_CARREE,
         )
 
     for edge in rwp_graph.edges:
@@ -179,8 +194,8 @@ def _plot_graph(rwp_graph, scalar_data=None, ax=None):
         ax.plot(
             [node1_coords[0], node2_coords[0]],
             [node1_coords[1], node2_coords[1]],
-            color="b",
-            transform=ccrs.PlateCarree(central_longitude=0),
+            color="b", linewidth=1.5, zorder=4,
+            transform=ccrs.Geodetic(),
         )
 
     plt.tight_layout()
@@ -190,30 +205,21 @@ def _plot_graph(rwp_graph, scalar_data=None, ax=None):
 def _plot_rwp_paths(rwp_graph, paths, scalar_data=None, ax=None):
 
     if ax is None:
-        ax = plt.subplot(
-            projection=ccrs.Orthographic(central_longitude=180, central_latitude=90)
-        )
+        ax = plt.subplot(projection=ccrs.PlateCarree(central_longitude=180))
 
-    colors = plt.cm.tab20.colors
+    ax.coastlines(linewidth=0.5, color="gray")
+
+    colors = plt.cm.tab10.colors
 
     if isinstance(scalar_data, DataArray):
-        scalar_data.plot.contour(
-            ax=ax,
-            levels=12,
-            transform=ccrs.PlateCarree(central_longitude=0),
-            labels=True,
-            colors="k",
-            linewidths=2,
-            zorder=1,
-        )
-        
         scalar_data.plot.contourf(
             ax=ax,
             levels=11,
-            transform=ccrs.PlateCarree(central_longitude=0),
+            transform=_PLATE_CARREE,
             zorder=1,
             cmap=NLDivCmap,
             add_colorbar=True,
+            add_labels=False,
             cbar_kwargs=dict(
                 orientation='horizontal',
                 shrink=0.6,
@@ -221,26 +227,38 @@ def _plot_rwp_paths(rwp_graph, paths, scalar_data=None, ax=None):
             )
         )
 
+        scalar_data.plot.contour(
+            ax=ax,
+            levels=12,
+            transform=_PLATE_CARREE,
+            colors="k",
+            linewidths=0.5,
+            zorder=2,
+            add_labels=False,
+        )
+
     for index, path in enumerate(paths):
+        path_color = colors[index % len(colors)]
+
         for node in path:
             coords = rwp_graph.nodes[node]["coords"]
             color = 'r' if node[0] == 'max' else 'b'
-            
-            ax.scatter(coords[0], coords[1], color=color, transform=ccrs.PlateCarree())
+
+            ax.scatter(
+                coords[0], coords[1], color=color, s=25, zorder=6,
+                edgecolors='k', linewidths=0.3,
+                transform=_PLATE_CARREE,
+            )
 
         for edge in [(path[i], path[i + 1]) for i in range(len(path) - 1)]:
             node1_coords = rwp_graph.nodes[edge[0]]["coords"]
             node2_coords = rwp_graph.nodes[edge[1]]["coords"]
 
-            delta_coord = 0
-            if node1_coords[0] - node2_coords[0] > 180:
-                delta_coord = 360
-
             ax.plot(
-                [node1_coords[0], node2_coords[0] + delta_coord],
+                [node1_coords[0], node2_coords[0]],
                 [node1_coords[1], node2_coords[1]],
-                color=colors[index % 20],
-                transform=ccrs.PlateCarree(),
+                color=path_color, linewidth=2.5, zorder=5,
+                transform=ccrs.Geodetic(),
             )
 
     plt.tight_layout()
@@ -255,59 +273,61 @@ def _plot_polygons(
     weighted_lat_list=None,
     plot_samples=False,
     ax=None,
+    poly_colors=None,
 ):
 
     if ax is None:
-        ax = plt.subplot(
-            projection=ccrs.Stereographic(central_longitude=0, central_latitude=90)
-        )
+        ax = plt.subplot(projection=_STEREO_NH)
 
-    if not (scalar_data is None):
-        scalar_data.plot.contour(
+    ax.coastlines(linewidth=0.5, color="gray")
+    ax.set_extent([-180, 180, 20, 90], crs=_PLATE_CARREE)
+
+    if scalar_data is not None:
+        scalar_data.plot.contourf(
             ax=ax,
             levels=12,
-            transform=ccrs.PlateCarree(central_longitude=0),
-            labels=True,
-            colors="k",
-            linewidth=1,
+            transform=_PLATE_CARREE,
             zorder=1,
+            cmap=NLDivCmap,
+            add_colorbar=False,
+            add_labels=False,
         )
 
-    for poly in poly_list:
+    default_colors = plt.cm.tab10.colors
 
-        lons, lats = poly.exterior.coords.xy
+    for idx, poly in enumerate(poly_list):
+        parts = list(poly.geoms) if isinstance(poly, MultiPolygon) else [poly]
+        if poly_colors is not None:
+            color = poly_colors[idx]
+        else:
+            color = default_colors[idx % len(default_colors)]
 
-        ax.plot(
-            lons, lats, transform=ccrs.Stereographic(central_longitude=0, central_latitude=90)
-        )
+        for part in parts:
+            lons, lats = part.exterior.coords.xy
 
-        for lon, lat in zip(lons, lats):
-            ax.scatter(
-                lon,
-                lat,
-                color="r",
-                s=30,
-                zorder=100,
-                transform=ccrs.Stereographic(central_longitude=0, central_latitude=90),
+            ax.fill(
+                list(lons), list(lats),
+                facecolor=color, alpha=0.3, edgecolor=color,
+                linewidth=1.5, zorder=3,
+                transform=_STEREO_NH,
             )
 
-    if not (weighted_lat_list is None):
+    if weighted_lat_list is not None:
         for index, coords in enumerate(list(zip(weighted_lon_list, weighted_lat_list))):
             lon, lat = coords
             ax.scatter(
-                lon,
-                lat,
-                transform=ccrs.PlateCarree(central_longitude=0),
-                s=50,
-                color="green",
-                zorder=100,
+                lon, lat,
+                transform=_PLATE_CARREE,
+                s=50, color="green", zorder=100,
+                edgecolors='k', linewidths=0.5,
             )
 
             ax.annotate(
                 str(index),
                 (lon, lat),
+                fontsize=8,
                 bbox=dict(boxstyle="round", fc="white", ec="b"),
-                transform=ccrs.PlateCarree(central_longitude=0),
+                transform=_PLATE_CARREE,
                 zorder=1000,
             )
 
@@ -315,11 +335,9 @@ def _plot_polygons(
         for sample_points in sample_points_list:
             for lon, lat in sample_points:
                 ax.scatter(
-                    lon,
-                    lat,
-                    color="b",
-                    s=5,
-                    transform=ccrs.Stereographic(central_longitude=0, central_latitude=90),
+                    lon, lat,
+                    color="b", s=5,
+                    transform=_STEREO_NH,
                 )
 
     plt.tight_layout()
@@ -327,7 +345,9 @@ def _plot_polygons(
 
 
 def _plot_raster(raster_data):
-    ax = plt.subplot(projection=ccrs.Stereographic(central_longitude=0, central_latitude=90))
+    ax = plt.subplot(projection=_STEREO_NH)
+    ax.coastlines(linewidth=0.5, color="gray")
+    ax.set_extent([-180, 180, 20, 90], crs=_PLATE_CARREE)
 
     ax.imshow(
         np.ma.array(raster_data, mask=(raster_data == 0)),
