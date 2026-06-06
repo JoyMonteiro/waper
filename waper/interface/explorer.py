@@ -27,7 +27,7 @@ def polygons_layer(cat, time):
         return hv.Polygons([])
     gdf = gpd.GeoDataFrame(df.assign(geometry=df["geometry_wkb"].apply(wkb.loads)),
                            geometry="geometry", crs="EPSG:4326")
-    return gdf.hvplot.polygons(geo=True, alpha=0.25, c="rwp_id",
+    return gdf.hvplot.polygons(geo=True, alpha=0.25, fill_color="rwp_id", line_color="black",
                                colorbar=False, responsive=True, height=500)
 
 def edges_layer(cat, time):
