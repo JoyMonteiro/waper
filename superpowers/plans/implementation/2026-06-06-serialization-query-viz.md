@@ -886,7 +886,7 @@ def test_match_points(cat):
 
 **Files:** Create `waper/interface/colormaps.py`; Test `tests/interface/test_colormaps.py`
 
-- [ ] **Step 1: Write the failing test:**
+- [x] **Step 1: Write the failing test:**
 
 ```python
 from waper.interface.colormaps import joy_nl8, bokeh_palette
@@ -900,9 +900,9 @@ def test_nl_palette_white_plateau():
     assert 0.45 <= white[0]/255 <= 0.55
 ```
 
-- [ ] **Step 2: Run, expect FAIL.**
+- [x] **Step 2: Run, expect FAIL.**
 
-- [ ] **Step 3: Implement** `waper/interface/colormaps.py` — copy the `cdictDivergeNL8` dict **verbatim** from `~/Dropbox/Scripts/myCmap.py` (self-contained, no file deps), plus a couple of siblings if desired:
+- [x] **Step 3: Implement** `waper/interface/colormaps.py` — copy the `cdictDivergeNL8` dict **verbatim** from `~/Dropbox/Scripts/myCmap.py` (self-contained, no file deps), plus a couple of siblings if desired:
 
 ```python
 """Vendored non-linear diverging colormaps (white plateau near zero).
@@ -928,9 +928,9 @@ def bokeh_palette(cmap, n=256):
     return [mc.rgb2hex(cmap(i/(n-1))) for i in range(n)]
 ```
 
-- [ ] **Step 4: Run, expect PASS.** `pytest tests/interface/test_colormaps.py -v`
+- [x] **Step 4: Run, expect PASS.** `pytest tests/interface/test_colormaps.py -v`
 
-- [ ] **Step 5: Commit.** `git commit -am "feat(viz): vendor NL diverging colormaps + bokeh_palette"`
+- [x] **Step 5: Commit.** `git commit -am "feat(viz): vendor NL diverging colormaps + bokeh_palette"`
 
 ## Task 15: Layer builders (data-level, no render)
 
@@ -938,7 +938,7 @@ def bokeh_palette(cmap, n=256):
 
 > Add deps first: `pip install hvplot holoviews geoviews panel panel-material-ui datashader` and add them to `pyproject.toml`.
 
-- [ ] **Step 1: Write the failing test** (build elements, assert types — no server):
+- [x] **Step 1: Write the failing test** (build elements, assert types — no server):
 
 ```python
 import holoviews as hv
@@ -952,9 +952,9 @@ def test_layer_builders_return_elements(cat):
     assert isinstance(polys, hv.Polygons)
 ```
 
-- [ ] **Step 2: Run, expect FAIL.**
+- [x] **Step 2: Run, expect FAIL.**
 
-- [ ] **Step 3: Implement** `waper/interface/explorer.py`:
+- [x] **Step 3: Implement** `waper/interface/explorer.py`:
 
 ```python
 import geopandas as gpd
@@ -1003,15 +1003,15 @@ def field_layer(field_da, time_index):
                               coastline=True, responsive=True, height=500)
 ```
 
-- [ ] **Step 4: Run, expect PASS.** `pytest tests/interface/test_explorer.py -v`
+- [x] **Step 4: Run, expect PASS.** `pytest tests/interface/test_explorer.py -v`
 
-- [ ] **Step 5: Commit.** `git commit -am "feat(viz): catalogue-backed layer builders (nodes/edges/polygons/field)"`
+- [x] **Step 5: Commit.** `git commit -am "feat(viz): catalogue-backed layer builders (nodes/edges/polygons/field)"`
 
 ## Task 16: `RWPExplorer` Panel app + render smoke test
 
 **Files:** Modify `waper/interface/explorer.py`; Test `tests/interface/test_explorer.py`
 
-- [ ] **Step 1: Write the failing smoke test** (build app + force a Bokeh render; no browser):
+- [x] **Step 1: Write the failing smoke test** (build app + force a Bokeh render; no browser):
 
 ```python
 def test_explorer_renders(cat):
@@ -1025,9 +1025,9 @@ def test_layer_toggle(cat):
     hv.render(app._map.object)
 ```
 
-- [ ] **Step 2: Run, expect FAIL.**
+- [x] **Step 2: Run, expect FAIL.**
 
-- [ ] **Step 3: Implement** (append to `waper/interface/explorer.py`):
+- [x] **Step 3: Implement** (append to `waper/interface/explorer.py`):
 
 ```python
 import panel as pn
@@ -1064,25 +1064,26 @@ class RWPExplorer(pn.viewable.Viewer):
 ```
 > Each callback returns the **same element type** whether on or off (skill rule). `field` is omitted from the toggle set because it needs the gridded `fields.zarr`; add it once Task 17 wires the field source.
 
-- [ ] **Step 4: Run, expect PASS.** `pytest tests/interface/test_explorer.py -v`
+- [x] **Step 4: Run, expect PASS.** `pytest tests/interface/test_explorer.py -v`
 
-- [ ] **Step 5: Manually serve once to eyeball** (optional but recommended): create `scripts/rwp_explorer.py` that loads a catalogue and calls `pn.serve(RWPExplorer(cat, n_times).servable())`; run `panel serve scripts/rwp_explorer.py --dev --show`. Confirm slider scrubs, toggles work, white-near-zero colorbar looks right.
+- [x] **Step 5: Manually serve once to eyeball** (optional but recommended): create `scripts/rwp_explorer.py` that loads a catalogue and calls `pn.serve(RWPExplorer(cat, n_times).servable())`; run `panel serve scripts/rwp_explorer.py --dev --show`. Confirm slider scrubs, toggles work, white-near-zero colorbar looks right.
 
-- [ ] **Step 6: Commit.** `git commit -am "feat(viz): RWPExplorer Panel app + render smoke tests"`
+- [x] **Step 6: Commit.** `git commit -am "feat(viz): RWPExplorer Panel app + render smoke tests"`
 
 ## Task 17: Field layer + Hovmöller + track table (optional, high value)
 
 **Files:** Modify `waper/interface/explorer.py`; Test `tests/interface/test_explorer.py`
 
-- [ ] **Step 1:** Add a `field_da` arg to `RWPExplorer.__init__` (default `None`); when present, add `"field"` to `layers.objects`, add a `_field` DynamicMap built with `field_layer`, and prepend it to the overlay (`field * polys * edges * nodes`). Build the field source from `fields.zarr` if the catalogue has one, else pass the original `v` DataArray.
+- [x] **Step 1:** Add a `field_da` arg to `RWPExplorer.__init__` (default `None`); when present, add `"field"` to `layers.objects`, add a `_field` DynamicMap built with `field_layer`, and prepend it to the overlay (`field * polys * edges * nodes`). Build the field source from `fields.zarr` if the catalogue has one, else pass the original `v` DataArray.
 
-- [ ] **Step 2:** Add a tracks Tabulator: `pn.widgets.Tabulator(cat.track_durations())`; on row select (`Selection1D` + `pn.bind(watch=True)`) highlight that track's path on the map (a separate DynamicMap returning an `hv.Path`). **Do not** use `link_selections` (incompatible with DynamicMap).
+- [x] **Step 2:** Add a tracks Tabulator: `pn.widgets.Tabulator(cat.track_durations())`; on row select (`Selection1D` + `pn.bind(watch=True)`) highlight that track's path on the map (a separate DynamicMap returning an `hv.Path`). **Do not** use `link_selections` (incompatible with DynamicMap).
 
-- [ ] **Step 3:** Add a Hovmöller side panel: `field_da.mean("latitude").hvplot.image(x="longitude", y="time", cmap=bokeh_palette(joy_nl8), clim=(-vmax,vmax))`.
+- [x] **Step 3:** Add a Hovmöller side panel: `field_da.mean("latitude").hvplot.image(x="longitude", y="time", cmap=bokeh_palette(joy_nl8), clim=(-vmax,vmax))`.
 
-- [ ] **Step 4:** Render smoke test for each new piece (`hv.render(...)`), as in Task 16.
+- [x] **Step 4:** Render smoke test for each new piece (`hv.render(...)`), as in Task 16.
 
-- [ ] **Step 5: Commit.** `git commit -am "feat(viz): field layer, Hovmöller, linked track table"`
+- [x] **Step 5: Commit.** `git commit -am "feat(viz): field layer, Hovmöller, linked track table"`
+
 
 ---
 
