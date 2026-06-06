@@ -49,7 +49,7 @@ def edges_layer(cat, time):
 def field_layer(field_da, time_index):
     da = field_da.isel(time=time_index)
     vmax = float(abs(da).quantile(0.99))
-    return da.hvplot.quadmesh(x="longitude", y="latitude", geo=True, project=True,
+    return da.hvplot.quadmesh(x="longitude", y="latitude", geo=True, project=False,
                               cmap=bokeh_palette(joy_nl8), clim=(-vmax, vmax),
                               rasterize=True, clabel="v (m s⁻¹)",
                               coastline=True, responsive=True, height=500)
@@ -114,6 +114,7 @@ class RWPExplorer(pn.viewable.Viewer):
             hov = self.field_da.mean("latitude").hvplot.image(
                 x="longitude",
                 y="time",
+                geo=False,
                 cmap=bokeh_palette(joy_nl8),
                 clim=(-vmax, vmax),
                 clabel="v (m s⁻¹)",
