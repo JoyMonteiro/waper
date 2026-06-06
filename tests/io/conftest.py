@@ -12,3 +12,10 @@ def tracked_waper(two_timestep_field):
     w.identify_rwps()
     w.track_rwps()
     return w
+
+@pytest.fixture
+def cat(tracked_waper, tmp_path):
+    from waper.io.catalogue import save_catalogue, load_catalogue
+    p = tmp_path / "cat"
+    save_catalogue(tracked_waper, p, meta={"units": "m s**-1", "dt_hours": 6})
+    return load_catalogue(p)

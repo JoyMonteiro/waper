@@ -492,7 +492,7 @@ git commit -m "feat(io): load_catalogue + Catalogue.table + graph round-trip tes
 
 **Files:** Modify `waper/io/catalogue.py`; Test `tests/io/test_query.py`
 
-- [ ] **Step 1: Write the failing test:**
+- [x] **Step 1: Write the failing test:**
 
 ```python
 def test_filter_and_accessors(cat):
@@ -502,9 +502,9 @@ def test_filter_and_accessors(cat):
     assert (sub.nodes()["time"] == 0).all()
 ```
 
-- [ ] **Step 2: Run, expect FAIL.**
+- [x] **Step 2: Run, expect FAIL.**
 
-- [ ] **Step 3: Implement** (add to `Catalogue`):
+- [x] **Step 3: Implement** (add to `Catalogue`):
 
 ```python
 import numpy as np
@@ -542,15 +542,15 @@ class Catalogue:   # ... continued
 ```
 > Replace the earlier minimal `__init__` with this one; keep `table()`, `load_catalogue`, `save_catalogue`, `write_meta`, `read_meta` as-is.
 
-- [ ] **Step 4: Run, expect PASS.**
+- [x] **Step 4: Run, expect PASS.**
 
-- [ ] **Step 5: Commit.** `git commit -am "feat(query): Catalogue.filter + raw accessors"`
+- [x] **Step 5: Commit.** `git commit -am "feat(query): Catalogue.filter + raw accessors"`
 
 ## Task 8: Structural metrics — amplitudes, zonal_extent, implied_wavenumber
 
 **Files:** Modify `waper/io/catalogue.py`; Test `tests/io/test_query.py`
 
-- [ ] **Step 1: Write the failing test:**
+- [x] **Step 1: Write the failing test:**
 
 ```python
 def test_structural_metrics(cat):
@@ -562,9 +562,9 @@ def test_structural_metrics(cat):
     assert wn["implied_wavenumber"].dropna().between(2, 12).mean() > 0.5
 ```
 
-- [ ] **Step 2: Run, expect FAIL.**
+- [x] **Step 2: Run, expect FAIL.**
 
-- [ ] **Step 3: Implement** (add to `Catalogue`; reuse `_longitude_separation`):
+- [x] **Step 3: Implement** (add to `Catalogue`; reuse `_longitude_separation`):
 
 ```python
     def amplitudes(self):
@@ -589,9 +589,9 @@ def test_structural_metrics(cat):
         return pd.DataFrame(out)
 ```
 
-- [ ] **Step 4: Run, expect PASS.**
+- [x] **Step 4: Run, expect PASS.**
 
-- [ ] **Step 5: Commit.** `git commit -am "feat(query): amplitudes, zonal_extent, implied_wavenumber"`
+- [x] **Step 5: Commit.** `git commit -am "feat(query): amplitudes, zonal_extent, implied_wavenumber"`
 
 ## Task 9: Track metrics — durations, propagation, group_velocity
 
@@ -599,7 +599,7 @@ def test_structural_metrics(cat):
 
 > **Scope note:** `group_velocity` is computed from track-centroid zonal displacement. `phase_speed` (individual node speed → the `c_g>c_p` downstream-development test) requires node-level tracking, which WAPER does not natively provide — **deferred to a follow-up plan**; do not stub it here.
 
-- [ ] **Step 1: Write the failing test:**
+- [x] **Step 1: Write the failing test:**
 
 ```python
 def test_track_metrics(cat):
@@ -609,9 +609,9 @@ def test_track_metrics(cat):
     assert {"track_id","propagation_deg"}.issubset(prop.columns)
 ```
 
-- [ ] **Step 2: Run, expect FAIL.**
+- [x] **Step 2: Run, expect FAIL.**
 
-- [ ] **Step 3: Implement** (add to `Catalogue`):
+- [x] **Step 3: Implement** (add to `Catalogue`):
 
 ```python
     def _track_paths(self):
@@ -662,15 +662,15 @@ def test_track_metrics(cat):
         return pd.DataFrame(rows)
 ```
 
-- [ ] **Step 4: Run, expect PASS.**
+- [x] **Step 4: Run, expect PASS.**
 
-- [ ] **Step 5: Commit.** `git commit -am "feat(query): track durations, propagation, group_velocity (phase_speed deferred)"`
+- [x] **Step 5: Commit.** `git commit -am "feat(query): track durations, propagation, group_velocity (phase_speed deferred)"`
 
 ## Task 10: Graph topology — merges, splits, tracks_through, provenance
 
 **Files:** Modify `waper/io/catalogue.py`; Test `tests/io/test_query.py`
 
-- [ ] **Step 1: Write the failing test:**
+- [x] **Step 1: Write the failing test:**
 
 ```python
 def test_graph_topology(cat):
@@ -680,9 +680,9 @@ def test_graph_topology(cat):
     # may legitimately be empty on the 2-step fixture; just assert shape/columns
 ```
 
-- [ ] **Step 2: Run, expect FAIL.**
+- [x] **Step 2: Run, expect FAIL.**
 
-- [ ] **Step 3: Implement** (add to `Catalogue`):
+- [x] **Step 3: Implement** (add to `Catalogue`):
 
 ```python
     def _digraph(self):
@@ -721,15 +721,15 @@ def test_graph_topology(cat):
         return dict(track_id=track_id, genesis_lon=lon, genesis_lat=lat, genesis_time=t)
 ```
 
-- [ ] **Step 4: Run, expect PASS.**
+- [x] **Step 4: Run, expect PASS.**
 
-- [ ] **Step 5: Commit.** `git commit -am "feat(query): merges/splits/tracks_through/provenance"`
+- [x] **Step 5: Commit.** `git commit -am "feat(query): merges/splits/tracks_through/provenance"`
 
 ## Task 11: Climatology aggregations
 
 **Files:** Modify `waper/io/catalogue.py`; Test `tests/io/test_query.py`
 
-- [ ] **Step 1: Write the failing test:**
+- [x] **Step 1: Write the failing test:**
 
 ```python
 def test_climatology_aggregations(cat):
@@ -739,9 +739,9 @@ def test_climatology_aggregations(cat):
     assert "amp_vs_extent_r" in cc
 ```
 
-- [ ] **Step 2: Run, expect FAIL.**
+- [x] **Step 2: Run, expect FAIL.**
 
-- [ ] **Step 3: Implement** (add to `Catalogue`):
+- [x] **Step 3: Implement** (add to `Catalogue`):
 
 ```python
     def amplitude_pdf(self, bins=20):
@@ -777,15 +777,15 @@ def test_climatology_aggregations(cat):
         return {"amp_vs_extent_r": float(amp_extent)}
 ```
 
-- [ ] **Step 4: Run, expect PASS.**
+- [x] **Step 4: Run, expect PASS.**
 
-- [ ] **Step 5: Commit.** `git commit -am "feat(query): amplitude/duration pdf, seasonal cycle, spatial frequency, correlations"`
+- [x] **Step 5: Commit.** `git commit -am "feat(query): amplitude/duration pdf, seasonal cycle, spatial frequency, correlations"`
 
 ## Task 12: Region / phase queries (WD + Shah & Monteiro)
 
 **Files:** Modify `waper/io/catalogue.py`; Test `tests/io/test_query.py`
 
-- [ ] **Step 1: Write the failing test:**
+- [x] **Step 1: Write the failing test:**
 
 ```python
 def test_region_phase(cat):
@@ -795,9 +795,9 @@ def test_region_phase(cat):
     assert {"nearest_node_type","fractional_position","nearest_node_lon"}.issubset(res)
 ```
 
-- [ ] **Step 2: Run, expect FAIL.**
+- [x] **Step 2: Run, expect FAIL.**
 
-- [ ] **Step 3: Implement** (add to `Catalogue`):
+- [x] **Step 3: Implement** (add to `Catalogue`):
 
 ```python
     def rwps_in(self, box):
@@ -837,15 +837,15 @@ def test_region_phase(cat):
                     nearest_node_lon=float(nearest["lon"]))
 ```
 
-- [ ] **Step 4: Run, expect PASS.**
+- [x] **Step 4: Run, expect PASS.**
 
-- [ ] **Step 5: Commit.** `git commit -am "feat(query): rwps_in, packet_at, phase_at (region-phase regime variable)"`
+- [x] **Step 5: Commit.** `git commit -am "feat(query): rwps_in, packet_at, phase_at (region-phase regime variable)"`
 
 ## Task 13: External point matching (Hunt catalogue, deferred-use but implement now)
 
 **Files:** Modify `waper/io/catalogue.py`; Test `tests/io/test_query.py`
 
-- [ ] **Step 1: Write the failing test:**
+- [x] **Step 1: Write the failing test:**
 
 ```python
 import pandas as pd
@@ -856,9 +856,9 @@ def test_match_points(cat):
     assert "matched" in m.columns and bool(m["matched"].iloc[0]) is True
 ```
 
-- [ ] **Step 2: Run, expect FAIL.**
+- [x] **Step 2: Run, expect FAIL.**
 
-- [ ] **Step 3: Implement** (add to `Catalogue`):
+- [x] **Step 3: Implement** (add to `Catalogue`):
 
 ```python
     def match_points(self, other_df, radius_km=850):
@@ -874,9 +874,9 @@ def test_match_points(cat):
         return other_df.assign(matched=out)
 ```
 
-- [ ] **Step 4: Run, expect PASS.** Then run the whole query suite: `pytest tests/io/test_query.py -v`
+- [x] **Step 4: Run, expect PASS.** Then run the whole query suite: `pytest tests/io/test_query.py -v`
 
-- [ ] **Step 5: Commit.** `git commit -am "feat(query): match_points (POD/FAR co-location)"`
+- [x] **Step 5: Commit.** `git commit -am "feat(query): match_points (POD/FAR co-location)"`
 
 ---
 
