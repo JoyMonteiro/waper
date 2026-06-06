@@ -64,7 +64,13 @@ dependencies = [
     "tqdm >= 4.64",
     "pyarrow",
     "geopandas",
-    "zarr"
+    "zarr",
+    "hvplot",
+    "holoviews",
+    "geoviews",
+    "panel",
+    "panel-material-ui",
+    "datashader"
 ]
 
 [project.optional-dependencies]
