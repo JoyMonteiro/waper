@@ -27,7 +27,11 @@ def save_catalogue(waper, path, *, meta=None) -> None:
     path = Path(path); path.mkdir(parents=True, exist_ok=True)
     for name, fn in _TABLES.items():
         _write_table(fn(waper), path / name)
-    write_meta(path, meta or {})
+    # Record the hemisphere so consumers know which polar-stereographic CRS the
+    # `rwps.geometry_wkb` polygons live in (the explorer reprojects with it).
+    meta = dict(meta or {})
+    meta.setdefault("hemisphere", waper._config.hemisphere)
+    write_meta(path, meta)
 
 import numpy as np
 

@@ -24,10 +24,25 @@ def test_extract_rwps(tracked_waper):
     geom = wkb.loads(df["geometry_wkb"].iloc[0])   # round-trips to a shapely geometry
     assert geom.geom_type in ("Polygon","MultiPolygon")
 
+def test_extract_rwps_geometry_is_stereographic(tracked_waper):
+    # Polygons are intentionally kept in WAPER's polar-stereographic CRS (metres)
+    # so dateline-crossing packets stay contiguous. Bounds are metre-scale, not
+    # degree-scale; the explorer projects them via the `hemisphere` meta.
+    df = extract_rwps(tracked_waper)
+    geom = wkb.loads(df["geometry_wkb"].iloc[0])
+    assert geom.geom_type in ("Polygon", "MultiPolygon")
+    assert max(abs(b) for b in geom.bounds) > 1e5, geom.bounds  # metres, not degrees
+
 def test_extract_samples(tracked_waper):
     df = extract_samples(tracked_waper)
     assert set(["time","rwp_id","pt_idx","lon","lat"]).issubset(df.columns)
     assert len(df) > 0
+
+def test_extract_samples_is_lonlat(tracked_waper):
+    # sample_points come back from WAPER in stereographic metres too.
+    df = extract_samples(tracked_waper)
+    assert df["lon"].between(-180.0, 360.0).all()
+    assert df["lat"].between(-90.0, 90.0).all()
 
 def test_extract_track_tables(tracked_waper):
     nodes = extract_track_nodes(tracked_waper)
