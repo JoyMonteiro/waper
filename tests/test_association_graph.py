@@ -194,3 +194,58 @@ def test_get_ranked_paths_independent_set():
     # Check that 3-0-4 is NOT in there
     assert [3, 0, 4] not in paths
     assert [4, 0, 3] not in paths
+
+
+def _chain_graph(specs):
+    """Build a simple chain graph. specs: list of (lon, node_type, region_id)."""
+    G = nx.Graph()
+    for i, (lon, ntype, region) in enumerate(specs):
+        G.add_node(i, coords=(lon, 50.0), node_type=ntype, region_id=region)
+    for i in range(len(specs) - 1):
+        G.add_edge(i, i + 1, weight=5.0)
+    return G
+
+
+def test_chain_with_shared_region_id_not_fragmented():
+    """A clean monotonic-east wave train must stay one path even when several
+    same-type extrema share a field-connectivity region_id (normal for a wave
+    train whose troughs lie on one continuous anomaly ribbon).
+
+    Regression for the 8-12 case: minima sharing region 0 were wrongly splitting
+    the chain via the region-wrap unwrap.
+    """
+    from waper.identification.rwp_graph import get_ranked_paths
+    # max-min-max-min-max, both minima share region_id 0 (like nodes 9 & 11)
+    G = _chain_graph([
+        (10.0, "max", 2),
+        (30.0, "min", 0),
+        (50.0, "max", 5),
+        (70.0, "min", 0),
+        (90.0, "max", 0),
+    ])
+    paths = [list(p) for p in get_ranked_paths(G, max_weight=100)]
+    assert [0, 1, 2, 3, 4] in paths, paths
+
+
+def test_globe_circling_path_is_split():
+    """A path whose cumulative eastward longitude completes a full circle is a
+    genuine wrap and must be split."""
+    from waper.identification.rwp_graph import _unwrap_path, _path_circles_globe
+    # cumulative east: 90+100+110+90 = 390 >= 360 -> wraps the globe
+    G = _chain_graph([
+        (0.0, "max", 0), (90.0, "min", 1), (190.0, "max", 2),
+        (300.0, "min", 3), (30.0, "max", 4),
+    ])
+    path = [0, 1, 2, 3, 4]
+    assert _path_circles_globe(G, path) is True
+    subs = _unwrap_path(G, path)
+    # the wrap must be broken up: no returned sub-path may still circle the globe,
+    # and the original full loop must not survive intact.
+    assert all(not _path_circles_globe(G, sp) for sp in subs)
+    assert [0, 1, 2, 3, 4] not in [list(s) for s in subs]
+
+
+def test_short_chain_does_not_circle_globe():
+    from waper.identification.rwp_graph import _path_circles_globe
+    G = _chain_graph([(10.0, "max", 0), (40.0, "min", 0), (80.0, "max", 0)])
+    assert _path_circles_globe(G, [0, 1, 2]) is False

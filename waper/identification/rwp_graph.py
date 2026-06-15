@@ -311,28 +311,26 @@ def _is_monotonic_east(assoc_graph, path):
     return True
 
 
-def _has_region_wrap(assoc_graph, path):
-    """Return True if any two same-type nodes in *path* share a region_id.
+def _path_circles_globe(assoc_graph, path, full_circle=360.0):
+    """Return True if the path wraps all the way around the globe.
 
-    This indicates the path has wrapped around to revisit the same connected
-    component of the scalar field, which is non-physical.
+    A genuine wrap is when the cumulative eastward longitude travelled along the
+    path reaches a full circle, meaning it has looped back to revisit the same
+    longitudes — which is non-physical for a single RWP.
+
+    This replaces the old shared-``region_id`` test: ``region_id`` is the
+    connected-region label of the *thresholded field*, and the successive
+    troughs (or crests) of one coherent wave train legitimately lie on the same
+    continuous anomaly ribbon, so they share a region. Splitting on that shredded
+    real wave trains; only an actual globe-circling loop is a wrap.
     """
-    seen_max_regions = {}
-    seen_min_regions = {}
-    for node in path:
-        attrs = assoc_graph.nodes[node]
-        node_type = attrs.get("node_type")
-        region_id = attrs.get("region_id", -1)
-        if node_type is None or region_id == -1:
-            continue
-        if node_type == "max":
-            if region_id in seen_max_regions:
-                return True
-            seen_max_regions[region_id] = node
-        else:
-            if region_id in seen_min_regions:
-                return True
-            seen_min_regions[region_id] = node
+    total = 0.0
+    for i in range(len(path) - 1):
+        lon_a = assoc_graph.nodes[path[i]]["coords"][0]
+        lon_b = assoc_graph.nodes[path[i + 1]]["coords"][0]
+        total += _longitude_separation(lon_a, lon_b)
+        if total >= full_circle:
+            return True
     return False
 
 
@@ -364,8 +362,8 @@ def _split_at_weakest_edge(assoc_graph, path):
 
 
 def _unwrap_path(assoc_graph, path):
-    """Recursively split a path until no sub-path has a region wrap."""
-    if not _has_region_wrap(assoc_graph, path):
+    """Recursively split a path until no sub-path circles the globe."""
+    if not _path_circles_globe(assoc_graph, path):
         return [path]
 
     sub_paths = _split_at_weakest_edge(assoc_graph, path)
