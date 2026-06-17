@@ -272,7 +272,7 @@ def rasterize_energy(energy_cells, hemisphere="north"):
     `rasterize_all_rwps`. Each pixel holds the burned energy (0 where empty).
 
     Args:
-        energy_cells: list of (geometry in stereographic metres, energy float).
+        energy_cells: list of (geometry in stereographic metres, energy = squared amplitude).
         hemisphere: "north" | "south".
 
     Returns:
