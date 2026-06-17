@@ -168,3 +168,20 @@ def test_feature_zero_not_in_edges(simple_wave_field, default_config):
     for u, v in track_g.edges():
         assert u[1] != 0, f"Feature 0 found as source in edge {u} -> {v}"
         assert v[1] != 0, f"Feature 0 found as target in edge {u} -> {v}"
+
+
+def test_energy_weighted_centroid_favors_high_amplitude():
+    from waper.tracking.rwp_polygon import _weighted_centroid
+    xs = np.array([0.0, 10.0]); ys = np.array([0.0, 0.0])
+    values = np.array([1.0, 3.0])          # 3x amplitude -> 9x energy
+    wx, wy = _weighted_centroid(xs, ys, values)
+    assert abs(wx - 9.0) < 1e-9            # 10 * 9/(1+9) = 9.0
+    assert abs(wy - 0.0) < 1e-9
+
+
+def test_weighted_centroid_uses_squared_weights_sign_independent():
+    from waper.tracking.rwp_polygon import _weighted_centroid
+    xs = np.array([0.0, 4.0]); ys = np.array([0.0, 0.0])
+    values = np.array([-2.0, 2.0])         # equal energy (4 each) -> midpoint
+    wx, _ = _weighted_centroid(xs, ys, values)
+    assert abs(wx - 2.0) < 1e-9

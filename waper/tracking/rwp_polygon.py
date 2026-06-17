@@ -87,6 +87,16 @@ def get_consistent_longitudes(longitude_array, min_lon):
     return list(final_array)
 
 
+def _weighted_centroid(xs, ys, values):
+    """Energy-weighted centroid: weights are amplitude squared (energy), so the
+    strongest crests/troughs dominate the position and the sign of `values`
+    does not matter."""
+    weights = np.asarray(values, dtype=float) ** 2
+    wx = np.average(np.asarray(xs, dtype=float), weights=weights)
+    wy = np.average(np.asarray(ys, dtype=float), weights=weights)
+    return wx, wy
+
+
 def get_region_points_and_values(
     assoc_graph, node, clipped_region, clip_threshold, scalar_name
 ):
@@ -202,8 +212,7 @@ def get_polygon_for_rwp_path(
         rwp_poly = MultiPoint(list(zip(xs_all, ys_all))).convex_hull
 
     xs, ys = transform_to_stereographic(all_lons, all_lats, hemisphere=hemisphere)
-    weighted_ys = np.average(ys, weights=np.abs(np.array(all_values)))
-    weighted_xs = np.average(xs, weights=np.abs(np.array(all_values)))
+    weighted_xs, weighted_ys = _weighted_centroid(xs, ys, all_values)
     weighted_longitude, weighted_latitude = transform_to_stereographic(
         weighted_xs, weighted_ys, hemisphere=hemisphere, inverse=True
     )
