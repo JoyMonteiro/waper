@@ -1,5 +1,4 @@
 import logging
-from itertools import product
 
 import networkx as nx
 from matplotlib.font_manager import weight_dict
@@ -7,7 +6,7 @@ from networkx import Graph
 from tqdm import tqdm
 
 from ..identification.utils import haversine_distance
-from .quadtree import compute_size_features, merge
+from .energy_overlap import feature_energies, overlap_energies
 
 logger = logging.getLogger(__name__)
 
@@ -47,34 +46,25 @@ def build_tracking_graph(time_step_data, number_steps: int = None) -> Graph:
             tracking_graph.add_node((time, feature), coords=(lon, lat))
 
         if time > 0:
-            prev_features = set(time_step_data[time - 1].raster_features) - {0}
-            curr_features = set(time_step_data[time].raster_features) - {0}
-
-            if not prev_features or not curr_features:
+            prev = time_step_data[time - 1]
+            curr = time_step_data[time]
+            if prev.raster_data is None or curr.raster_data is None:
+                continue
+            if prev.energy_raster is None or curr.energy_raster is None:
                 continue
 
-            merge_graph = merge(
-                time_step_data[time].quadtree,
-                time_step_data[time - 1].quadtree,
+            prev_energy = feature_energies(prev.raster_data, prev.energy_raster)
+            curr_energy = feature_energies(curr.raster_data, curr.energy_raster)
+            overlaps = overlap_energies(
+                prev.raster_data, prev.energy_raster,
+                curr.raster_data, curr.energy_raster,
             )
-            merge_feature_size = compute_size_features(merge_graph)
-            prev_feature_size = compute_size_features(
-                time_step_data[time - 1].quadtree
-            )
-            curr_feature_size = compute_size_features(time_step_data[time].quadtree)
 
-            edge_list = list(product(prev_features, curr_features))
-
-            for edge in edge_list:
-                if (edge in merge_feature_size) or (
-                    edge[::-1] in merge_feature_size
-                ):
-                    weight = merge_feature_size[edge] / max(
-                        prev_feature_size[tuple([edge[0]])],
-                        curr_feature_size[tuple([edge[1]])],
-                    )
+            for (a, b), overlap_e in overlaps.items():
+                denom = max(prev_energy.get(a, 0.0), curr_energy.get(b, 0.0))
+                if denom > 0:
                     tracking_graph.add_edge(
-                        (time - 1, edge[0]), (time, edge[1]), weight=weight
+                        (time - 1, a), (time, b), weight=overlap_e / denom
                     )
 
     for edge in tracking_graph.edges:

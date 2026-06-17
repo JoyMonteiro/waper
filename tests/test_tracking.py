@@ -129,34 +129,41 @@ def test_quadtree_pixel_counts():
     assert sizes[(2,)] == 400
 
 
-def test_merge_called_once_per_timestep_pair():
-    """merge() must be called exactly (number_steps - 1) times total.
-
-    With 2 features and 3 timesteps, buggy code calls merge 2*2=4 times;
-    correct code calls it 2 times.
-    """
+def _stub_tsd(raster, energy, features):
     from unittest.mock import MagicMock
+    s = MagicMock()
+    s.raster_data = raster
+    s.energy_raster = energy
+    s.raster_features = features
+    s.rwp_info = {}
+    return s
 
-    # Build minimal stub objects — only quadtree and raster_features are needed
-    # by build_tracking_graph for the merge/edge logic
-    def make_ts(feature_ids):
-        ts = MagicMock()
-        ts.raster_features = set(feature_ids)
-        ts.rwp_info = {}  # no RWP info needed for this test
-        return ts
 
-    ts0 = make_ts({0, 1, 2})  # features 1 and 2 (0 = background)
-    ts1 = make_ts({0, 1, 2})
-    ts2 = make_ts({0, 1, 2})
-    ts_list = [ts0, ts1, ts2]
+def test_energy_weight_full_overlap_is_one():
+    F = np.array([[0, 1, 1], [0, 1, 0]])
+    E = np.array([[0.0, 2.0, 2.0], [0.0, 2.0, 0.0]])
+    ts = [_stub_tsd(F, E, {0, 1}), _stub_tsd(F.copy(), E.copy(), {0, 1})]
+    g = tracking_graph.build_tracking_graph(ts, 2)
+    assert g.number_of_edges() == 1
+    assert abs(g[(0, 1)][(1, 1)]["weight"] - 1.0) < 1e-9
 
-    with patch("waper.tracking.tracking_graph.merge", return_value=MagicMock()) as mock_merge, \
-         patch("waper.tracking.tracking_graph.compute_size_features", return_value={}):
-        tracking_graph.build_tracking_graph(ts_list, number_steps=3)
-        assert mock_merge.call_count == 2, (
-            f"Expected merge() called 2 times (once per timestep pair), "
-            f"got {mock_merge.call_count}"
-        )
+
+def test_energy_weight_partial_when_core_moves():
+    Fp = np.array([[1, 1, 0, 0]]); Ep = np.array([[5.0, 1.0, 0.0, 0.0]])
+    Fc = np.array([[0, 1, 1, 0]]); Ec = np.array([[0.0, 1.0, 5.0, 0.0]])
+    ts = [_stub_tsd(Fp, Ep, {0, 1}), _stub_tsd(Fc, Ec, {0, 1})]
+    g = tracking_graph.build_tracking_graph(ts, 2)
+    w = g[(0, 1)][(1, 1)]["weight"]
+    assert 0.0 < w < 1.0
+
+
+def test_overlap_computed_once_per_timestep_pair():
+    F = np.array([[1]]); E = np.array([[1.0]])
+    ts = [_stub_tsd(F, E, {0, 1}) for _ in range(3)]
+    with patch("waper.tracking.tracking_graph.overlap_energies",
+               return_value={}) as mock_ov:
+        tracking_graph.build_tracking_graph(ts, number_steps=3)
+        assert mock_ov.call_count == 2
 
 
 def test_feature_zero_not_in_edges(simple_wave_field, default_config):
