@@ -265,3 +265,26 @@ def rasterize_all_rwps(polygon_list, hemisphere="north"):
         all_touched=True,
         transform=_get_raster_transform(hemisphere),
     )
+
+
+def rasterize_energy(energy_cells, hemisphere="north"):
+    """Rasterize energy cells onto the same 512x512 stereographic grid used by
+    `rasterize_all_rwps`. Each pixel holds the burned energy (0 where empty).
+
+    Args:
+        energy_cells: list of (geometry in stereographic metres, energy float).
+        hemisphere: "north" | "south".
+
+    Returns:
+        float64 raster of shape (WAPER_IMAGE_SIZE, WAPER_IMAGE_SIZE), or None.
+    """
+    if len(energy_cells) == 0:
+        return None
+    return features.rasterize(
+        ((g, e) for g, e in energy_cells),
+        out_shape=(WAPER_IMAGE_SIZE, WAPER_IMAGE_SIZE),
+        fill=0.0,
+        all_touched=True,
+        dtype="float64",
+        transform=_get_raster_transform(hemisphere),
+    )

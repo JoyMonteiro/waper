@@ -203,3 +203,20 @@ def test_energy_disks_one_per_node_weighted_by_energy():
 def test_energy_disks_empty():
     from waper.tracking.rwp_polygon import energy_disks
     assert energy_disks([], hemisphere="north") == []
+
+
+def test_rasterize_energy_shape_and_values():
+    from waper.tracking.rwp_polygon import energy_disks, rasterize_energy, WAPER_IMAGE_SIZE
+    cells = energy_disks([(0.0, 80.0, 4.0)], hemisphere="north", radius_m=500e3)
+    raster = rasterize_energy(cells, hemisphere="north")
+    assert raster.shape == (WAPER_IMAGE_SIZE, WAPER_IMAGE_SIZE)
+    assert raster.dtype == np.float64
+    # the only non-zero value present is the burned energy (4**2 = 16)
+    nonzero = np.unique(raster[raster > 0])
+    assert nonzero.size == 1 and abs(nonzero[0] - 16.0) < 1e-6
+    assert (raster > 0).sum() > 0
+
+
+def test_rasterize_energy_empty_returns_none():
+    from waper.tracking.rwp_polygon import rasterize_energy
+    assert rasterize_energy([], hemisphere="north") is None
