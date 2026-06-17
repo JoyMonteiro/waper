@@ -4,7 +4,7 @@ import numpy as np
 import pyproj
 from pyproj.transformer import Transformer
 from rasterio import Affine, features
-from shapely.geometry import MultiPoint
+from shapely.geometry import MultiPoint, Point
 from shapely.ops import unary_union
 
 from ..identification import topology
@@ -95,6 +95,25 @@ def _weighted_centroid(xs, ys, values):
     wx = np.average(np.asarray(xs, dtype=float), weights=weights)
     wy = np.average(np.asarray(ys, dtype=float), weights=weights)
     return wx, wy
+
+
+def energy_disks(node_coords_scalars, hemisphere="north", radius_m=500e3):
+    """Build energy footprint cells for a set of extrema.
+
+    Args:
+        node_coords_scalars: iterable of (lon, lat, scalar) for each extremum.
+        hemisphere: "north" | "south".
+        radius_m: disk radius in metres around each extremum.
+
+    Returns:
+        list of (shapely Polygon in stereographic metres, energy=scalar**2).
+        Energy concentrates the footprint on the high-amplitude cores.
+    """
+    cells = []
+    for lon, lat, scalar in node_coords_scalars:
+        x, y = transform_to_stereographic(lon, lat, hemisphere=hemisphere)
+        cells.append((Point(x, y).buffer(radius_m), float(scalar) ** 2))
+    return cells
 
 
 def get_region_points_and_values(

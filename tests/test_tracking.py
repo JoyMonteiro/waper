@@ -185,3 +185,21 @@ def test_weighted_centroid_uses_squared_weights_sign_independent():
     values = np.array([-2.0, 2.0])         # equal energy (4 each) -> midpoint
     wx, _ = _weighted_centroid(xs, ys, values)
     assert abs(wx - 2.0) < 1e-9
+
+
+def test_energy_disks_one_per_node_weighted_by_energy():
+    from waper.tracking.rwp_polygon import energy_disks
+    # two extrema; energy must be amplitude**2 and sign-independent
+    cells = energy_disks([(0.0, 50.0, 3.0), (90.0, 50.0, -2.0)],
+                         hemisphere="north", radius_m=300e3)
+    assert len(cells) == 2
+    geom0, e0 = cells[0]
+    geom1, e1 = cells[1]
+    assert abs(e0 - 9.0) < 1e-9
+    assert abs(e1 - 4.0) < 1e-9
+    assert geom0.geom_type == "Polygon" and geom0.area > 0
+
+
+def test_energy_disks_empty():
+    from waper.tracking.rwp_polygon import energy_disks
+    assert energy_disks([], hemisphere="north") == []
