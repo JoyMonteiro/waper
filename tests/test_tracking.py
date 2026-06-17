@@ -11,7 +11,12 @@ from waper.interface.api import WaperConfig, Waper, _identify_rwps
 from waper.tracking import tracking_graph
 from waper.tracking import quadtree as qt_module
 from waper.tracking.quadtree import compute_size_features, create_quadtree
-from waper.tracking.rwp_polygon import WAPER_IMAGE_SIZE
+from waper.tracking.rwp_polygon import (
+    WAPER_IMAGE_SIZE,
+    _weighted_centroid,
+    energy_disks,
+    rasterize_energy,
+)
 
 
 @pytest.fixture
@@ -180,7 +185,6 @@ def test_feature_zero_not_in_edges(simple_wave_field, default_config):
 
 
 def test_energy_weighted_centroid_favors_high_amplitude():
-    from waper.tracking.rwp_polygon import _weighted_centroid
     xs = np.array([0.0, 10.0]); ys = np.array([0.0, 0.0])
     values = np.array([1.0, 3.0])          # 3x amplitude -> 9x energy
     wx, wy = _weighted_centroid(xs, ys, values)
@@ -189,7 +193,6 @@ def test_energy_weighted_centroid_favors_high_amplitude():
 
 
 def test_weighted_centroid_uses_squared_weights_sign_independent():
-    from waper.tracking.rwp_polygon import _weighted_centroid
     xs = np.array([0.0, 4.0]); ys = np.array([0.0, 0.0])
     values = np.array([-2.0, 2.0])         # equal energy (4 each) -> midpoint
     wx, _ = _weighted_centroid(xs, ys, values)
@@ -197,7 +200,6 @@ def test_weighted_centroid_uses_squared_weights_sign_independent():
 
 
 def test_energy_disks_one_per_node_weighted_by_energy():
-    from waper.tracking.rwp_polygon import energy_disks
     # two extrema; energy must be amplitude**2 and sign-independent
     cells = energy_disks([(0.0, 50.0, 3.0), (90.0, 50.0, -2.0)],
                          hemisphere="north", radius_m=300e3)
@@ -210,12 +212,10 @@ def test_energy_disks_one_per_node_weighted_by_energy():
 
 
 def test_energy_disks_empty():
-    from waper.tracking.rwp_polygon import energy_disks
     assert energy_disks([], hemisphere="north") == []
 
 
 def test_rasterize_energy_shape_and_values():
-    from waper.tracking.rwp_polygon import energy_disks, rasterize_energy, WAPER_IMAGE_SIZE
     cells = energy_disks([(0.0, 80.0, 4.0)], hemisphere="north", radius_m=500e3)
     raster = rasterize_energy(cells, hemisphere="north")
     assert raster.shape == (WAPER_IMAGE_SIZE, WAPER_IMAGE_SIZE)
@@ -227,12 +227,10 @@ def test_rasterize_energy_shape_and_values():
 
 
 def test_rasterize_energy_empty_returns_none():
-    from waper.tracking.rwp_polygon import rasterize_energy
     assert rasterize_energy([], hemisphere="north") is None
 
 
 def test_energy_raster_built_and_aligned(two_timestep_field):
-    import xarray as xr
     ds = xr.Dataset({"v": two_timestep_field})
     w = Waper(data_array=ds, scalar_name="v",
               latitude_label="latitude", longitude_label="longitude", time_label="time",

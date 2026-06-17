@@ -1,7 +1,6 @@
 import logging
 
 import networkx as nx
-from matplotlib.font_manager import weight_dict
 from networkx import Graph
 from tqdm import tqdm
 
@@ -12,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def build_tracking_graph(time_step_data, number_steps: int = None) -> Graph:
-    """Build tracking graph based on overlap between quadtrees
+    """Build tracking graph based on energy overlap between consecutive timesteps
 
     Args:
         time_step_data (list): list of identification data

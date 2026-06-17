@@ -80,7 +80,7 @@ class WaperSingleTimestepData:
     raster_data: ndarray
     raster_features: list
     quadtree: Graph
-    energy_raster: ndarray = None
+    energy_raster: ndarray = None  # set by _identify_rwps
 
     def __init__(self, input_data: DataArray, config: WaperConfig) -> None:
         self.input_data = input_data
