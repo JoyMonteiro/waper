@@ -48,6 +48,7 @@ class WaperConfig:
     hull_method: str = "per_node"  # "per_node" | "convex" | "concave"
     hemisphere: str = "north"  # "north" | "south"
     penalty_length_scale_km: float = 2000.0
+    energy_radius_km: float = 500.0
 
     vtk_latitude_label: str = "Latitude"
     vtk_longitude_label: str = "Longitude"
@@ -79,6 +80,7 @@ class WaperSingleTimestepData:
     raster_data: ndarray
     raster_features: list
     quadtree: Graph
+    energy_raster: ndarray = None
 
     def __init__(self, input_data: DataArray, config: WaperConfig) -> None:
         self.input_data = input_data
@@ -253,6 +255,20 @@ def _identify_rwps(
         logger.warning("No RWPs found at this timestep. Consider adjusting thresholds.")
 
     time_step_data.raster_data = rwp_polygon.rasterize_all_rwps(list_polygons, hemisphere=config.hemisphere)
+
+    energy_nodes = []
+    for path in time_step_data.identified_rwp_paths:
+        for n in path:
+            lon, lat = time_step_data.pruned_graph.nodes[n]["coords"]
+            scalar = time_step_data.pruned_graph.nodes[n]["scalar"]
+            energy_nodes.append((lon, lat, scalar))
+    energy_cells = rwp_polygon.energy_disks(
+        energy_nodes, hemisphere=config.hemisphere,
+        radius_m=config.energy_radius_km * 1000.0,
+    )
+    time_step_data.energy_raster = rwp_polygon.rasterize_energy(
+        energy_cells, hemisphere=config.hemisphere
+    )
 
     if time_step_data.raster_data is None:
         time_step_data.raster_features = {0}

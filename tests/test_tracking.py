@@ -5,7 +5,7 @@ import networkx as nx
 import numpy as np
 import pytest
 
-from waper.interface.api import WaperConfig, _identify_rwps
+from waper.interface.api import WaperConfig, Waper, _identify_rwps
 from waper.tracking import tracking_graph
 from waper.tracking import quadtree as qt_module
 from waper.tracking.quadtree import compute_size_features, create_quadtree
@@ -220,3 +220,20 @@ def test_rasterize_energy_shape_and_values():
 def test_rasterize_energy_empty_returns_none():
     from waper.tracking.rwp_polygon import rasterize_energy
     assert rasterize_energy([], hemisphere="north") is None
+
+
+def test_energy_raster_built_and_aligned(two_timestep_field):
+    import xarray as xr
+    ds = xr.Dataset({"v": two_timestep_field})
+    w = Waper(data_array=ds, scalar_name="v",
+              latitude_label="latitude", longitude_label="longitude", time_label="time",
+              clip_value=2, extrema_threshold=10, min_latitude=20, max_latitude=80.1,
+              node_pruning_threshold=15, edge_pruning_threshold=3e-5,
+              track_pruning_threshold=0.3, max_edge_weight=1, debug=False)
+    w.identify_rwps()
+    tsd = w._time_step_data[0]
+    assert tsd.energy_raster is not None
+    assert tsd.energy_raster.shape == tsd.raster_data.shape
+    # energy lives only where a feature footprint is, and is strictly positive there
+    assert (tsd.energy_raster > 0).any()
+    assert np.all(tsd.energy_raster[tsd.raster_data == 0] >= 0)
