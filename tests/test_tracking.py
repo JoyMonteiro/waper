@@ -1,9 +1,11 @@
+import os
 import time as time_module
 from unittest.mock import patch
 
 import networkx as nx
 import numpy as np
 import pytest
+import xarray as xr
 
 from waper.interface.api import WaperConfig, Waper, _identify_rwps
 from waper.tracking import tracking_graph
@@ -244,3 +246,22 @@ def test_energy_raster_built_and_aligned(two_timestep_field):
     # energy lives only where a feature footprint is, and is strictly positive there
     assert (tsd.energy_raster > 0).any()
     assert np.all(tsd.energy_raster[tsd.raster_data == 0] >= 0)
+
+
+DATASET = "datasets/forecast_bust.nc"
+
+
+@pytest.mark.skipif(not os.path.exists(DATASET), reason="forecast_bust.nc not present")
+def test_energy_tracks_show_eastward_motion():
+    ds = xr.open_dataset(DATASET)
+    w = Waper(data_array=ds, scalar_name="v",
+              latitude_label="latitude", longitude_label="longitude", time_label="time",
+              clip_value=2, extrema_threshold=10, min_latitude=20, max_latitude=80,
+              node_pruning_threshold=20, edge_pruning_threshold=0.02, max_edge_weight=1,
+              track_pruning_threshold=0.3)
+    w.identify_rwps(); w.track_rwps()
+    g = w._tracking_graph
+    # at least one tracked edge exists, and centroids move (not frozen)
+    assert g.number_of_edges() > 0
+    moved = [d["distance"] for _, _, d in g.edges(data=True)]
+    assert np.median(moved) > 0.0
