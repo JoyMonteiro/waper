@@ -108,6 +108,11 @@ def energy_disks(node_coords_scalars, hemisphere="north", radius_m=500e3):
     Returns:
         list of (shapely Polygon in stereographic metres, energy=scalar**2).
         Energy concentrates the footprint on the high-amplitude cores.
+
+    Note:
+        radius_m must be large enough that the disks cover each RWP's footprint;
+        a feature not covered by any disk pixel gets zero energy and is dropped
+        from tracking.
     """
     cells = []
     for lon, lat, scalar in node_coords_scalars:
