@@ -45,3 +45,36 @@ def test_unmatched_prev_feature_dies():
     tracks = track_features(fb)
     assert len(tracks) == 2
     assert all(len(t.steps) == 1 for t in tracks)
+
+
+def test_feature_recovered_through_weak_step():
+    # strong at t0, only a WEAK overlapping feature at t1, strong again at t2
+    fb = [
+        [_feat(0, "max", 0)],
+        [_feat(1, "max", 4, strength="weak")],
+        [_feat(2, "max", 8)],
+    ]
+    tracks = track_features(fb, max_recover_steps=2)
+    assert len(tracks) == 1
+    steps = tracks[0].steps
+    assert [s.time for s in steps] == [0, 1, 2]
+    assert steps[1].recovered is True and steps[2].recovered is False
+
+
+def test_track_dies_after_recovery_budget_exhausted():
+    fb = [
+        [_feat(0, "max", 0)],
+        [_feat(1, "max", 4, strength="weak")],
+        [_feat(2, "max", 8, strength="weak")],
+        [_feat(3, "max", 12, strength="weak")],   # 3rd consecutive weak > budget(2)
+    ]
+    tracks = track_features(fb, max_recover_steps=2)
+    assert len(tracks) == 1
+    assert [s.time for s in tracks[0].steps] == [0, 1, 2]   # terminated before t3
+
+
+def test_track_ends_when_feature_leaves_lat_band():
+    f0 = _feat(0, "max", 0); f0.lat = 60.0
+    f1 = _feat(1, "max", 4); f1.lat = 85.0          # outside band
+    tracks = track_features([[f0], [f1]], lat_bounds=(20.0, 80.0))
+    assert len(tracks) == 1 and len(tracks[0].steps) == 1

@@ -72,37 +72,70 @@ def _strong(features):
     return [f for f in features if f.strength == "strong"]
 
 
-def track_features(features_by_time) -> list:
-    """Build continuous feature tracks across timesteps. A track is seeded from a
-    strong feature and extended each step to the maximally-overlapping strong
-    feature of the same type; unmatched strong features at t are deaths, unmatched
-    strong features at t+1 are births."""
+def _weak(features):
+    return [f for f in features if f.strength == "weak"]
+
+
+def _in_band(feature: Feature, lat_bounds) -> bool:
+    if lat_bounds is None:
+        return True
+    lo, hi = lat_bounds
+    return lo <= feature.lat <= hi
+
+
+def track_features(features_by_time, max_recover_steps: int = 2,
+                   lat_bounds=None) -> list:
+    """Build continuous feature tracks across timesteps.
+
+    A track is seeded from a strong feature and extended each step to the
+    maximally-overlapping strong feature of the same type. If no strong match
+    exists, the track may be continued through an overlapping *weak* feature
+    (recovery), flagged on that step; it terminates after `max_recover_steps`
+    consecutive recovered steps, or when its head leaves `lat_bounds`
+    (``(min_lat, max_lat)`` or ``None``).
+    """
     tracks = []
-    # active = list of [track, head_feature]; seed from the first non-empty step
-    active = []
+    active = []  # list of [track, head_feature, weak_streak]
     next_id = 0
     if features_by_time:
         for f in _strong(features_by_time[0]):
             tr = FeatureTrack(next_id, [_step(f, recovered=False)]); next_id += 1
-            tracks.append(tr); active.append([tr, f])
+            tracks.append(tr); active.append([tr, f, 0])
 
     for t in range(1, len(features_by_time)):
         curr_strong = _strong(features_by_time[t])
+        curr_weak = _weak(features_by_time[t])
         heads = [a[1] for a in active]
-        match = match_features(heads, curr_strong)
+
+        strong_match = match_features(heads, curr_strong)
+        unmatched_heads = [hi for hi in range(len(active)) if hi not in strong_match]
+        weak_match = match_features([active[hi][1] for hi in unmatched_heads], curr_weak)
+        # remap weak_match local indices back to head indices
+        weak_match = {unmatched_heads[k]: v for k, v in weak_match.items()}
+
         new_active = []
-        matched_curr = set(match.values())
         for hi, a in enumerate(active):
-            if hi in match:
-                f = curr_strong[match[hi]]
+            if hi in strong_match:
+                f = curr_strong[strong_match[hi]]
+                if not _in_band(f, lat_bounds):
+                    continue                       # leaves band -> terminate
                 a[0].steps.append(_step(f, recovered=False))
-                new_active.append([a[0], f])
-            # else: track dies (dropped from active)
-        # births: strong curr features not matched to any head
+                new_active.append([a[0], f, 0])
+            elif hi in weak_match:
+                f = curr_weak[weak_match[hi]]
+                if not _in_band(f, lat_bounds) or a[2] + 1 > max_recover_steps:
+                    continue                       # band exit or budget exhausted -> terminate
+                a[0].steps.append(_step(f, recovered=True))
+                new_active.append([a[0], f, a[2] + 1])
+            # else: no match at all -> terminate
+
+        matched_curr = set(strong_match.values())
         for j, f in enumerate(curr_strong):
             if j not in matched_curr:
+                if not _in_band(f, lat_bounds):
+                    continue
                 tr = FeatureTrack(next_id, [_step(f, recovered=False)]); next_id += 1
-                tracks.append(tr); new_active.append([tr, f])
+                tracks.append(tr); new_active.append([tr, f, 0])
         active = new_active
 
     return tracks
