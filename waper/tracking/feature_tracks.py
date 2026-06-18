@@ -5,6 +5,9 @@ primitive is a single extremum (crest/trough), which moves continuously, rather
 than the RWP group, whose membership flips between timesteps.
 """
 from dataclasses import dataclass, field
+from shapely.geometry import MultiPoint
+from ..identification import topology
+from .rwp_polygon import get_region_points_and_values, transform_to_stereographic
 
 
 @dataclass
@@ -166,3 +169,43 @@ def phase_velocity(track, dt_hours: float) -> float:
         east += ((b.lon - a.lon + 180.0) % 360.0) - 180.0
     span_hours = (steps[-1].time - steps[0].time) * dt_hours
     return east / span_hours if span_hours else float("nan")
+
+
+def _footprint_from_region(lons, lats, hemisphere):
+    xs, ys = transform_to_stereographic(np.asarray(lons), np.asarray(lats),
+                                        hemisphere=hemisphere)
+    pts = list(zip(np.atleast_1d(xs), np.atleast_1d(ys)))
+    geom = MultiPoint(pts)
+    return geom.convex_hull if len(pts) >= 3 else geom.buffer(1e4)
+
+
+def extract_features(tsd, time, scalar_name, clip_value, amplitude_threshold,
+                     hemisphere="north"):
+    """All extrema of one timestep as Features, footprint = convex hull of the
+    extremum's connected-region sample points at a single global `clip_value`."""
+    scalar_data = tsd.vtk_data
+    g = tsd.association_graph
+    max_region = topology.identify_connected_regions(
+        scalar_data.clip_scalar(scalars=scalar_name, value=clip_value, invert=False).clean())
+    min_region = topology.identify_connected_regions(
+        scalar_data.clip_scalar(scalars=scalar_name, value=-clip_value, invert=True).clean())
+
+    features = []
+    for node in g.nodes():
+        attrs = g.nodes[node]
+        region = max_region if attrs["node_type"] == "max" else min_region
+        out = get_region_points_and_values(g, node, region, clip_value, scalar_name)
+        if out is None:
+            continue
+        lons, lats, _ = out
+        if len(np.atleast_1d(lons)) == 0:
+            continue
+        lon, lat = attrs["coords"]
+        scalar = float(attrs["scalar"])
+        features.append(Feature(
+            time=time, cluster_id=int(attrs["cluster_id"]), node_type=attrs["node_type"],
+            lon=float(lon), lat=float(lat), scalar=scalar,
+            footprint=_footprint_from_region(lons, lats, hemisphere),
+            strength=("strong" if abs(scalar) >= amplitude_threshold else "weak"),
+        ))
+    return features

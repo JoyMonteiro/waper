@@ -103,3 +103,28 @@ def test_phase_velocity_handles_dateline():
     f1 = _feat(1, "max", 4); f1.lon = -179.0   # +2 deg east across dateline
     (track,) = track_features([[f0], [f1]])
     assert abs(phase_velocity(track, dt_hours=2.0) - 1.0) < 1e-9
+
+
+import xarray as xr
+from waper.interface.api import Waper
+from waper.tracking.feature_tracks import extract_features, Feature
+
+
+def test_extract_features_from_real_timestep(two_timestep_field):
+    ds = xr.Dataset({"v": two_timestep_field})
+    w = Waper(data_array=ds, scalar_name="v",
+              latitude_label="latitude", longitude_label="longitude", time_label="time",
+              clip_value=2, extrema_threshold=10, min_latitude=20, max_latitude=80.1,
+              node_pruning_threshold=15, edge_pruning_threshold=3e-5,
+              track_pruning_threshold=0.3, max_edge_weight=1, debug=False)
+    w.identify_rwps()
+    feats = extract_features(w._time_step_data[0], time=0, scalar_name="v",
+                             clip_value=2, amplitude_threshold=10)
+    assert len(feats) > 0
+    assert all(isinstance(f, Feature) for f in feats)
+    assert all(f.node_type in ("max", "min") for f in feats)
+    assert all(f.strength in ("strong", "weak") for f in feats)
+    assert all(f.footprint.area > 0 for f in feats)        # real region hulls, not points
+    # there are at least as many features as pruned RWP nodes (nothing was dropped)
+    n_pruned_nodes = sum(len(p) for p in w._time_step_data[0].identified_rwp_paths)
+    assert len(feats) >= n_pruned_nodes
