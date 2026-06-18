@@ -13,7 +13,7 @@ from waper.tracking import quadtree as qt_module
 from waper.tracking.quadtree import compute_size_features, create_quadtree
 from waper.tracking.rwp_polygon import (
     WAPER_IMAGE_SIZE,
-    _weighted_centroid,
+    _amplitude_weighted_lonlat_centroid,
     energy_disks,
     rasterize_energy,
 )
@@ -184,19 +184,32 @@ def test_feature_zero_not_in_edges(simple_wave_field, default_config):
         assert v[1] != 0, f"Feature 0 found as target in edge {u} -> {v}"
 
 
-def test_energy_weighted_centroid_favors_high_amplitude():
-    xs = np.array([0.0, 10.0]); ys = np.array([0.0, 0.0])
-    values = np.array([1.0, 3.0])          # 3x amplitude -> 9x energy
-    wx, wy = _weighted_centroid(xs, ys, values)
-    assert abs(wx - 9.0) < 1e-9            # 10 * 9/(1+9) = 9.0
-    assert abs(wy - 0.0) < 1e-9
+def test_centroid_no_poleward_bias_for_zonal_spread():
+    # nodes spread across a wide longitude band at one latitude: the centroid
+    # latitude must stay at that latitude, NOT be pulled toward the pole (the
+    # bug when averaging in the polar-stereographic plane).
+    lons = np.array([0.0, 60.0, 120.0]); lats = np.array([60.0, 60.0, 60.0])
+    values = np.array([1.0, 1.0, 1.0])
+    wlon, wlat = _amplitude_weighted_lonlat_centroid(lons, lats, values)
+    assert abs(wlat - 60.0) < 1e-9
+    assert abs(wlon - 60.0) < 1e-9          # circular mean longitude
 
 
-def test_weighted_centroid_uses_squared_weights_sign_independent():
-    xs = np.array([0.0, 4.0]); ys = np.array([0.0, 0.0])
-    values = np.array([-2.0, 2.0])         # equal energy (4 each) -> midpoint
-    wx, _ = _weighted_centroid(xs, ys, values)
-    assert abs(wx - 2.0) < 1e-9
+def test_centroid_energy_weighting_sign_independent():
+    # weights are amplitude squared (energy); sign does not matter.
+    lons = np.array([0.0, 10.0]); lats = np.array([40.0, 40.0])
+    values = np.array([-1.0, 3.0])          # energy 1 vs 9 -> ~9/10 toward 10
+    wlon, wlat = _amplitude_weighted_lonlat_centroid(lons, lats, values)
+    assert abs(wlon - 9.0) < 0.02          # ~9 (circular mean), dominated by energy-9 node
+    assert abs(wlat - 40.0) < 1e-9
+
+
+def test_centroid_longitude_wraparound():
+    # circular mean of 350 and 10 is 0, not 180.
+    lons = np.array([350.0, 10.0]); lats = np.array([40.0, 40.0])
+    values = np.array([1.0, 1.0])
+    wlon, _ = _amplitude_weighted_lonlat_centroid(lons, lats, values)
+    assert abs(((wlon + 180.0) % 360.0) - 180.0) < 1e-6
 
 
 def test_energy_disks_one_per_node_weighted_by_energy():

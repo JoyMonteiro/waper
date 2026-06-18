@@ -87,14 +87,26 @@ def get_consistent_longitudes(longitude_array, min_lon):
     return list(final_array)
 
 
-def _weighted_centroid(xs, ys, values):
-    """Energy-weighted centroid: weights are amplitude squared (energy), so the
-    strongest crests/troughs dominate the position and the sign of `values`
-    does not matter."""
+def _amplitude_weighted_lonlat_centroid(lons, lats, values):
+    """Amplitude(energy)-weighted RWP centroid, computed on the sphere.
+
+    Weights are amplitude squared (energy), so the strongest crests/troughs
+    dominate and the sign of `values` does not matter. The longitude is a
+    weighted circular mean (wraparound-safe, returned in -180..180) and the
+    latitude is a weighted mean. Computing this in lon/lat — rather than in the
+    polar-stereographic plane — avoids a poleward bias for zonally-extended
+    packets, whose planar average is pulled toward the projection origin (pole).
+
+    Returns:
+        (weighted_longitude, weighted_latitude) in degrees.
+    """
     weights = np.asarray(values, dtype=float) ** 2
-    wx = np.average(np.asarray(xs, dtype=float), weights=weights)
-    wy = np.average(np.asarray(ys, dtype=float), weights=weights)
-    return wx, wy
+    lon_rad = np.radians(np.asarray(lons, dtype=float))
+    sin_mean = np.average(np.sin(lon_rad), weights=weights)
+    cos_mean = np.average(np.cos(lon_rad), weights=weights)
+    weighted_lon = float(np.degrees(np.arctan2(sin_mean, cos_mean)))
+    weighted_lat = float(np.average(np.asarray(lats, dtype=float), weights=weights))
+    return weighted_lon, weighted_lat
 
 
 def energy_disks(node_coords_scalars, hemisphere="north", radius_m=500e3):
@@ -236,9 +248,8 @@ def get_polygon_for_rwp_path(
         rwp_poly = MultiPoint(list(zip(xs_all, ys_all))).convex_hull
 
     xs, ys = transform_to_stereographic(all_lons, all_lats, hemisphere=hemisphere)
-    weighted_xs, weighted_ys = _weighted_centroid(xs, ys, all_values)
-    weighted_longitude, weighted_latitude = transform_to_stereographic(
-        weighted_xs, weighted_ys, hemisphere=hemisphere, inverse=True
+    weighted_longitude, weighted_latitude = _amplitude_weighted_lonlat_centroid(
+        all_lons, all_lats, all_values
     )
 
     list_rwp_points = list(zip(xs[::WAPER_SUBSAMPLE], ys[::WAPER_SUBSAMPLE]))
