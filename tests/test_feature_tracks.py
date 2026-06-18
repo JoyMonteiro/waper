@@ -1,3 +1,4 @@
+import pytest
 from shapely.geometry import box
 from waper.tracking.feature_tracks import Feature, feature_overlap, match_features, track_features, FeatureTrack
 
@@ -128,3 +129,30 @@ def test_extract_features_from_real_timestep(two_timestep_field):
     # there are at least as many features as pruned RWP nodes (nothing was dropped)
     n_pruned_nodes = sum(len(p) for p in w._time_step_data[0].identified_rwp_paths)
     assert len(feats) >= n_pruned_nodes
+
+
+import os
+
+DATASET = "datasets/forecast_bust.nc"
+
+
+@pytest.mark.skipif(not os.path.exists(DATASET), reason="forecast_bust.nc not present")
+def test_feature_tracks_are_continuous_on_real_data():
+    import numpy as np, xarray as xr
+    from waper.interface.api import Waper
+    from waper.tracking.feature_tracks import extract_features, track_features
+
+    ds = xr.open_dataset(DATASET)
+    av = np.abs(ds["v"].values).ravel()
+    thr = float(np.percentile(av, 90))
+    w = Waper(data_array=ds, scalar_name="v",
+              latitude_label="latitude", longitude_label="longitude", time_label="time",
+              clip_value=2, extrema_threshold=10, min_latitude=20, max_latitude=80,
+              node_pruning_threshold=20, edge_pruning_threshold=0.02, max_edge_weight=1,
+              track_pruning_threshold=0.3)
+    w.identify_rwps()
+    fb = [extract_features(w._time_step_data[t], t, "v", 2, thr)
+          for t in range(ds.sizes["time"])]
+    tracks = track_features(fb, max_recover_steps=2, lat_bounds=(20.0, 80.0))
+    # at least one feature is tracked across several steps (not all singletons)
+    assert max(len(t.steps) for t in tracks) >= 5
