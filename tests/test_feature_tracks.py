@@ -78,3 +78,28 @@ def test_track_ends_when_feature_leaves_lat_band():
     f1 = _feat(1, "max", 4); f1.lat = 85.0          # outside band
     tracks = track_features([[f0], [f1]], lat_bounds=(20.0, 80.0))
     assert len(tracks) == 1 and len(tracks[0].steps) == 1
+
+
+import pandas as pd
+from waper.tracking.feature_tracks import feature_tracks_to_dataframe, phase_velocity
+
+
+def test_dataframe_has_one_row_per_step():
+    fb = [[_feat(0, "max", 0)], [_feat(1, "max", 4)]]
+    df = feature_tracks_to_dataframe(track_features(fb))
+    assert set(df.columns) >= {"track_id", "time", "lon", "lat", "scalar", "node_type", "recovered"}
+    assert len(df) == 2
+
+
+def test_phase_velocity_eastward_degrees_per_hour():
+    f0 = _feat(0, "max", 0); f0.lon = 10.0
+    f1 = _feat(1, "max", 4); f1.lon = 16.0     # +6 deg over 6 h -> 1.0 deg/h east
+    (track,) = track_features([[f0], [f1]])
+    assert abs(phase_velocity(track, dt_hours=6.0) - 1.0) < 1e-9
+
+
+def test_phase_velocity_handles_dateline():
+    f0 = _feat(0, "max", 0); f0.lon = 179.0
+    f1 = _feat(1, "max", 4); f1.lon = -179.0   # +2 deg east across dateline
+    (track,) = track_features([[f0], [f1]])
+    assert abs(phase_velocity(track, dt_hours=2.0) - 1.0) < 1e-9

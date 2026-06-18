@@ -139,3 +139,30 @@ def track_features(features_by_time, max_recover_steps: int = 2,
         active = new_active
 
     return tracks
+
+
+import numpy as np
+import pandas as pd
+
+
+def feature_tracks_to_dataframe(tracks) -> pd.DataFrame:
+    rows = []
+    for tr in tracks:
+        for s in tr.steps:
+            rows.append(dict(track_id=tr.track_id, time=s.time, lon=s.lon, lat=s.lat,
+                             scalar=s.scalar, node_type=s.node_type, recovered=s.recovered))
+    return pd.DataFrame(rows, columns=["track_id", "time", "lon", "lat", "scalar",
+                                       "node_type", "recovered"])
+
+
+def phase_velocity(track, dt_hours: float) -> float:
+    """Mean eastward propagation in degrees/hour along the track (wraparound-safe).
+    Returns nan for a single-step track."""
+    steps = track.steps
+    if len(steps) < 2:
+        return float("nan")
+    east = 0.0
+    for a, b in zip(steps[:-1], steps[1:]):
+        east += ((b.lon - a.lon + 180.0) % 360.0) - 180.0
+    span_hours = (steps[-1].time - steps[0].time) * dt_hours
+    return east / span_hours if span_hours else float("nan")
