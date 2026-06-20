@@ -7,6 +7,7 @@ warnings.filterwarnings("ignore")
 import numpy as np
 import pandas as pd
 import xarray as xr
+from tqdm import tqdm
 
 from waper import Waper
 from waper.tracking.rwp_polygon import WAPER_IMAGE_SIZE
@@ -72,7 +73,7 @@ def compute_zimin_masks(v_da, band, threshold=ZIMIN_THRESHOLD):
     lon = v_sorted.longitude.values
     lat = v_sorted.latitude.values
     masks = np.empty((v_da.time.size, WAPER_IMAGE_SIZE, WAPER_IMAGE_SIZE), dtype=bool)
-    for t in range(v_da.time.size):
+    for t in tqdm(range(v_da.time.size), desc="Zimin envelope masks", unit="step"):
         env = compute_rwp_envelope(v_sorted.isel(time=t).values, (3, 11))
         masks[t] = zimin_mask(env, lon, lat, band, threshold=threshold)
     return masks
@@ -99,19 +100,24 @@ def _aggregate(method_masks, zimin_masks, band, method_name, threshold):
 def sweep(v_da, gt_grid=GT_GRID, st_grid=ST_GRID):
     """Full agreement sweep -> tidy DataFrame."""
     band = band_mask(*BAND)
+
+    print("[1/3] Computing Zimin reference masks (14 m/s, wavenumbers 3-11)...")
     zimin_masks = compute_zimin_masks(v_da, band)
 
     rows = []
 
     # Node-amplitude: one base run supplies association graphs; re-threshold per ST.
+    print(f"[2/3] Node-amplitude sweep: base WAPER run, then {len(st_grid)} ST thresholds...")
     base = run_base_waper(v_da)
     assoc = [tsd.association_graph for tsd in base._time_step_data]
-    for st in st_grid:
+    for st in tqdm(st_grid, desc="Node-amplitude ST sweep", unit="thr"):
         method_masks = [node_amplitude_mask(g, st, band) for g in assoc]
         rows.append(_aggregate(method_masks, zimin_masks, band, "node_amplitude", st))
 
     # Edge-pruning: a full WAPER run per GT; read raster_data.
-    for gt in gt_grid:
+    print(f"[3/3] Edge-pruning sweep: {len(gt_grid)} full WAPER runs (one per GT)...")
+    for i, gt in enumerate(gt_grid, 1):
+        print(f"  edge-pruning run {i}/{len(gt_grid)}  (GT={gt})")
         w = run_base_waper(v_da, node_pruning_threshold=20, edge_pruning_threshold=gt)
         method_masks = [edge_pruning_mask(tsd, band) for tsd in w._time_step_data]
         rows.append(_aggregate(method_masks, zimin_masks, band, "edge_pruning", gt))
