@@ -78,6 +78,7 @@ dev = ["pytest >= 7.0", "pytest-cov", "mypy", "ruff"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+markers = ["slow: integration runs that load data"]
 
 [tool.setuptools]
 packages=["waper", "waper.identification", "waper.tracking", "waper.interface", "waper.io"]

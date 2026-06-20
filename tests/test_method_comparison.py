@@ -1,3 +1,4 @@
+import pytest
 import numpy as np
 import networkx as nx
 from scripts.method_comparison.metrics import (
@@ -7,6 +8,7 @@ from scripts.method_comparison.masks import (
     pixel_lonlat_grid, band_mask, compute_rwp_envelope,
     zimin_mask, edge_pruning_mask, node_amplitude_mask,
 )
+from scripts.method_comparison.run_sweep import load_dataset, run_base_waper
 
 
 def test_iou_disjoint_is_zero():
@@ -139,3 +141,21 @@ def test_node_amplitude_mask_keeps_only_strong_nodes():
     plon, plat = pixel_lonlat_grid("north")
     near_weak = m & (np.abs(plon - 200.0) < 5.0) & (np.abs(plat - 50.0) < 5.0)
     assert near_weak.sum() == 0
+
+
+@pytest.mark.slow
+def test_load_dataset_shape():
+    v = load_dataset()
+    assert set(v.dims) == {"time", "latitude", "longitude"}
+    assert float(v.longitude.min()) >= 0.0 and float(v.longitude.max()) < 360.0
+    # 1-degree coarsened NH
+    assert v.latitude.size <= 91 + 1
+    assert v.time.size == 720
+
+
+@pytest.mark.slow
+def test_run_base_waper_has_association_graphs():
+    v = load_dataset().isel(time=slice(0, 2))
+    w = run_base_waper(v)
+    assert len(w._time_step_data) == 2
+    assert w._time_step_data[0].association_graph is not None
