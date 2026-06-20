@@ -76,6 +76,9 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest >= 7.0", "pytest-cov", "mypy", "ruff"]
 
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
 [tool.setuptools]
 packages=["waper", "waper.identification", "waper.tracking", "waper.interface", "waper.io"]
 
