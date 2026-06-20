@@ -9,6 +9,7 @@ import pandas as pd
 import xarray as xr
 
 from waper import Waper
+from waper.tracking.rwp_polygon import WAPER_IMAGE_SIZE
 
 from .masks import (
     band_mask, compute_rwp_envelope, zimin_mask,
@@ -49,6 +50,9 @@ def run_base_waper(v_da, node_pruning_threshold=5, edge_pruning_threshold=0.02):
         longitude_label="longitude",
         time_label="time",
         clip_value=2,
+        # ST values below extrema_threshold will find no nodes (extrema are never
+        # created below it), so the node-amplitude ST sweep is effectively
+        # floor-bounded at 10.
         extrema_threshold=10,
         min_latitude=20,
         max_latitude=80,
@@ -60,12 +64,16 @@ def run_base_waper(v_da, node_pruning_threshold=5, edge_pruning_threshold=0.02):
 
 
 def compute_zimin_masks(v_da, band, threshold=ZIMIN_THRESHOLD):
-    """Stacked (ntime,512,512) bool Zimin reference masks."""
-    lon = v_da.longitude.values
-    lat = v_da.latitude.values
-    masks = np.empty((v_da.time.size, 512, 512), dtype=bool)
+    """Stacked (ntime,WAPER_IMAGE_SIZE,WAPER_IMAGE_SIZE) bool Zimin reference masks."""
+    # Sort latitude ascending for the interpolation path only — older scipy's
+    # RegularGridInterpolator requires strictly ascending coordinates.  The
+    # original (descending) orientation fed to WAPER is intentionally unchanged.
+    v_sorted = v_da.sortby("latitude")
+    lon = v_sorted.longitude.values
+    lat = v_sorted.latitude.values
+    masks = np.empty((v_da.time.size, WAPER_IMAGE_SIZE, WAPER_IMAGE_SIZE), dtype=bool)
     for t in range(v_da.time.size):
-        env = compute_rwp_envelope(v_da.isel(time=t).values, (3, 11))
+        env = compute_rwp_envelope(v_sorted.isel(time=t).values, (3, 11))
         masks[t] = zimin_mask(env, lon, lat, band, threshold=threshold)
     return masks
 
