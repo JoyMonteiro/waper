@@ -9,6 +9,7 @@ from scripts.method_comparison.masks import (
     zimin_mask, edge_pruning_mask, node_amplitude_mask,
 )
 from scripts.method_comparison.run_sweep import load_dataset, run_base_waper
+from scripts.method_comparison.run_sweep import compute_zimin_masks, sweep
 
 
 def test_iou_disjoint_is_zero():
@@ -159,3 +160,16 @@ def test_run_base_waper_has_association_graphs():
     w = run_base_waper(v)
     assert len(w._time_step_data) == 2
     assert w._time_step_data[0].association_graph is not None
+
+
+@pytest.mark.slow
+def test_sweep_smoke_two_timesteps():
+    v = load_dataset().isel(time=slice(0, 2))
+    df = sweep(v, gt_grid=[0.02], st_grid=[20])
+    assert set(df.columns) == {
+        "method", "threshold", "mean_iou", "detection_agreement",
+        "mean_method_only_frac", "mean_zimin_only_frac", "n_timesteps",
+    }
+    assert set(df["method"]) == {"edge_pruning", "node_amplitude"}
+    assert (df["n_timesteps"] == 2).all()
+    assert (df["mean_iou"] >= 0).all() and (df["mean_iou"] <= 1).all()
