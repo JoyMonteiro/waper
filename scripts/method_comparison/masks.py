@@ -47,3 +47,50 @@ def compute_rwp_envelope(v, wavenumber_range=(3, 11)):
     F_filt = F * keep
     v_band = np.fft.ifft(F_filt, axis=-1).real
     return np.abs(hilbert(v_band, axis=-1))
+
+
+from scipy.interpolate import RegularGridInterpolator
+
+from waper.tracking.rwp_polygon import rasterize_all_rwps
+from waper.tracking.feature_tracks import _footprint_from_region
+
+
+def _empty_mask():
+    return np.zeros((WAPER_IMAGE_SIZE, WAPER_IMAGE_SIZE), dtype=bool)
+
+
+def zimin_mask(envelope, ds_lon, ds_lat, band, threshold=14.0, hemisphere="north"):
+    """Threshold the Hilbert envelope at `threshold`, sampled onto the shared grid."""
+    plon, plat = pixel_lonlat_grid(hemisphere)
+    interp = RegularGridInterpolator(
+        (ds_lat, ds_lon), envelope, method="nearest",
+        bounds_error=False, fill_value=0.0,
+    )
+    pts = np.stack([plat.ravel(), plon.ravel()], axis=-1)
+    E = interp(pts).reshape(plat.shape)
+    return (E >= threshold) & band
+
+
+def edge_pruning_mask(time_step_data, band):
+    """Boolean mask from a WAPER timestep's rasterized RWP footprints."""
+    raster = time_step_data.raster_data
+    if raster is None:
+        return _empty_mask()
+    return (np.asarray(raster) > 0) & band
+
+
+def node_amplitude_mask(association_graph, st, band, hemisphere="north"):
+    """Per-cluster footprints for nodes whose |scalar| >= st (no edge connection)."""
+    polys = []
+    for _, attr in association_graph.nodes(data=True):
+        if abs(attr["scalar"]) < st:
+            continue
+        coords = [pt[0] for pt in attr["cluster_extrema"]]  # pt = ((lon,lat), cid, scalar)
+        lons = [c[0] for c in coords]
+        lats = [c[1] for c in coords]
+        geom = _footprint_from_region(lons, lats, hemisphere)
+        polys.append((geom, len(polys) + 1))
+    raster = rasterize_all_rwps(polys, hemisphere=hemisphere)
+    if raster is None:
+        return _empty_mask()
+    return (np.asarray(raster) > 0) & band

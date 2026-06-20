@@ -1,6 +1,11 @@
 import numpy as np
+import networkx as nx
 from scripts.method_comparison.metrics import (
     iou, disagreement_decomposition, detection_agreement,
+)
+from scripts.method_comparison.masks import (
+    pixel_lonlat_grid, band_mask, compute_rwp_envelope,
+    zimin_mask, edge_pruning_mask, node_amplitude_mask,
 )
 
 
@@ -46,11 +51,6 @@ def test_detection_agreement():
     assert detection_agreement(nonempty, empty) is False
 
 
-from scripts.method_comparison.masks import (
-    pixel_lonlat_grid, band_mask, compute_rwp_envelope,
-)
-
-
 def test_pixel_lonlat_grid_shapes_and_ranges():
     lon, lat = pixel_lonlat_grid("north")
     assert lon.shape == (512, 512)
@@ -83,3 +83,59 @@ def test_compute_rwp_envelope_recovers_modulation():
     interior = slice(30, nlon - 30)
     rel_err = np.abs(env[0, interior] - A[interior]) / A[interior]
     assert rel_err.max() < 0.15
+
+
+class _FakeTSD:
+    def __init__(self, raster):
+        self.raster_data = raster
+
+
+def test_edge_pruning_mask_none_raster_is_empty():
+    bm = band_mask()
+    m = edge_pruning_mask(_FakeTSD(None), bm)
+    assert m.shape == (512, 512)
+    assert m.sum() == 0
+
+
+def test_edge_pruning_mask_thresholds_and_bands():
+    bm = band_mask()
+    raster = np.zeros((512, 512), dtype=np.int32)
+    raster[bm] = 1            # label inside band
+    raster[~bm] = 2           # label outside band (must be dropped)
+    m = edge_pruning_mask(_FakeTSD(raster), bm)
+    assert m.sum() == bm.sum()
+    assert not m[~bm].any()
+
+
+def test_zimin_mask_thresholds_within_band():
+    bm = band_mask()
+    ds_lon = np.arange(0, 360, 1.0)
+    ds_lat = np.arange(0, 91, 1.0)          # NH 1-deg
+    env = np.zeros((ds_lat.size, ds_lon.size))
+    # strong envelope only at 50N, 100E -> should appear; a strong patch at 5N should not
+    env[50, 100] = 30.0
+    env[5, 100] = 30.0
+    m = zimin_mask(env, ds_lon, ds_lat, bm, threshold=14.0)
+    assert m.shape == (512, 512)
+    assert m.sum() > 0
+    _, plat = pixel_lonlat_grid("north")
+    assert (plat[m] >= 20.0).all() and (plat[m] <= 80.0).all()
+
+
+def test_node_amplitude_mask_keeps_only_strong_nodes():
+    bm = band_mask()
+    g = nx.Graph()
+    # one strong cluster near 50N/100E, one weak cluster near 50N/200E
+    g.add_node(("max", 0), scalar=30.0,
+               cluster_extrema=[((99.0, 49.0), 0, 30.0), ((101.0, 51.0), 0, 28.0),
+                                ((100.0, 50.0), 0, 29.0)])
+    g.add_node(("max", 1), scalar=8.0,
+               cluster_extrema=[((199.0, 49.0), 1, 8.0), ((201.0, 51.0), 1, 7.0),
+                                ((200.0, 50.0), 1, 6.0)])
+    m = node_amplitude_mask(g, st=20.0, band=bm)
+    assert m.shape == (512, 512)
+    assert m.sum() > 0
+    # nothing should be burned near 200E (weak node dropped); check via lon grid
+    plon, plat = pixel_lonlat_grid("north")
+    near_weak = m & (np.abs(plon - 200.0) < 5.0) & (np.abs(plat - 50.0) < 5.0)
+    assert near_weak.sum() == 0
