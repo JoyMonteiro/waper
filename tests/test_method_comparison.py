@@ -44,3 +44,42 @@ def test_detection_agreement():
     assert detection_agreement(nonempty, nonempty.copy()) is True
     assert detection_agreement(empty, empty.copy()) is True
     assert detection_agreement(nonempty, empty) is False
+
+
+from scripts.method_comparison.masks import (
+    pixel_lonlat_grid, band_mask, compute_rwp_envelope,
+)
+
+
+def test_pixel_lonlat_grid_shapes_and_ranges():
+    lon, lat = pixel_lonlat_grid("north")
+    assert lon.shape == (512, 512)
+    assert lat.shape == (512, 512)
+    # NH stereographic grid: latitudes span roughly 0..90 in the disc, NaN/<0 in corners
+    finite = np.isfinite(lat)
+    assert lat[finite].max() > 85.0
+    assert (lon[finite] >= 0).all() and (lon[finite] <= 360).all()
+
+
+def test_band_mask_excludes_outside():
+    bm = band_mask(20.0, 80.0, "north")
+    lon, lat = pixel_lonlat_grid("north")
+    inside = bm
+    # every True pixel must have latitude in [20, 80]
+    assert (lat[inside] >= 20.0).all()
+    assert (lat[inside] <= 80.0).all()
+    assert bm.sum() > 0
+
+
+def test_compute_rwp_envelope_recovers_modulation():
+    # v(x) = A(x) * cos(k x), A slowly varying, k inside the 3-11 band
+    nlon = 360
+    x = np.linspace(0, 2 * np.pi, nlon, endpoint=False)
+    A = 10.0 + 5.0 * np.cos(x)              # wavenumber-1 modulation (outside band)
+    carrier = np.cos(7 * x)                 # wavenumber 7 (inside band)
+    v = (A * carrier)[None, :]              # shape (1, nlon)
+    env = compute_rwp_envelope(v, (3, 11))
+    # envelope should track A(x) away from the wrap edges
+    interior = slice(30, nlon - 30)
+    rel_err = np.abs(env[0, interior] - A[interior]) / A[interior]
+    assert rel_err.max() < 0.15
