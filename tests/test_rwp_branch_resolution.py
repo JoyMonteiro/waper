@@ -132,3 +132,54 @@ def test_orphan_outside_gate_dropped():
     g.add_edge(("min", 0), ("max", 1), weight=9.0)           # strong edge, but gated out
     out = reassign_orphans(g, [[("max", 0), ("min", 0)]], lat_gate=15.0)
     assert out == [[("max", 0), ("min", 0)]]
+
+
+def test_orphan_west_side_absorb():
+    # West-side absorb (direction == -1): path starts with a min at its western end.
+    # An orphan max strictly west of that min has an edge to it; the west arm is empty
+    # so the orphan is prepended without competition.
+    #
+    # Path:  (min,0)[lon=30] -> (max,0)[lon=60]
+    # Orphan: (max,1)[lon=10]  -- west of (min,0)
+    # Edge:  (max,1) -- (min,0), weight=3.0
+    g = nx.Graph()
+    _node(g, ("min", 0), 30.0, 50.0)
+    _node(g, ("max", 0), 60.0, 50.0)
+    _node(g, ("max", 1), 10.0, 50.0)   # orphan, strictly west of (min,0)
+    g.add_edge(("min", 0), ("max", 0), weight=5.0)
+    g.add_edge(("max", 1), ("min", 0), weight=3.0)   # edge from orphan to path's west end
+
+    initial_path = [("min", 0), ("max", 0)]
+    out = reassign_orphans(g, [initial_path], lat_gate=15.0)
+
+    # Orphan should be prepended: result is [orphan, *original_path]
+    assert out == [[("max", 1), ("min", 0), ("max", 0)]]
+
+
+def test_orphan_cascade_multi_iteration():
+    # Cascade / multi-iteration: absorbing a strong orphan D into path A->B->C
+    # strips the weak east arm (C), re-orphaning C. On a subsequent iteration C
+    # loses its competition against D and is dropped permanently.
+    #
+    # Path:  (max,0)[lon=10] -w=5- (min,0)[lon=40] -w=2- (max,2)[lon=70]
+    # Orphan D=(max,1)[lon=55], edge (min,0)--(max,1) weight=8
+    #
+    # Iteration 1: D competes with east arm B->C (weight 2). D wins (8>2).
+    #   Path becomes [(max,0),(min,0),(max,1)]; (max,2) re-orphaned.
+    # Iteration 2: (max,2) tries to re-attach to (min,0) (east side, weight 2).
+    #   Existing east arm is now (min,0)--(max,1) weight 8. 2 < 8 -> (max,2) dropped.
+    # Final: [[(max,0),(min,0),(max,1)]]
+    g = nx.Graph()
+    _node(g, ("max", 0), 10.0, 50.0)
+    _node(g, ("min", 0), 40.0, 50.0)
+    _node(g, ("max", 2), 70.0, 50.0)   # originally in path, becomes orphan after cascade
+    _node(g, ("max", 1), 55.0, 50.0)   # strong orphan that triggers cascade
+
+    g.add_edge(("max", 0), ("min", 0), weight=5.0)
+    g.add_edge(("min", 0), ("max", 2), weight=2.0)   # weak east arm
+    g.add_edge(("min", 0), ("max", 1), weight=8.0)   # strong orphan edge
+
+    initial_path = [("max", 0), ("min", 0), ("max", 2)]
+    out = reassign_orphans(g, [initial_path], lat_gate=15.0)
+
+    assert out == [[("max", 0), ("min", 0), ("max", 1)]]
