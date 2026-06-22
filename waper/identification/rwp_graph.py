@@ -382,6 +382,8 @@ def get_ranked_paths(assoc_graph, max_weight):
 
     for source in start_leaves:
         for sink in end_leaves:
+            if source == sink:
+                continue
             # eliminate sinks to the west of source node
             if is_to_the_east(
                 assoc_graph.nodes[source]["coords"][0], assoc_graph.nodes[sink]["coords"][0]
