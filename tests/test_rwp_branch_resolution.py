@@ -203,6 +203,59 @@ def _load_t95():
     return da.isel(time=[95])
 
 
+def test_orphan_absorb_blocked_by_in_band_overlap():
+    """Regression: reassign_orphans must NOT absorb an orphan when doing so
+    would extend a path's longitude span to interleave-in-band with another
+    currently-accepted path.
+
+    Setup
+    -----
+    Path A (western):  A0[lon=10] --w=5-- A1[lon=40]   lat~50
+    Path B (eastern):  B0[lon=70] --w=5-- B1[lon=100]  lat~50  (same band, disjoint lons)
+    Orphan O:          lon=80, lat=50  -- has an edge to A1 (weight 9, stronger than
+                       A's east arm which is empty/0).
+
+    Without the fix:
+        arm_weight on the east side of A1 is 0.0 (chain end), so 9 > 0 -> orphan is
+        absorbed and path A becomes [A0, A1, O].  A's span is now 10..80, which
+        overlaps B's span 70..100 in the same latitude band (gap ~0 deg < lat_gate 15).
+        _paths_interleave_in_band(A_extended, B) is True: BUG.
+
+    With the fix:
+        Before committing the splice, the candidate path [A0, A1, O] is checked against
+        path B.  _paths_interleave_in_band returns True -> absorb is rejected, O is
+        dropped.  Final paths: [path A unchanged, path B unchanged], no interleave.
+    """
+    g = nx.Graph()
+    # Path A: western train, lon 10..40, lat 50
+    _node(g, ("max", 0), 10.0, 50.0)    # A0
+    _node(g, ("min", 0), 40.0, 50.0)    # A1 (eastern end of path A)
+    g.add_edge(("max", 0), ("min", 0), weight=5.0)
+
+    # Path B: eastern train, lon 70..100, lat 50 (same band, currently disjoint from A)
+    _node(g, ("max", 1), 70.0, 50.0)    # B0
+    _node(g, ("min", 1), 100.0, 50.0)   # B1
+    g.add_edge(("max", 1), ("min", 1), weight=5.0)
+
+    # Orphan O: lon=80 — east of A1 (lon=40), inside B's span (70..100).
+    # Edge A1--O is strong (w=9); A1's east arm is empty (w=0), so O beats the arm.
+    # Absorbing O extends path A to span 10..80, which overlaps B's 70..100.
+    _node(g, ("max", 2), 80.0, 50.0)    # O
+    g.add_edge(("min", 0), ("max", 2), weight=9.0)
+
+    path_a = [("max", 0), ("min", 0)]
+    path_b = [("max", 1), ("min", 1)]
+
+    out = reassign_orphans(g, [path_a, path_b], lat_gate=15.0)
+
+    # After the fix: no two returned paths may interleave in-band
+    for i in range(len(out)):
+        for j in range(i + 1, len(out)):
+            assert not _paths_interleave_in_band(g, out[i], out[j], 15.0), (
+                f"paths {out[i]} and {out[j]} interleave in-band after reassign_orphans"
+            )
+
+
 @pytest.mark.slow
 def test_acceptance_t95():
     from waper import Waper

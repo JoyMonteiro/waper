@@ -520,9 +520,22 @@ def reassign_orphans(assoc_graph, top_paths, lat_gate=15.0, max_iter=50):
             if w_o <= existing:
                 dropped.add(o)                      # orphan's branch is weaker -> drop it
             elif direction == 1:
-                paths[pi] = path[: j + 1] + [o]     # drop weaker east arm, splice orphan
+                candidate = path[: j + 1] + [o]
+                # Guard: reject if the extended path now interleaves-in-band with
+                # any other currently-accepted path (reproducing pass-1 invariant).
+                if any(_paths_interleave_in_band(assoc_graph, candidate, paths[k], lat_gate)
+                       for k in range(len(paths)) if k != pi):
+                    dropped.add(o)                  # would re-introduce overlap -> drop
+                else:
+                    paths[pi] = candidate           # safe: splice orphan on east end
             else:
-                paths[pi] = [o] + path[j:]          # drop weaker west arm, splice orphan
+                candidate = [o] + path[j:]
+                # Same guard for west-side splice.
+                if any(_paths_interleave_in_band(assoc_graph, candidate, paths[k], lat_gate)
+                       for k in range(len(paths)) if k != pi):
+                    dropped.add(o)                  # would re-introduce overlap -> drop
+                else:
+                    paths[pi] = candidate           # safe: splice orphan on west end
             progressed = True
             break                                   # recompute assignment after each change
 
