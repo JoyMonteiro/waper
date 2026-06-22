@@ -49,6 +49,50 @@ def compute_rwp_envelope(v, wavenumber_range=(3, 11)):
     return np.abs(hilbert(v_band, axis=-1))
 
 
+def t21_truncate(field_asc, ntrunc=21):
+    """Triangular spectral truncation T<ntrunc> of a Northern-Hemisphere field.
+
+    Souders et al. (2014) apply a T21 Cholesky/spectral filter to the envelope to
+    remove wavelengths too small to be associated with RWPs. The comparison data
+    is NH-only, so we build a global field by even reflection across the equator,
+    run a spherical-harmonic truncation to total wavenumber ``ntrunc`` with
+    ``spharm`` (pyspharm), and return the NH half. ``field_asc`` is ``(nlat, nlon)``
+    on ASCENDING latitude; the result keeps that shape and orientation.
+
+    Reflection is a numerical device for truncation on NH-only data; it is not
+    identical to a true global T21 (values near the equatorward edge are mildly
+    affected). A global dataset would allow an exact global T21.
+    """
+    import spharm
+
+    nh = np.asarray(field_asc, dtype=float)
+    nlat_nh, nlon = nh.shape
+    glob = np.concatenate([nh[::-1], nh], axis=0)  # descending-lat global, even reflection
+    sht = spharm.Spharmt(nlon, glob.shape[0], gridtype="regular")
+    smoothed = sht.spectogrd(sht.grdtospec(glob, ntrunc=ntrunc))
+    return smoothed[:nlat_nh][::-1]  # NH half, back to ascending latitude
+
+
+def temporal_running_mean(stack, hours, time_values):
+    """Centered running mean over the time axis (axis 0), window = ``hours``.
+
+    Souders et al. (2014) apply a 24-h running mean to the envelope to smooth the
+    progression of WPA maxima. The step is inferred from ``time_values``. Returns
+    ``stack`` unchanged if the window resolves to <= 1 step.
+    """
+    from scipy.ndimage import uniform_filter1d
+
+    if not hours or hours <= 0 or stack.shape[0] < 2:
+        return stack
+    dt_h = np.median(
+        np.diff(np.asarray(time_values)).astype("timedelta64[s]").astype(float)
+    ) / 3600.0
+    win = max(1, int(round(hours / dt_h)))
+    if win <= 1:
+        return stack
+    return uniform_filter1d(stack, size=win, axis=0, mode="nearest")
+
+
 from scipy.interpolate import RegularGridInterpolator
 
 from waper.tracking.rwp_polygon import rasterize_all_rwps

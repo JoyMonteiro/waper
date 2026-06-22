@@ -15,6 +15,7 @@ from waper.tracking.rwp_polygon import WAPER_IMAGE_SIZE
 from .masks import (
     band_mask, compute_rwp_envelope, zimin_mask,
     edge_pruning_mask, node_amplitude_mask,
+    t21_truncate, temporal_running_mean,
 )
 from .metrics import iou, disagreement_decomposition, detection_agreement
 
@@ -64,18 +65,34 @@ def run_base_waper(v_da, node_pruning_threshold=5, edge_pruning_threshold=0.02):
     return w
 
 
-def compute_zimin_masks(v_da, band, threshold=ZIMIN_THRESHOLD):
-    """Stacked (ntime,WAPER_IMAGE_SIZE,WAPER_IMAGE_SIZE) bool Zimin reference masks."""
+def compute_zimin_masks(v_da, band, threshold=ZIMIN_THRESHOLD, t21=True, temporal_hours=24):
+    """Stacked (ntime,WAPER_IMAGE_SIZE,WAPER_IMAGE_SIZE) bool reference masks.
+
+    With the Souders (2014) defaults (``t21=True``, ``temporal_hours=24``) the
+    Zimin envelope is post-processed by a T21 spatial truncation and a 24-h
+    temporal running mean before thresholding. Set ``t21=False, temporal_hours=0``
+    for the bare Zimin-2003 zonal envelope (no Souders smoothing).
+    """
     # Sort latitude ascending for the interpolation path only — older scipy's
     # RegularGridInterpolator requires strictly ascending coordinates.  The
     # original (descending) orientation fed to WAPER is intentionally unchanged.
     v_sorted = v_da.sortby("latitude")
     lon = v_sorted.longitude.values
     lat = v_sorted.latitude.values
-    masks = np.empty((v_da.time.size, WAPER_IMAGE_SIZE, WAPER_IMAGE_SIZE), dtype=bool)
-    for t in tqdm(range(v_da.time.size), desc="Zimin envelope masks", unit="step"):
-        env = compute_rwp_envelope(v_sorted.isel(time=t).values, (3, 11))
-        masks[t] = zimin_mask(env, lon, lat, band, threshold=threshold)
+    nt = v_da.time.size
+
+    env = np.empty((nt, lat.size, lon.size))
+    for t in tqdm(range(nt), desc="Zimin envelope", unit="step"):
+        env[t] = compute_rwp_envelope(v_sorted.isel(time=t).values, (3, 11))
+    if t21:
+        for t in tqdm(range(nt), desc="T21 spatial filter", unit="step"):
+            env[t] = t21_truncate(env[t], ntrunc=21)
+    if temporal_hours:
+        env = temporal_running_mean(env, temporal_hours, v_da.time.values)
+
+    masks = np.empty((nt, WAPER_IMAGE_SIZE, WAPER_IMAGE_SIZE), dtype=bool)
+    for t in range(nt):
+        masks[t] = zimin_mask(env[t], lon, lat, band, threshold=threshold)
     return masks
 
 

@@ -7,6 +7,7 @@ from scripts.method_comparison.metrics import (
 from scripts.method_comparison.masks import (
     pixel_lonlat_grid, band_mask, compute_rwp_envelope,
     zimin_mask, edge_pruning_mask, node_amplitude_mask,
+    t21_truncate, temporal_running_mean,
 )
 from scripts.method_comparison.run_sweep import load_dataset, run_base_waper
 from scripts.method_comparison.run_sweep import compute_zimin_masks, sweep
@@ -123,6 +124,36 @@ def test_zimin_mask_thresholds_within_band():
     assert m.sum() > 0
     _, plat = pixel_lonlat_grid("north")
     assert (plat[m] >= 20.0).all() and (plat[m] <= 80.0).all()
+
+
+def test_t21_truncate_smooths_and_preserves_shape():
+    # large-scale (wavenumber 6) + small-scale (wavenumber 40) on an ascending NH grid
+    nlat, nlon = 90, 360
+    lat = np.linspace(0.5, 89.5, nlat)
+    lon = np.linspace(0, 360, nlon, endpoint=False)
+    LON, LAT = np.meshgrid(lon, lat)
+    big = np.cos(np.deg2rad(LAT)) * np.sin(np.deg2rad(6 * LON))
+    small = 0.5 * np.sin(np.deg2rad(40 * LON))
+    field = big + small
+    out = t21_truncate(field, ntrunc=21)
+    assert out.shape == field.shape
+    # T21 removes the wavenumber-40 component -> closer to the large-scale part
+    assert np.std(out - big) < np.std(field - big)
+
+
+def test_temporal_running_mean_smears_spike_and_infers_step():
+    import numpy as np
+    nt = 48
+    stack = np.zeros((nt, 4, 4))
+    stack[24] = 10.0  # a one-hour spike
+    times = np.datetime64("2011-04-01T00") + np.arange(nt) * np.timedelta64(1, "h")
+    out = temporal_running_mean(stack, 24, times)
+    assert out.shape == stack.shape
+    assert out[24].max() < 10.0          # spike smeared by the 24-step window
+    assert out[24].max() > 0.0           # but spread into the window
+    # window <= 1 step is a no-op
+    same = temporal_running_mean(stack, 0, times)
+    assert np.array_equal(same, stack)
 
 
 def test_node_amplitude_mask_keeps_only_strong_nodes():
