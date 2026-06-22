@@ -469,7 +469,7 @@ def get_ranked_paths(assoc_graph, max_weight, lat_gate=15.0):
         top_paths.append(path)
         used_nodes.update(path_nodes)
 
-    return top_paths
+    return reassign_orphans(assoc_graph, top_paths, lat_gate=lat_gate)
 
 
 def reassign_orphans(assoc_graph, top_paths, lat_gate=15.0, max_iter=50):

@@ -183,3 +183,49 @@ def test_orphan_cascade_multi_iteration():
     out = reassign_orphans(g, [initial_path], lat_gate=15.0)
 
     assert out == [[("max", 0), ("min", 0), ("max", 1)]]
+
+
+# ---------------------------------------------------------------------------
+# Task 5: acceptance test on real data (timestep 95)
+# ---------------------------------------------------------------------------
+import pytest
+
+
+def _load_t95():
+    import warnings; warnings.filterwarnings("ignore")
+    import xarray as xr
+    raw = xr.open_dataset("datasets/forecast_bust_hourly.nc")
+    da = (raw["v"].rename({"valid_time": "time"})
+          .squeeze("pressure_level", drop=True)
+          .coarsen(latitude=4, longitude=4, boundary="trim").mean()
+          .assign_coords(longitude=lambda d: d.longitude % 360)
+          .sortby("longitude"))
+    return da.isel(time=[95])
+
+
+@pytest.mark.slow
+def test_acceptance_t95():
+    from waper import Waper
+    from waper.identification.rwp_graph import (
+        _paths_interleave_in_band,
+    )
+    da = _load_t95()
+    w = Waper(data_array=da.to_dataset(name="v"), scalar_name="v",
+              latitude_label="latitude", longitude_label="longitude",
+              time_label="time", clip_value=2, extrema_threshold=10,
+              min_latitude=20, max_latitude=80,
+              node_pruning_threshold=20, edge_pruning_threshold=0.02,
+              lat_gate=15.0)
+    w.identify_rwps()
+    tsd = w._time_step_data[0]
+    paths = tsd.identified_rwp_paths
+    g = tsd.pruned_graph
+
+    # no length-1 RWPs
+    assert all(len(p) >= 2 for p in paths)
+    # the strong western train survived (a long path remains)
+    assert max(len(p) for p in paths) >= 8
+    # no in-band spatial overlap between any two returned RWPs
+    for i in range(len(paths)):
+        for j in range(i + 1, len(paths)):
+            assert not _paths_interleave_in_band(g, paths[i], paths[j], 15.0)

@@ -49,6 +49,7 @@ class WaperConfig:
     hemisphere: str = "north"  # "north" | "south"
     penalty_length_scale_km: float = 2000.0
     energy_radius_km: float = 500.0
+    lat_gate: float = 15.0
 
     vtk_latitude_label: str = "Latitude"
     vtk_longitude_label: str = "Longitude"
@@ -211,7 +212,7 @@ def _identify_rwps(
     )
 
     time_step_data.identified_rwp_paths = rwp_graph.get_ranked_paths(
-        time_step_data.pruned_graph, config.max_edge_weight
+        time_step_data.pruned_graph, config.max_edge_weight, lat_gate=config.lat_gate
     )
 
     for index, path in enumerate(time_step_data.identified_rwp_paths):
@@ -305,6 +306,7 @@ class Waper:
         max_edge_weight=1,
         debug=False,
         penalty_length_scale_km=2000.0,
+        lat_gate=15.0,
     ) -> None:
 
         self._config = WaperConfig(
@@ -322,6 +324,7 @@ class Waper:
             max_edge_weight=max_edge_weight,
             debug=debug,
             penalty_length_scale_km=penalty_length_scale_km,
+            lat_gate=lat_gate,
         )
 
         self.data_array = data_array
