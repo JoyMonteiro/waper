@@ -91,3 +91,44 @@ def test_pass1_keeps_different_waveguide():
     node_sets = [set(p) for p in paths]
     assert {("max", 0), ("min", 0), ("max", 2)} in node_sets        # midlat kept
     assert {("min", 1), ("max", 1)} in node_sets                    # subtropical also kept
+
+
+# ---------------------------------------------------------------------------
+# Task 4: reassign_orphans tests
+# ---------------------------------------------------------------------------
+from waper.identification.rwp_graph import reassign_orphans
+
+
+def test_orphan_extends_chain_end():
+    # orphan max east of the path's eastmost min -> clean extension (no branch)
+    g = nx.Graph()
+    _node(g, ("max", 0), 10.0, 50.0); _node(g, ("min", 0), 40.0, 50.0)
+    _node(g, ("max", 1), 70.0, 50.0)  # orphan, east of min0
+    g.add_edge(("max", 0), ("min", 0), weight=5.0)
+    g.add_edge(("min", 0), ("max", 1), weight=4.0)   # discarded edge available
+    out = reassign_orphans(g, [[("max", 0), ("min", 0)]], lat_gate=15.0)
+    assert out == [[("max", 0), ("min", 0), ("max", 1)]]
+
+
+def test_orphan_weak_branch_dropped():
+    # interior junction: orphan competes with a strong existing east arm and loses
+    g = nx.Graph()
+    _node(g, ("max", 0), 10.0, 50.0); _node(g, ("min", 0), 40.0, 50.0); _node(g, ("max", 2), 80.0, 50.0)
+    g.add_edge(("max", 0), ("min", 0), weight=5.0)
+    g.add_edge(("min", 0), ("max", 2), weight=5.0)          # strong east arm
+    _node(g, ("max", 1), 55.0, 50.0)                         # orphan east of min0, weak edge
+    g.add_edge(("min", 0), ("max", 1), weight=0.5)
+    out = reassign_orphans(g, [[("max", 0), ("min", 0), ("max", 2)]], lat_gate=15.0)
+    # orphan dropped; strong train intact
+    assert out == [[("max", 0), ("min", 0), ("max", 2)]]
+
+
+def test_orphan_outside_gate_dropped():
+    # orphan within longitude but >15 deg latitude away, with an edge -> not absorbed, dropped
+    g = nx.Graph()
+    _node(g, ("max", 0), 10.0, 50.0); _node(g, ("min", 0), 40.0, 50.0)
+    g.add_edge(("max", 0), ("min", 0), weight=5.0)
+    _node(g, ("max", 1), 60.0, 25.0)                         # far band
+    g.add_edge(("min", 0), ("max", 1), weight=9.0)           # strong edge, but gated out
+    out = reassign_orphans(g, [[("max", 0), ("min", 0)]], lat_gate=15.0)
+    assert out == [[("max", 0), ("min", 0)]]

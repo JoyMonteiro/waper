@@ -470,3 +470,63 @@ def get_ranked_paths(assoc_graph, max_weight, lat_gate=15.0):
         used_nodes.update(path_nodes)
 
     return top_paths
+
+
+def reassign_orphans(assoc_graph, top_paths, lat_gate=15.0, max_iter=50):
+    """Absorb leftover (orphan) nodes into the stronger branch, drop the weaker.
+
+    An orphan attaches to an in-RWP neighbour within ``lat_gate`` degrees of
+    latitude. If it would extend a chain end (the existing arm on its side is
+    empty) it is absorbed. Otherwise it competes with that arm by summed edge
+    weight: the weaker arm is dropped (its nodes re-orphan and may re-attach on a
+    later iteration). Orphans with no eligible neighbour are dropped.
+    """
+    paths = [list(p) for p in top_paths]
+
+    def arm_weight(path, j, direction):
+        w = 0.0
+        i = j
+        while 0 <= i + direction < len(path):
+            a, b = path[i], path[i + direction]
+            w += assoc_graph[a][b]["weight"]
+            i += direction
+        return w
+
+    dropped = set()
+    for _ in range(max_iter):
+        assigned = {n for p in paths for n in p}
+        orphans = [n for n in assoc_graph.nodes()
+                   if n not in assigned and n not in dropped]
+        progressed = False
+
+        for o in orphans:
+            o_lon, o_lat = assoc_graph.nodes[o]["coords"]
+            cands = [
+                (nb, assoc_graph[o][nb]["weight"])
+                for nb in assoc_graph.neighbors(o)
+                if nb in assigned
+                and abs(assoc_graph.nodes[nb]["coords"][1] - o_lat) <= lat_gate
+            ]
+            if not cands:
+                continue
+
+            nb, w_o = max(cands, key=lambda c: c[1])
+            pi = next(i for i, p in enumerate(paths) if nb in p)
+            path = paths[pi]
+            j = path.index(nb)
+            direction = 1 if is_to_the_east(o_lon, assoc_graph.nodes[nb]["coords"][0]) else -1
+            existing = arm_weight(path, j, direction)
+
+            if w_o <= existing:
+                dropped.add(o)                      # orphan's branch is weaker -> drop it
+            elif direction == 1:
+                paths[pi] = path[: j + 1] + [o]     # drop weaker east arm, splice orphan
+            else:
+                paths[pi] = [o] + path[j:]          # drop weaker west arm, splice orphan
+            progressed = True
+            break                                   # recompute assignment after each change
+
+        if not progressed:
+            break
+
+    return [p for p in paths if len(p) >= 2]
