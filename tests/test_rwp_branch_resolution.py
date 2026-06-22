@@ -61,3 +61,33 @@ def test_paths_interleave_in_band():
     c = [("max", 2), ("min", 2)]
     assert _paths_interleave_in_band(g, a, b, 15.0) is True    # same band, overlapping lon
     assert _paths_interleave_in_band(g, a, c, 15.0) is False   # far band -> allowed
+
+
+def test_pass1_rejects_in_band_interleaver():
+    g = nx.Graph()
+    # strong train, lat ~50, lon 10..70
+    _node(g, ("max", 0), 10.0, 50.0); _node(g, ("min", 0), 40.0, 51.0); _node(g, ("max", 2), 70.0, 50.0)
+    g.add_edge(("max", 0), ("min", 0), weight=5.0)
+    g.add_edge(("min", 0), ("max", 2), weight=5.0)
+    # weak interleaver, lat ~52 (same band), lon 20..50
+    _node(g, ("min", 1), 20.0, 52.0); _node(g, ("max", 1), 50.0, 52.0)
+    g.add_edge(("min", 1), ("max", 1), weight=0.5)
+    paths = get_ranked_paths(g, max_weight=10.0, lat_gate=15.0)
+    node_sets = [set(p) for p in paths]
+    assert {("max", 0), ("min", 0), ("max", 2)} in node_sets        # strong train kept
+    assert {("min", 1), ("max", 1)} not in node_sets                # weak interleaver rejected
+
+
+def test_pass1_keeps_different_waveguide():
+    g = nx.Graph()
+    # midlat train lat ~50, lon 10..70
+    _node(g, ("max", 0), 10.0, 50.0); _node(g, ("min", 0), 40.0, 50.0); _node(g, ("max", 2), 70.0, 50.0)
+    g.add_edge(("max", 0), ("min", 0), weight=5.0)
+    g.add_edge(("min", 0), ("max", 2), weight=5.0)
+    # subtropical train lat ~25 (>15 away), overlapping lon 20..60
+    _node(g, ("min", 1), 20.0, 25.0); _node(g, ("max", 1), 60.0, 25.0)
+    g.add_edge(("min", 1), ("max", 1), weight=4.0)
+    paths = get_ranked_paths(g, max_weight=10.0, lat_gate=15.0)
+    node_sets = [set(p) for p in paths]
+    assert {("max", 0), ("min", 0), ("max", 2)} in node_sets        # midlat kept
+    assert {("min", 1), ("max", 1)} in node_sets                    # subtropical also kept

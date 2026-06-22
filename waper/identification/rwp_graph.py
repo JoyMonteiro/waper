@@ -422,7 +422,7 @@ def _paths_interleave_in_band(assoc_graph, path_a, path_b, lat_gate):
     )
 
 
-def get_ranked_paths(assoc_graph, max_weight):
+def get_ranked_paths(assoc_graph, max_weight, lat_gate=15.0):
 
     path_list = []
 
@@ -461,8 +461,12 @@ def get_ranked_paths(assoc_graph, max_weight):
 
     for path in sorted_paths:
         path_nodes = set(path)
-        if path_nodes.isdisjoint(used_nodes):
-            top_paths.append(path)
-            used_nodes.update(path_nodes)
+        if not path_nodes.isdisjoint(used_nodes):
+            continue
+        if any(_paths_interleave_in_band(assoc_graph, path, ap, lat_gate)
+               for ap in top_paths):
+            continue
+        top_paths.append(path)
+        used_nodes.update(path_nodes)
 
     return top_paths
