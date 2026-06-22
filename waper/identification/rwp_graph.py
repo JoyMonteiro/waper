@@ -373,6 +373,55 @@ def _unwrap_path(assoc_graph, path):
     return result
 
 
+def _path_lon_span(assoc_graph, path):
+    """Eastward longitude arc of a monotonic-east path: (start_lon, arc_length_deg)."""
+    start = assoc_graph.nodes[path[0]]["coords"][0]
+    length = 0.0
+    for i in range(len(path) - 1):
+        a = assoc_graph.nodes[path[i]]["coords"][0]
+        b = assoc_graph.nodes[path[i + 1]]["coords"][0]
+        length += _longitude_separation(a, b)
+    return start, length
+
+
+def _arc_bins(start, length, full=360.0, step=1.0):
+    """Integer-degree bins covered by the eastward arc [start, start+length] (mod 360)."""
+    n = int(length // step) + 1
+    return {int(round((start + k * step) % full)) % 360 for k in range(n + 1)}
+
+
+def _arcs_overlap(start_a, len_a, start_b, len_b):
+    """True if two eastward longitude arcs share any longitude (wrap-aware)."""
+    return not _arc_bins(start_a, len_a).isdisjoint(_arc_bins(start_b, len_b))
+
+
+def _path_lat_range(assoc_graph, path):
+    lats = [assoc_graph.nodes[n]["coords"][1] for n in path]
+    return min(lats), max(lats)
+
+
+def _lat_ranges_within(range_a, range_b, gate):
+    """True if the gap between two [min,max] latitude ranges is <= gate (overlap -> 0)."""
+    lo = max(range_a[0], range_b[0])
+    hi = min(range_a[1], range_b[1])
+    if lo <= hi:
+        return True
+    return (lo - hi) <= gate
+
+
+def _paths_interleave_in_band(assoc_graph, path_a, path_b, lat_gate):
+    """True if two paths overlap in longitude AND lie within lat_gate of each other."""
+    sa, la = _path_lon_span(assoc_graph, path_a)
+    sb, lb = _path_lon_span(assoc_graph, path_b)
+    if not _arcs_overlap(sa, la, sb, lb):
+        return False
+    return _lat_ranges_within(
+        _path_lat_range(assoc_graph, path_a),
+        _path_lat_range(assoc_graph, path_b),
+        lat_gate,
+    )
+
+
 def get_ranked_paths(assoc_graph, max_weight):
 
     path_list = []
