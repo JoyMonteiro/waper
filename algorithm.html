@@ -80,7 +80,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-921ecb3ff3b004e91bddb2369f3a9636.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-6ac2aec46ad7f46b16024ee4409aa65c.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -675,6 +675,9 @@ weighted_y = Σ(yᵢ × |vᵢ|) / Σ|vᵢ|</code></pre>
 <h3 class="anchored" data-anchor-id="tracking-graph-pruning">10.2 Tracking graph pruning</h3>
 <p>Edges whose centroid distance exceeds <code>track_pruning_threshold</code> are removed. This prevents tracking connections between features that are spatially far apart even if they happen to overlap in the raster (e.g., due to large polygons).</p>
 <p>The threshold is a haversine distance <strong>in kilometres</strong>, matching the <code>distance</code> edge attribute stored in §10.1 — it is not an overlap weight. Values below a few hundred km prune every edge and leave an empty graph.</p>
+<p>A second, independent gate gives the overlap weight itself a cutoff. <code>track_weight_threshold</code> removes edges whose <code>weight</code> — the envelope-level energy overlap of §10.1, normalised to (0, 1] — falls <em>below</em> the threshold. Note the opposite direction: distance prunes from above, weight from below, which is why they are separate parameters rather than one. Because the normalisation divides by the <em>larger</em> of the two feature energies, this gate also suppresses merges and splits where a small packet is absorbed into a much bigger one.</p>
+<p>The weight gate is <code>None</code> (disabled) by default — it has not been calibrated against a reference dataset, so enabling it changes which tracks survive.</p>
+<p>Note that weight already influences track <em>selection</em> even with the gate off: §10.3 maximises summed weight along a path, so a weak edge is deprioritised. The gate is what removes it outright when it is the only edge available.</p>
 </section>
 <section id="track-extraction" class="level3">
 <h3 class="anchored" data-anchor-id="track-extraction">10.3 Track extraction</h3>
@@ -828,6 +831,12 @@ weighted_y = Σ(yᵢ × |vᵢ|) / Σ|vᵢ|</code></pre>
 <td>Maximum centroid distance for tracking edges</td>
 </tr>
 <tr class="odd">
+<td><code>track_weight_threshold</code></td>
+<td><code>None</code></td>
+<td>§10.2</td>
+<td>Minimum envelope overlap weight for tracking edges (disabled by default)</td>
+</tr>
+<tr class="even">
 <td><code>debug</code></td>
 <td>False</td>
 <td>All</td>
