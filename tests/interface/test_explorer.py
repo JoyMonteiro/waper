@@ -1,4 +1,5 @@
 import holoviews as hv
+import pytest
 import xarray as xr
 from waper.interface import explorer
 
@@ -21,6 +22,10 @@ def test_layer_toggle(cat):
     hv.render(app._map.object)
 
 def test_explorer_with_field(cat, two_timestep_field):
+    # The field layer renders with rasterize=True, which needs the
+    # datashader/numba stack. Skip rather than fail where that stack cannot be
+    # imported (numba caps numpy at 2.4 — see the numpy pin in pyproject.toml).
+    pytest.importorskip("datashader", exc_type=ImportError)
     hv.extension("bokeh")
     field_da = xr.Dataset({"v": two_timestep_field})["v"]
     app = explorer.RWPExplorer(cat, n_times=2, field_da=field_da)

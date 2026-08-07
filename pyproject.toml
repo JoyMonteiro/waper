@@ -48,7 +48,9 @@ classifiers = [
 ]
 
 dependencies = [
-    "numpy >= 1.22",
+    # Upper bound is set by numba (pulled in via datashader, used for the
+    # explorer's rasterized field layer): numba requires numpy <= 2.4.
+    "numpy >= 1.22, < 2.5",
     "scipy >= 1.9",
     "xarray >= 2022.6",
     "networkx >= 2.8",
