@@ -1,8 +1,9 @@
 import networkx as nx
+import pytest
 from waper.identification.rwp_graph import get_ranked_paths
 from waper.identification.rwp_graph import (
     _path_lon_span, _arcs_overlap, _path_lat_range,
-    _lat_ranges_within, _paths_interleave_in_band,
+    _lat_ranges_within, _paths_interleave_in_band, _arc_bins,
 )
 
 
@@ -45,6 +46,13 @@ def test_arcs_overlap():
     assert _arcs_overlap(350.0, 30.0, 10.0, 10.0) is True    # wrap: [350,20] vs [10,20]
 
 
+def test_arc_bins_do_not_run_past_the_arc_end():
+    """Bins must stop at start+length, not spill over it."""
+    assert _arc_bins(10.0, 20.0) == set(range(10, 31))        # [10,30] inclusive, nothing beyond
+    # adjacent-but-disjoint arcs: [10,30] and [31,41] must not be judged overlapping
+    assert _arcs_overlap(10.0, 20.0, 31.0, 10.0) is False
+
+
 def test_lat_ranges_within():
     assert _lat_ranges_within((40, 55), (45, 60), 15) is True    # overlapping
     assert _lat_ranges_within((30, 35), (45, 50), 15) is True    # gap 10 <= 15
@@ -56,11 +64,14 @@ def test_paths_interleave_in_band():
     _node(g, ("max", 0), 10.0, 50.0); _node(g, ("min", 0), 40.0, 52.0)   # band A 50-52
     _node(g, ("max", 1), 20.0, 51.0); _node(g, ("min", 1), 50.0, 53.0)   # overlaps lon, same band
     _node(g, ("max", 2), 20.0, 25.0); _node(g, ("min", 2), 50.0, 27.0)   # overlaps lon, far band
+    _node(g, ("max", 3), 200.0, 51.0); _node(g, ("min", 3), 230.0, 53.0)  # same band, disjoint lon
     a = [("max", 0), ("min", 0)]
     b = [("max", 1), ("min", 1)]
     c = [("max", 2), ("min", 2)]
+    d = [("max", 3), ("min", 3)]
     assert _paths_interleave_in_band(g, a, b, 15.0) is True    # same band, overlapping lon
     assert _paths_interleave_in_band(g, a, c, 15.0) is False   # far band -> allowed
+    assert _paths_interleave_in_band(g, a, d, 15.0) is False   # in band but no lon overlap
 
 
 def test_pass1_rejects_in_band_interleaver():
@@ -188,7 +199,6 @@ def test_orphan_cascade_multi_iteration():
 # ---------------------------------------------------------------------------
 # Task 5: acceptance test on real data (timestep 95)
 # ---------------------------------------------------------------------------
-import pytest
 
 
 def _load_t95():

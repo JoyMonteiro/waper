@@ -155,11 +155,6 @@ In rough priority order:
    final scale check — multi-month behavior may surface issues that don't
    appear in 28- or 81-step files.
 
-4. **Promote validated values into `WaperConfig` defaults.** Once (1)–(3)
-   converge, change the defaults in `waper/interface/api.py` and update
-   `visualize.py` / sensitivity scripts to use the dataclass defaults
-   instead of hard-coding. Add a short note here.
-
 5. **Promote validated values into `WaperConfig` defaults.** Once (1)–(3)
    converge, change the defaults in `waper/interface/api.py` and update
    `visualize.py` / sensitivity scripts to use the dataclass defaults

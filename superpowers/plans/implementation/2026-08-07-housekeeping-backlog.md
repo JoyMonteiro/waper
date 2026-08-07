@@ -20,29 +20,27 @@
 
 ---
 
-## Tier 1 — small and safe (~1 hour)
+## Tier 1 — small and safe (~1 hour) — **done 2026-08-07**
 
-- [ ] **Three deferred branch-resolution review findings.** Adjudicated non-correctness-
+- [x] **Three deferred branch-resolution review findings.** Adjudicated non-correctness-
       affecting during the SDD review; see `.superpowers/sdd/progress.md`.
-  - `_lat_ranges_within` (`waper/identification/rwp_graph.py:403-409`) — `lo`/`hi` are
-    semantically inverted (they are overlap bounds; `lo > hi` means disjoint). Readability
-    only, zero behaviour change.
-  - Missing test: "no longitude overlap but latitude within gate → False". Obvious by
-    early-return, still untested.
-  - Mid-file `import pytest` in `tests/test_rwp_branch_resolution.py` — style.
+  - `_lat_ranges_within` — `lo`/`hi` renamed to `overlap_lo`/`overlap_hi` with a comment;
+    zero behaviour change.
+  - Missing test added to `test_paths_interleave_in_band`: same band, disjoint longitude
+    → False.
+  - `import pytest` hoisted to the top of `tests/test_rwp_branch_resolution.py`.
 
-- [ ] **`_arc_bins` off-by-one** (`waper/identification/rwp_graph.py:389-390`).
-      `n = int(length // step) + 1` followed by `range(n + 1)` yields two bins past the arc
-      end; should be `range(n)`. **Unlike the items above this perturbs identification
-      output** (slightly wider overlap detection, conservative direction), so re-run the
-      branch-resolution acceptance test alongside. The intended semantics are unambiguous,
-      so no judgement call is involved.
+- [x] **`_arc_bins` off-by-one** (`waper/identification/rwp_graph.py:389-390`).
+      `range(n + 1)` → `range(n)`. New regression test
+      `test_arc_bins_do_not_run_past_the_arc_end` pins the boundary (adjacent-but-disjoint
+      arcs `[10,30]` / `[31,41]` no longer read as overlapping). Full suite green,
+      including the real-data `test_acceptance_t95` — 130 passed, 1 skipped.
 
-- [ ] **Doc hygiene.**
-  - `datasets/experiments/2026-03-21-initial-audit.md` — "Next experiments" has two items
-    numbered 4, and items 4 and 5 are verbatim duplicates of each other.
-  - `datasets/experiments/README.md` parameter list predates `lat_gate` (default 15.0),
-    `hull_method`, and `hemisphere`. `lat_gate` in particular has never been swept.
+- [x] **Doc hygiene.**
+  - `datasets/experiments/2026-03-21-initial-audit.md` — dropped the duplicate item, so
+    "Next experiments" now numbers 1–7 cleanly.
+  - `datasets/experiments/README.md` — added `lat_gate` (15.0, flagged never-swept),
+    `hull_method`, `hemisphere` to the parameter list.
 
 ## Tier 2 — half a day
 

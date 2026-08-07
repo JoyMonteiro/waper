@@ -28,12 +28,19 @@ register of rejected approaches. Cross-link when a sweep backs an assessment.
 - `event_winds_abs_1.nc` (81 timesteps, June 1980) — qualitative visual-inspection dataset; keep it independent of tuning sweeps.
 - `souders_v_{1,2}.nc` — only 3 timesteps each; too short for sweeps, useful for single-frame regression checks.
 - `v_winds_300mb_nh_2022_2023.nc` — **empty stub file (239 B)**. Needs re-download via `download_era5.ipynb` before it can be used as a long climatology sweep.
-- Parameters of interest (current defaults in `WaperConfig`):
+- Parameters of interest (current defaults in `WaperConfig`, `waper/interface/api.py`):
   - `edge_pruning_threshold` (GT) = `3e-5` (effectively off)
   - `node_pruning_threshold` (ST) = caller-specified
   - `penalty_length_scale_km` = `2000`
   - `cluster_max_eps_km` = `3000`, `cluster_xi` = `0.15` (OPTICS)
   - `extrema_threshold` = caller-specified
+  - `lat_gate` = `15.0` — latitude gate (deg) for branch resolution: two candidate
+    paths that overlap in longitude and lie within this gap are treated as branches
+    of the same wave train. **Never swept.**
+  - `hull_method` = `per_node` (`per_node` | `convex` | `concave`) — RWP polygon
+    construction.
+  - `hemisphere` = `north` (`north` | `south`) — sets the stereographic projection
+    and pole; all sweep datasets so far are NH.
 - Sweep drivers live in `datasets/`: `sensitivity.py`, `gt_sensitivity.py`, `penalty_sensitivity.py`.
 
 ## Index

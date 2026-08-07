@@ -387,7 +387,7 @@ def _path_lon_span(assoc_graph, path):
 def _arc_bins(start, length, full=360.0, step=1.0):
     """Integer-degree bins covered by the eastward arc [start, start+length] (mod 360)."""
     n = int(length // step) + 1
-    return {int(round((start + k * step) % full)) % 360 for k in range(n + 1)}
+    return {int(round((start + k * step) % full)) % 360 for k in range(n)}
 
 
 def _arcs_overlap(start_a, len_a, start_b, len_b):
@@ -402,11 +402,11 @@ def _path_lat_range(assoc_graph, path):
 
 def _lat_ranges_within(range_a, range_b, gate):
     """True if the gap between two [min,max] latitude ranges is <= gate (overlap -> 0)."""
-    lo = max(range_a[0], range_b[0])
-    hi = min(range_a[1], range_b[1])
-    if lo <= hi:
+    overlap_lo = max(range_a[0], range_b[0])
+    overlap_hi = min(range_a[1], range_b[1])
+    if overlap_lo <= overlap_hi:          # ranges intersect -> gap is 0
         return True
-    return (lo - hi) <= gate
+    return (overlap_lo - overlap_hi) <= gate
 
 
 def _paths_interleave_in_band(assoc_graph, path_a, path_b, lat_gate):
