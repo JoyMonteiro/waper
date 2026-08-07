@@ -156,36 +156,6 @@ show_error_codes = true
 [tool.setuptools]
 packages=["waper", "waper.identification", "waper.tracking", "waper.interface", "waper.io"]
 
-#  [tool.setuptools.packages.find]
-# {include = ["tests",
-#     "docs/**/*.rst",
-#     "docs/conf.py",
-#     "src/**/*.typed",
-#     "src/stubs/*.pyi",
-#     "pyproject.toml",
-#     "LICENSE",
-#     "README.rst",
-#     "CONTRIBUTING.md",
-#     "CHANGELOG.rst",
-# ]},
-# {exclude = [
-#     ".github/*",
-#     "docs/*",
-#     "requirements/*",
-#     "scripts/*.py",
-#     "tox.ini",
-#     ".bettercodehub.yml",
-#     ".circleci/config.yml",
-#     ".coveragerc",
-#     ".DS_Store",
-#     ".gitignore",
-#     ".prospector.yml",
-#     ".pylintrc",
-#     ".readthedocs.yml",
-#     ".scrutinizer.yml",
-#     ".travis.yml"
-# ]}]
-
 # A list of all of the optional dependencies, some of which are included in the
 # below `extras`. They can be opted into by apps.
 

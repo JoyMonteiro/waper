@@ -7,7 +7,7 @@ Contributions are welcome :)
 * [Types of Contributions](#Types-of-Contributions)
 * [Contributor Setup](#Setting-Up-the-Code-for-Local-Development)
 * [Contributor Guidelines](#Contributor-Guidelines)
-* [Contributor Testing](#Testing-with-tox)
+* [Contributor Testing](#Running-the-Tests)
 * [Core Committer Guide](#Core-Committer-Guide)
 
 
@@ -40,17 +40,7 @@ See [Contributor Setup](#Setting-Up-the-Code-for-Local-Development) to get start
 
 ### Write Documentation
 
-My New Project could always use more documentation, whether as part of the official My New Project docs, in docstrings, etc.
-
-If you want to review your changes on the documentation locally, you can do:
-
-```bash
-python3 -m pip install --user tox
-tox -e live-html
-```
-
-This will compile the documentation (into html) and start watching the files for changes, recompiling as you save.
-You can open it in your browser at http://127.0.0.1:8000 !
+WAPER could always use more documentation, whether as part of the official WAPER docs, in docstrings, etc.
 
 ### Submit Feedback
 
@@ -100,31 +90,21 @@ git checkout -b name-of-your-bugfix-or-feature
 
 Now you can make your changes locally.
 
-6. When you're done making changes, check that your changes pass the tests locally:
+6. When you're done making changes, check that your changes pass the tests and the
+   lint/type checks locally. See [Running the Tests](#Running-the-Tests) for the commands
+   — they are the same ones CI runs.
+
+7. Ensure that your feature or commit is covered by tests. To see which lines your change
+   left uncovered:
 
 ```bash
-pytest -m "not slow"
+pytest -m "not slow" --cov --cov-report=term-missing
 ```
 
-The `slow` tests are excluded because they read large NetCDF files that are gitignored and
-absent from a fresh clone. If you have those datasets locally, run the whole suite with
-plain `pytest`; anything still missing will skip rather than fail.
+Add `--cov-report=html` for a browsable report in `htmlcov/`. That directory is
+gitignored; please do not commit it.
 
-Note: `tox.ini` is unmodified cookiecutter scaffolding — it targets a `src/my_new_project`
-layout that has never existed in this repo, and none of its environments work. CI runs
-pytest directly. Do not rely on `tox` here.
-
-If you want to produce a built tar.gz and wheel distributions:
-
-```bash
-tox -e check && tox -e build
-```
-
-1. Ensure that your feature or commit is fully covered by tests. Check the coverage report that should be visible on the console when you run tox
-
-You report will be placed to `htmlcov` directory. Please do not include this directory to your commits, accidentally.
-
-1. Commit your changes and push your branch to GitHub:
+8. Commit your changes and push your branch to GitHub:
 
 ```bash
 git add -p
@@ -132,7 +112,7 @@ git commit -m "Your detailed description of your changes."
 git push origin name-of-your-bugfix-or-feature
 ```
 
-8. Submit a pull request through the GitHub website.
+9. Submit a pull request through the GitHub website.
 
 ## Contributor Guidelines
 
@@ -153,30 +133,39 @@ Before you submit a pull request, check that it meets these guidelines:
 * Composition over Inheritance
 
 
-## Testing with tox
+## Running the Tests
 
-Tox uses pytest under the hood, hence it supports the same syntax for selecting tests.
-
-For further information please consult the [pytest usage docs](http://pytest.org/en/latest/example/index.html).
-
-
-To run all tests using various versions of python in virtualenvs defined in tox.ini, just run tox:
+The suite is run with `pytest` directly; its configuration lives in `pyproject.toml` under
+`[tool.pytest.ini_options]`. Install the development extra first (`pip install -e ".[dev]"`),
+which brings in `pytest` and `pytest-cov`.
 
 ```bash
-tox
+pytest -m "not slow"
 ```
 
-To run all tests using python 3.8:
+The `slow` tests are deselected because they read large NetCDF files that are gitignored and
+absent from a fresh clone. If you have those datasets locally, run the whole suite with
+plain `pytest`; anything still missing will skip rather than fail.
+
+Standard pytest selection syntax applies, e.g. to run only tests matching a substring:
 
 ```bash
-tox -e py38
+pytest -m "not slow" -k 'smoke_test'
 ```
 
-To only run test cases matching the string 'smoke_test', using python 3.8:
+For further information please consult the [pytest usage docs](https://docs.pytest.org/en/latest/example/index.html).
+
+### Lint and Type Checks
+
+CI runs these on every push, so run them before you open a pull request:
 
 ```bash
-tox -e py38 -- -k 'smoke_test'
+ruff check .
+mypy
 ```
+
+Both are configured in `pyproject.toml`. `ruff check --fix .` applies the fixes it can
+make automatically.
 
 
 ## Core Committer Guide
@@ -203,7 +192,7 @@ Core committers, use this section to:
 
 #### Fast and Focused
 
-My New Project is designed to do one thing, and do that one thing very well.
+WAPER is designed to do one thing, and do that one thing very well.
 
 * Cover the important use cases and as little as possible beyond that :)
 
