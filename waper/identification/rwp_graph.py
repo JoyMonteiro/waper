@@ -1,8 +1,10 @@
+from collections import defaultdict
+
 import networkx as nx
 import numpy as np
 from scipy.spatial import cKDTree
-from collections import defaultdict
-from .utils import haversine_distance, is_to_the_east, _longitude_separation
+
+from .utils import _longitude_separation, haversine_distance, is_to_the_east
 
 WAPER_MAX_SCALAR_VALUE = 100
 WAPER_MAX_NODE_DISTANCE = 1000
@@ -101,10 +103,7 @@ def compute_association_graph(max_points, min_points, iso_contour, scalar_name):
         if max_id != -1 and min_id != -1:
             assoc_set.add((max_id, min_id))
 
-    count = 0
-
     for elem in assoc_set:
-        count += 1
         max_id = elem[0]
         min_id = elem[1]
         max_centre = cluster_max_point[max_id]
@@ -156,7 +155,7 @@ def prune_association_graph_nodes(assoc_graph, scalar_threshold):
     """
 
     pruned_graph = nx.Graph()
-    edges = [e for e in assoc_graph.edges()]
+    edges = list(assoc_graph.edges())
     for e in edges:
         start_node = e[0]
         end_node = e[1]
@@ -252,7 +251,7 @@ def prune_association_graph_edges(
     """
 
     pruned_graph = nx.Graph()
-    edges = [e for e in assoc_graph.edges()]
+    edges = list(assoc_graph.edges())
 
     for e in edges:
         start_node = e[0]
@@ -387,7 +386,7 @@ def _path_lon_span(assoc_graph, path):
 def _arc_bins(start, length, full=360.0, step=1.0):
     """Integer-degree bins covered by the eastward arc [start, start+length] (mod 360)."""
     n = int(length // step) + 1
-    return {int(round((start + k * step) % full)) % 360 for k in range(n)}
+    return {round((start + k * step) % full) % 360 for k in range(n)}
 
 
 def _arcs_overlap(start_a, len_a, start_b, len_b):
@@ -426,8 +425,8 @@ def get_ranked_paths(assoc_graph, max_weight, lat_gate=15.0):
 
     path_list = []
 
-    start_leaves = [x for x in assoc_graph.nodes()]
-    end_leaves = [x for x in assoc_graph.nodes()]
+    start_leaves = list(assoc_graph.nodes())
+    end_leaves = list(assoc_graph.nodes())
 
     for source in start_leaves:
         for sink in end_leaves:
@@ -520,7 +519,7 @@ def reassign_orphans(assoc_graph, top_paths, lat_gate=15.0, max_iter=50):
             if w_o <= existing:
                 dropped.add(o)                      # orphan's branch is weaker -> drop it
             elif direction == 1:
-                candidate = path[: j + 1] + [o]
+                candidate = [*path[:j + 1], o]
                 # Guard: reject if the extended path now interleaves-in-band with
                 # any other currently-accepted path (reproducing pass-1 invariant).
                 if any(_paths_interleave_in_band(assoc_graph, candidate, paths[k], lat_gate)
@@ -529,7 +528,7 @@ def reassign_orphans(assoc_graph, top_paths, lat_gate=15.0, max_iter=50):
                 else:
                     paths[pi] = candidate           # safe: splice orphan on east end
             else:
-                candidate = [o] + path[j:]
+                candidate = [o, *path[j:]]
                 # Same guard for west-side splice.
                 if any(_paths_interleave_in_band(assoc_graph, candidate, paths[k], lat_gate)
                        for k in range(len(paths)) if k != pi):

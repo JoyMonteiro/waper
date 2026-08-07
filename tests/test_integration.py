@@ -1,4 +1,3 @@
-import pytest
 import xarray as xr
 
 from waper.interface.api import Waper
@@ -38,7 +37,6 @@ def test_full_pipeline_synthetic(two_timestep_field):
 
 
 def test_full_pipeline_flat_field_graceful(flat_field):
-    import numpy as np
     import xarray as xr
 
     # Make a 2 timestep flat field

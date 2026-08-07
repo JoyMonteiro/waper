@@ -11,32 +11,33 @@ import argparse
 import os
 import sys
 import tempfile
-import xarray as xr
+
 import panel as pn
+import xarray as xr
 
 # Add repo root to path so waper is importable
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from waper import Waper
-from waper.io.catalogue import save_catalogue, load_catalogue
 from waper.interface.explorer import RWPExplorer
+from waper.io.catalogue import load_catalogue, save_catalogue
 
 # Standard WAPER kwargs from datasets/visualize.py
-WAPER_KWARGS = dict(
-    scalar_name="v",
-    latitude_label="latitude",
-    longitude_label="longitude",
-    time_label="time",
-    clip_value=2,
-    extrema_threshold=10,
-    min_latitude=20,
-    max_latitude=80,
-    node_pruning_threshold=20,
-    edge_pruning_threshold=0.02,
-    max_edge_weight=1,
-    track_pruning_threshold=0.3,
-    penalty_length_scale_km=4000,
-)
+WAPER_KWARGS = {
+    "scalar_name": "v",
+    "latitude_label": "latitude",
+    "longitude_label": "longitude",
+    "time_label": "time",
+    "clip_value": 2,
+    "extrema_threshold": 10,
+    "min_latitude": 20,
+    "max_latitude": 80,
+    "node_pruning_threshold": 20,
+    "edge_pruning_threshold": 0.02,
+    "max_edge_weight": 1,
+    "track_pruning_threshold": 0.3,
+    "penalty_length_scale_km": 4000,
+}
 
 def main():
     parser = argparse.ArgumentParser(description="Run WAPER pipeline and launch RWPExplorer.")
@@ -118,5 +119,5 @@ def main():
     tmpdir.cleanup()
 
 if __name__ == "__main__":
-    import numpy as np # import here to satisfy script run dependencies
+    import numpy as np  # import here to satisfy script run dependencies
     main()

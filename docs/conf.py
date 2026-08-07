@@ -25,15 +25,15 @@ def get_templated_vars():
     return type(
         'TemplatedVariables',
         (),
-        dict(
-            project_slug='my-new-project',
-            package_name='my_new_project',
-            author_name='John Doe',
-            year='2022',
-            version='0.0.1',
-            github_username='john-doe-gh-account-name',
-            repo_name='my-new-project',
-        ),
+        {
+            'project_slug': 'my-new-project',
+            'package_name': 'my_new_project',
+            'author_name': 'John Doe',
+            'year': '2022',
+            'version': '0.0.1',
+            'github_username': 'john-doe-gh-account-name',
+            'repo_name': 'my-new-project',
+        },
     )
 
 
@@ -46,10 +46,7 @@ sys.path.insert(0, os.path.abspath(os.path.join('..', 'src', variables.package_n
 # -- Project information -----------------------------------------------------
 
 project = variables.project_slug
-copyright = '{year}, {name}'.format(
-    year=variables.year,
-    name=variables.author_name,
-)
+copyright = f'{variables.year}, {variables.author_name}'
 author = variables.author_name
 
 # The full version, including alpha/beta/rc tags
@@ -114,10 +111,7 @@ if not on_rtd:  # only set the theme if we're building docs locally
 # You can add etries here, according to your use case(s).
 extlinks = {
     'issue': (
-        'https://github.com/{username}/{repository}/issues/'.format(
-            username=variables.github_username,
-            repository=variables.repo_name,
-        )
+        f'https://github.com/{variables.github_username}/{variables.repo_name}/issues/'
         + '%s',
         'issue ',
     ),

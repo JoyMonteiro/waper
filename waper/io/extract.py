@@ -1,7 +1,9 @@
 import pandas as pd
 from shapely import wkb
+
 from waper.identification.utils import _longitude_separation
 from waper.tracking.rwp_polygon import transform_to_stereographic
+
 
 def _serialize_node_id(n):
     if isinstance(n, tuple):
@@ -18,10 +20,10 @@ def extract_nodes(waper) -> pd.DataFrame:
             for n in path:
                 nd = g.nodes[n]
                 lon, lat = nd["coords"]
-                rows.append(dict(time=t, rwp_id=rwp_id, node_id=int(_serialize_node_id(n)),
-                                 node_type=nd["node_type"], lon=float(lon), lat=float(lat),
-                                 scalar=float(nd["scalar"]), cluster_id=int(nd["cluster_id"]),
-                                 region_id=int(nd["region_id"])))
+                rows.append({"time": t, "rwp_id": rwp_id, "node_id": int(_serialize_node_id(n)),
+                                 "node_type": nd["node_type"], "lon": float(lon), "lat": float(lat),
+                                 "scalar": float(nd["scalar"]), "cluster_id": int(nd["cluster_id"]),
+                                 "region_id": int(nd["region_id"])})
     return pd.DataFrame(rows)
 
 def extract_edges(waper) -> pd.DataFrame:
@@ -30,9 +32,9 @@ def extract_edges(waper) -> pd.DataFrame:
         for path in tsd.identified_rwp_paths:
             rwp_id = tsd.rwp_info[tuple(path)]["rwp_id"]
             for a, b in zip(path[:-1], path[1:]):
-                rows.append(dict(time=t, rwp_id=rwp_id,
-                                 src_node_id=int(_serialize_node_id(a)),
-                                 dst_node_id=int(_serialize_node_id(b))))
+                rows.append({"time": t, "rwp_id": rwp_id,
+                                 "src_node_id": int(_serialize_node_id(a)),
+                                 "dst_node_id": int(_serialize_node_id(b))})
     return pd.DataFrame(rows)
 
 def _zonal_extent_deg(lons):
@@ -53,14 +55,14 @@ def extract_rwps(waper) -> pd.DataFrame:
             info = tsd.rwp_info[tuple(path)]
             scalars = [abs(g.nodes[n]["scalar"]) for n in path]
             lons = [g.nodes[n]["coords"][0] for n in path]
-            rows.append(dict(
-                time=t, rwp_id=info["rwp_id"],
-                weighted_lon=float(info["weighted_longitude"]),
-                weighted_lat=float(info["weighted_latitude"]),
-                peak_amp=float(max(scalars)), n_nodes=len(path),
-                zonal_extent_deg=float(_zonal_extent_deg(lons)),
-                geometry_wkb=wkb.dumps(info["polygon"]),
-            ))
+            rows.append({
+                "time": t, "rwp_id": info["rwp_id"],
+                "weighted_lon": float(info["weighted_longitude"]),
+                "weighted_lat": float(info["weighted_latitude"]),
+                "peak_amp": float(max(scalars)), "n_nodes": len(path),
+                "zonal_extent_deg": float(_zonal_extent_deg(lons)),
+                "geometry_wkb": wkb.dumps(info["polygon"]),
+            })
     return pd.DataFrame(rows)
 
 def extract_samples(waper) -> pd.DataFrame:
@@ -76,8 +78,8 @@ def extract_samples(waper) -> pd.DataFrame:
             ys = [p[1] for p in pts]
             lons, lats = transform_to_stereographic(xs, ys, hemisphere=hemisphere, inverse=True)
             for i, (lon, lat) in enumerate(zip(lons, lats)):
-                rows.append(dict(time=t, rwp_id=info["rwp_id"], pt_idx=i,
-                                 lon=float(lon), lat=float(lat)))
+                rows.append({"time": t, "rwp_id": info["rwp_id"], "pt_idx": i,
+                                 "lon": float(lon), "lat": float(lat)})
     return pd.DataFrame(rows)
 
 def _key(time, feature):
@@ -88,8 +90,8 @@ def extract_track_nodes(waper) -> pd.DataFrame:
     rows = []
     for (time, feature), nd in g.nodes(data=True):
         lon, lat = nd["coords"]
-        rows.append(dict(time=int(time), feature=int(feature),
-                         lon=float(lon), lat=float(lat), key=_key(time, feature)))
+        rows.append({"time": int(time), "feature": int(feature),
+                         "lon": float(lon), "lat": float(lat), "key": _key(time, feature)})
     return pd.DataFrame(rows)
 
 def extract_track_edges(waper) -> pd.DataFrame:
@@ -97,9 +99,9 @@ def extract_track_edges(waper) -> pd.DataFrame:
     rows = []
     for (a, b, ed) in g.edges(data=True):
         (t0, f0), (t1, f1) = a, b
-        rows.append(dict(src=_key(t0, f0), dst=_key(t1, f1),
-                         time_from=int(t0), feat_from=int(f0),
-                         time_to=int(t1), feat_to=int(f1),
-                         weight=float(ed.get("weight", 0.0)),
-                         distance=float(ed.get("distance", 0.0))))
+        rows.append({"src": _key(t0, f0), "dst": _key(t1, f1),
+                         "time_from": int(t0), "feat_from": int(f0),
+                         "time_to": int(t1), "feat_to": int(f1),
+                         "weight": float(ed.get("weight", 0.0)),
+                         "distance": float(ed.get("distance", 0.0))})
     return pd.DataFrame(rows)

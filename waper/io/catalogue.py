@@ -1,10 +1,15 @@
 import json
-import pandas as pd
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
 from . import extract
 
+
 def write_meta(path, meta: dict) -> None:
-    path = Path(path); path.mkdir(parents=True, exist_ok=True)
+    path = Path(path)
+    path.mkdir(parents=True, exist_ok=True)
     (path / "meta.json").write_text(json.dumps(meta, indent=2, default=str))
 
 def read_meta(path) -> dict:
@@ -24,7 +29,8 @@ def _write_table(df: pd.DataFrame, out_dir: Path) -> None:
     df.to_parquet(out_dir / "part.parquet", engine="pyarrow", index=False)
 
 def save_catalogue(waper, path, *, meta=None) -> None:
-    path = Path(path); path.mkdir(parents=True, exist_ok=True)
+    path = Path(path)
+    path.mkdir(parents=True, exist_ok=True)
     for name, fn in _TABLES.items():
         _write_table(fn(waper), path / name)
     # Record the hemisphere so consumers know which polar-stereographic CRS the
@@ -33,7 +39,6 @@ def save_catalogue(waper, path, *, meta=None) -> None:
     meta.setdefault("hemisphere", waper._config.hemisphere)
     write_meta(path, meta)
 
-import numpy as np
 
 class Catalogue:
     def __init__(self, path, _filters=None):
@@ -97,12 +102,13 @@ class Catalogue:
                 gaps = [_longitude_separation(a, b) for a, b in zip(lons[:-1], lons[1:])]
                 spacing = float(np.mean(gaps))
                 wn = 180.0 / spacing if spacing > 0 else np.nan
-            out.append(dict(time=t, rwp_id=rid, implied_wavenumber=wn))
+            out.append({"time": t, "rwp_id": rid, "implied_wavenumber": wn})
         return pd.DataFrame(out)
 
     def _track_paths(self):
         """Rebuild the DiGraph and return longest-weight track paths (list of node keys)."""
         import networkx as nx
+
         from waper.tracking import tracking_graph as tg
         te = self.table("track_edges")
         tn = self.table("track_nodes")
@@ -111,7 +117,7 @@ class Catalogue:
         g = nx.from_pandas_edgelist(te, "src", "dst",
                                     edge_attr=["weight", "distance"], create_using=nx.DiGraph)
         coords = {r.key: (r.lon, r.lat, r.time) for r in tn.itertuples()}
-        for k, (lon, lat, t) in coords.items():
+        for k, (lon, lat, _t) in coords.items():
             if k in g:
                 g.nodes[k]["coords"] = (lon, lat)
         return tg.get_track_paths(g), coords
@@ -123,8 +129,8 @@ class Catalogue:
         for i, p in enumerate(paths):
             t0 = coords[p[0]][2]
             t1 = coords[p[-1]][2]
-            rows.append(dict(track_id=i, duration_steps=t1 - t0,
-                             duration_hours=(t1 - t0) * dt))
+            rows.append({"track_id": i, "duration_steps": t1 - t0,
+                             "duration_hours": (t1 - t0) * dt})
         return pd.DataFrame(rows)
 
     def track_propagation(self):
@@ -134,7 +140,7 @@ class Catalogue:
         for i, p in enumerate(paths):
             lon0 = coords[p[0]][0]
             lon1 = coords[p[-1]][0]
-            rows.append(dict(track_id=i, propagation_deg=_longitude_separation(lon1, lon0)))
+            rows.append({"track_id": i, "propagation_deg": _longitude_separation(lon1, lon0)})
         return pd.DataFrame(rows)
 
     def group_velocity(self):
@@ -149,7 +155,7 @@ class Catalogue:
             lon1, lat1, t1 = coords[p[-1]]
             km = haversine_distance(lat0, lon0, lat1, lon1)
             secs = (t1 - t0) * dt
-            rows.append(dict(track_id=i, group_velocity_ms=(km * 1000.0) / secs if secs else np.nan))
+            rows.append({"track_id": i, "group_velocity_ms": (km * 1000.0) / secs if secs else np.nan})
         return pd.DataFrame(rows)
 
     def _digraph(self):
@@ -185,21 +191,21 @@ class Catalogue:
         """Genesis (lon,lat,time) = first node of the track path."""
         paths, coords = self._track_paths()
         lon, lat, t = coords[paths[track_id][0]]
-        return dict(track_id=track_id, genesis_lon=lon, genesis_lat=lat, genesis_time=t)
+        return {"track_id": track_id, "genesis_lon": lon, "genesis_lat": lat, "genesis_time": t}
 
     def amplitude_pdf(self, bins=20):
         a = self.amplitudes()["peak_amp"].to_numpy()
         if a.size == 0:
             return pd.DataFrame(columns=["bin_left", "bin_right", "density"])
         dens, edges = np.histogram(a, bins=bins, density=True)
-        return pd.DataFrame(dict(bin_left=edges[:-1], bin_right=edges[1:], density=dens))
+        return pd.DataFrame({"bin_left": edges[:-1], "bin_right": edges[1:], "density": dens})
 
     def duration_pdf(self, bins=20):
         d = self.track_durations()["duration_hours"].to_numpy()
         if d.size == 0:
             return pd.DataFrame(columns=["bin_left", "bin_right", "density"])
         dens, edges = np.histogram(d, bins=bins, density=True)
-        return pd.DataFrame(dict(bin_left=edges[:-1], bin_right=edges[1:], density=dens))
+        return pd.DataFrame({"bin_left": edges[:-1], "bin_right": edges[1:], "density": dens})
 
     def seasonal_cycle(self, time_to_month=None):
         """Monthly RWP count. time_to_month maps a `time` index to month 1-12."""
@@ -243,10 +249,10 @@ class Catalogue:
     def phase_at(self, point, time):
         """Region's wave-phase: nearest node + fractional position between bracketing nodes."""
         from waper.identification.utils import _longitude_separation
-        lon0, lat0 = point
+        lon0, _lat0 = point
         nd = self.filter(time=time).nodes()
         if nd.empty:
-            return dict(nearest_node_type=None, fractional_position=np.nan, nearest_node_lon=np.nan)
+            return {"nearest_node_type": None, "fractional_position": np.nan, "nearest_node_lon": np.nan}
         nd = nd.assign(dlon=nd["lon"].apply(lambda L: _longitude_separation(L, lon0)))
         nearest = nd.loc[nd["dlon"].idxmin()]
         west = nd[nd["lon"] <= lon0].sort_values("lon")
@@ -258,9 +264,9 @@ class Catalogue:
             frac = _longitude_separation(lon0, a) / span if span > 0 else np.nan
         else:
             frac = np.nan
-        return dict(nearest_node_type=nearest["node_type"],
-                    fractional_position=float(frac) if not np.isnan(frac) else np.nan,
-                    nearest_node_lon=float(nearest["lon"]))
+        return {"nearest_node_type": nearest["node_type"],
+                    "fractional_position": float(frac) if not np.isnan(frac) else np.nan,
+                    "nearest_node_lon": float(nearest["lon"])}
 
     def match_points(self, other_df, radius_km=850):
         """For each external point (lon,lat,time), True if within radius of any RWP centroid."""

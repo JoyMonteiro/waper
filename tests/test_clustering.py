@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 import xarray as xr
 
 from waper.identification import max_min, topology
@@ -101,7 +100,7 @@ def test_centroid_representative():
     (
         cluster_max_arr,
         cluster_max_point,
-        max_pt_dict,
+        _max_pt_dict,
         num_max_clusters,
     ) = topology.max_cluster_assign(clustered, "v")
 

@@ -5,6 +5,7 @@ import numpy as np
 import pyvista as pv
 import vtk
 from sklearn import cluster
+
 from .utils import RADIUS_EARTH_KM, RADIUS_SPHERE
 
 CLUSTER_MAX_DISTANCE = 15000.0
@@ -71,7 +72,6 @@ def cluster_extrema(
     locator = vtk.vtkCellLocator()
     locator.SetDataSet(base_field)
     locator.BuildLocator()
-    cell_ids = vtk.vtkIdList()
 
     cell_v = base_field.GetCellData().GetArray(f"{scalar_name} Cell Value")
 
@@ -127,10 +127,7 @@ def cluster_extrema(
             point_scalar_arr = scalar_field.GetPointData().GetArray(scalar_name)
             for ptIdx in range(id_list.GetNumberOfIds()):
                 vid = id_list.GetId(ptIdx)
-                if point_scalar_arr:
-                    val = point_scalar_arr.GetTuple1(vid)
-                else:
-                    val = cell_v.GetTuple1(vid)
+                val = point_scalar_arr.GetTuple1(vid) if point_scalar_arr else cell_v.GetTuple1(vid)
                     
                 if sign > 0:
                     if val < path_extreme_v:
@@ -161,10 +158,7 @@ def cluster_extrema(
                 descent = path_extreme_v - reference
                 
             abs_ref = abs(reference)
-            if abs_ref > 0:
-                f = max(0.0, descent / abs_ref)
-            else:
-                f = 0.0
+            f = max(0.0, descent / abs_ref) if abs_ref > 0 else 0.0
                 
             penalty_km = f * penalty_length_scale_km
             

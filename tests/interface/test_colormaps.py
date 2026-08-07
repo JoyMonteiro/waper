@@ -1,4 +1,5 @@
-from waper.interface.colormaps import joy_nl8, bokeh_palette
+from waper.interface.colormaps import bokeh_palette, joy_nl8
+
 
 def test_nl_palette_white_plateau():
     pal = bokeh_palette(joy_nl8, n=256)

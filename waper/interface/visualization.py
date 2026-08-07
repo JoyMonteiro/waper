@@ -1,14 +1,15 @@
-import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
-import pyvista as pv
+import matplotlib.pyplot as plt
 import numpy as np
-from xarray import DataArray
+import pyvista as pv
 from matplotlib.colors import LinearSegmentedColormap
 from shapely.geometry import MultiPolygon
+from xarray import DataArray
 
 from ..tracking.rwp_polygon import WAPER_X_BOUNDS, WAPER_Y_BOUNDS
+from .colormaps import ColorDict
 
-cdictDivergeNL = {'red' : (
+cdictDivergeNL: ColorDict = {'red' : (
                   (0.,0.455,0.455),
                   (0.25,0.670,0.670),
                   (0.4,0.878,0.878),
@@ -90,7 +91,7 @@ def _plot_clusters(
             str(region_id + 1),
             (lon, lat),
             fontsize=6,
-            bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="b", alpha=0.7),
+            bbox={'boxstyle': "round,pad=0.15", 'fc': "white", 'ec': "b", 'alpha': 0.7},
             transform=_PLATE_CARREE,
         )
 
@@ -103,7 +104,7 @@ def _plot_clusters(
             str(-region_id - 1),
             (lon, lat),
             fontsize=6,
-            bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="r", alpha=0.7),
+            bbox={'boxstyle': "round,pad=0.15", 'fc': "white", 'ec': "r", 'alpha': 0.7},
             transform=_PLATE_CARREE,
         )
 
@@ -128,7 +129,7 @@ def _plot_clusters(
                 str(cluster_id),
                 (point[0], point[1]),
                 fontsize=6,
-                bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="b", alpha=0.7),
+                bbox={'boxstyle': "round,pad=0.15", 'fc': "white", 'ec': "b", 'alpha': 0.7},
                 transform=_PLATE_CARREE,
             )
 
@@ -138,7 +139,7 @@ def _plot_clusters(
                 str(-cluster_id),
                 (point[0], point[1]),
                 fontsize=6,
-                bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="r", alpha=0.7),
+                bbox={'boxstyle': "round,pad=0.15", 'fc': "white", 'ec': "r", 'alpha': 0.7},
                 transform=_PLATE_CARREE,
             )
 
@@ -163,11 +164,11 @@ def _plot_graph(rwp_graph, scalar_data=None, ax=None):
             cmap=NLDivCmap,
             add_colorbar=True,
             add_labels=False,
-            cbar_kwargs=dict(
-                orientation='horizontal',
-                shrink=0.6,
-                aspect=30
-            )
+            cbar_kwargs={
+                'orientation': 'horizontal',
+                'shrink': 0.6,
+                'aspect': 30
+            }
         )
 
         scalar_data.plot.contour(
@@ -220,11 +221,11 @@ def _plot_rwp_paths(rwp_graph, paths, scalar_data=None, ax=None):
             cmap=NLDivCmap,
             add_colorbar=True,
             add_labels=False,
-            cbar_kwargs=dict(
-                orientation='horizontal',
-                shrink=0.6,
-                aspect=30
-            )
+            cbar_kwargs={
+                'orientation': 'horizontal',
+                'shrink': 0.6,
+                'aspect': 30
+            }
         )
 
         scalar_data.plot.contour(
@@ -326,7 +327,7 @@ def _plot_polygons(
                 str(index),
                 (lon, lat),
                 fontsize=8,
-                bbox=dict(boxstyle="round", fc="white", ec="b"),
+                bbox={'boxstyle': "round", 'fc': "white", 'ec': "b"},
                 transform=_PLATE_CARREE,
                 zorder=1000,
             )

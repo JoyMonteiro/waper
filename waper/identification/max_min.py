@@ -1,7 +1,6 @@
 import numpy as np
-import pyvista as pv
 import vtk
-from scipy.ndimage import maximum_filter
+from scipy.ndimage import maximum_filter, minimum_filter
 
 from .utils import get_vtk_object_from_data_array
 
@@ -35,12 +34,9 @@ def add_maxima_data(scalar_values, scalar_name, longitudes, latitudes):
 
     grid_vtk.point_data["is max"] = is_max.ravel()
     grid_vtk.point_data["Vertex_id"] = vertex_identifiers
-    grid_vtk.cell_data["{} Cell ID".format(scalar_name)] = cell_id
+    grid_vtk.cell_data[f"{scalar_name} Cell ID"] = cell_id
 
     return grid_vtk
-
-
-from scipy.ndimage import minimum_filter
 
 
 def add_minima_data(scalar_values, scalar_name, longitudes, latitudes):
@@ -75,7 +71,7 @@ def add_minima_data(scalar_values, scalar_name, longitudes, latitudes):
 
     grid_vtk.point_data["is min"] = is_min.ravel()
     grid_vtk.point_data["Vertex_id"] = vertex_identifiers
-    grid_vtk.cell_data["{} Cell ID".format(scalar_name)] = cell_id
+    grid_vtk.cell_data[f"{scalar_name} Cell ID"] = cell_id
 
     return grid_vtk
 
@@ -142,7 +138,7 @@ def interpolate_cell_values(dataset, scalar_name):
     cell_scalars = vtk.vtkFloatArray()
     cell_scalars.SetNumberOfComponents(1)
     cell_scalars.SetNumberOfTuples(num_cells)
-    cell_scalars.SetName("{} Cell Value".format(scalar_name))
+    cell_scalars.SetName(f"{scalar_name} Cell Value")
 
     for i in range(num_cells):
         cell = dataset.GetCell(i)

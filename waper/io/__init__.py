@@ -1,2 +1,3 @@
-from .catalogue import save_catalogue, load_catalogue, Catalogue, write_meta, read_meta
-__all__ = ["save_catalogue", "load_catalogue", "Catalogue", "write_meta", "read_meta"]
+from .catalogue import Catalogue, load_catalogue, read_meta, save_catalogue, write_meta
+
+__all__ = ["Catalogue", "load_catalogue", "read_meta", "save_catalogue", "write_meta"]

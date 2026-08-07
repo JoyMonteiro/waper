@@ -8,10 +8,10 @@ import typing as t
 # TODO Improve: try using the semantic_version_checker package for semver regex
 
 ExceptionFactory = t.Callable[[str, str, str], Exception]
-ClientCallback = t.Callable[[str, str], t.Tuple]
+ClientCallback = t.Callable[[str, str], tuple]
 
-MatchConverter = t.Callable[[t.Match], t.Tuple]
-MatchData = t.Tuple[str, t.List[t.Any], t.Callable[[t.Match], t.Tuple]]
+MatchConverter = t.Callable[[t.Match], tuple]
+MatchData = tuple[str, list[t.Any], t.Callable[[t.Match], tuple]]
 # 1st item (str): 'method'/'callable attribute' of the 're' python module)
 # 2nd item (list): zero or more additional runtime arguments
 # 3rd item (Callable): takes a Match object and return a tuple of strings
@@ -27,8 +27,8 @@ DEMO_SECTION: str = (
 
 
 def build_client_callback(data: MatchData, factory: ExceptionFactory) -> ClientCallback:
-    def client_callback(file_path: str, regex: str) -> t.Tuple:
-        with open(file_path, 'r') as _file:
+    def client_callback(file_path: str, regex: str) -> tuple:
+        with open(file_path) as _file:
             contents = _file.read()
         match = getattr(re, data[0])(regex, contents, *data[1])
         if match:
@@ -71,8 +71,8 @@ version_file_parser = build_client_callback(
         lambda match: (match.group(1),),
     ),
     lambda file_path, reg, string: AttributeError(
-        "Could not find a match for regex {regex} when applied to:".format(regex=reg)
-        + "\n{content}".format(content=string)
+        f"Could not find a match for regex {reg} when applied to:"
+        + f"\n{string}"
     ),
 )
 

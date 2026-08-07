@@ -1,4 +1,5 @@
-from waper.identification.utils import is_to_the_east, _longitude_separation
+from waper.identification.utils import _longitude_separation, is_to_the_east
+
 
 def test_east_simple():
     assert is_to_the_east(10, 5) is True

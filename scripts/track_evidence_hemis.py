@@ -6,17 +6,19 @@ disks can be watched moving.
 """
 import os
 import warnings
+
 warnings.filterwarnings("ignore")
+import matplotlib
 import numpy as np
 import xarray as xr
-import matplotlib
+
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
+import matplotlib.pyplot as plt
 
 from waper import Waper
-from waper.tracking.rwp_polygon import energy_disks
 from waper.interface.colormaps import joy_nl8
+from waper.tracking.rwp_polygon import energy_disks
 
 OUT = "/tmp/hemis_frames"
 os.makedirs(OUT, exist_ok=True)
@@ -72,7 +74,7 @@ def render(t, path=None):
     all_amp = [abs(s) for _, nodes, _, _ in rwps for _, _, s in nodes]
     gmax = max(all_amp) if all_amp else 1.0
 
-    for rid, nodes, wlon, wlat in rwps:
+    for _rid, nodes, wlon, wlat in rwps:
         for lon, lat, scalar in nodes:
             (disk, _), = energy_disks([(lon, lat, scalar)], hemisphere="north")
             is_global_max = abs(scalar) >= gmax - 1e-9

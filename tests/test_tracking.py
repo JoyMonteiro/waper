@@ -7,9 +7,8 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from waper.interface.api import WaperConfig, Waper, _identify_rwps
+from waper.interface.api import Waper, WaperConfig, _identify_rwps
 from waper.tracking import tracking_graph
-from waper.tracking import quadtree as qt_module
 from waper.tracking.quadtree import compute_size_features, create_quadtree
 from waper.tracking.rwp_polygon import (
     WAPER_IMAGE_SIZE,
@@ -46,7 +45,7 @@ def test_identical_timesteps_full_overlap(simple_wave_field, default_config):
 
     # Check edges
     # Weight should be 1.0 because the quadtrees are exactly the same
-    for u, v, data in track_g.edges(data=True):
+    for _u, _v, data in track_g.edges(data=True):
         assert pytest.approx(data["weight"], 0.01) == 1.0
 
 
@@ -59,7 +58,7 @@ def test_shifted_field_partial_overlap(two_timestep_field, default_config):
 
     # Since it shifted, the overlap should be between 0 and 1.
     edges_found = False
-    for u, v, data in track_g.edges(data=True):
+    for _u, _v, data in track_g.edges(data=True):
         if 0 < data["weight"] < 1.0:
             edges_found = True
 
@@ -218,7 +217,7 @@ def test_energy_disks_one_per_node_weighted_by_energy():
                          hemisphere="north", radius_m=300e3)
     assert len(cells) == 2
     geom0, e0 = cells[0]
-    geom1, e1 = cells[1]
+    _geom1, e1 = cells[1]
     assert abs(e0 - 9.0) < 1e-9
     assert abs(e1 - 4.0) < 1e-9
     assert geom0.geom_type == "Polygon" and geom0.area > 0

@@ -1,5 +1,4 @@
 import networkx as nx
-import numpy as np
 import pytest
 
 from waper.interface.api import WaperConfig, _identify_rwps
@@ -99,7 +98,7 @@ def test_edge_pruning_removes_low_gradient(simple_wave_field):
     # compared to association_graph
     assert len(G_pruned.edges) < len(ts_data.association_graph.edges)
 
-    for u, v, data in G_pruned.edges(data=True):
+    for _u, _v, data in G_pruned.edges(data=True):
         assert data["weight"] >= 0.5
 
 
@@ -230,7 +229,7 @@ def test_chain_with_shared_region_id_not_fragmented():
 def test_globe_circling_path_is_split():
     """A path whose cumulative eastward longitude completes a full circle is a
     genuine wrap and must be split."""
-    from waper.identification.rwp_graph import _unwrap_path, _path_circles_globe
+    from waper.identification.rwp_graph import _path_circles_globe, _unwrap_path
     # cumulative east: 90+100+110+90 = 390 >= 360 -> wraps the globe
     G = _chain_graph([
         (0.0, "max", 0), (90.0, "min", 1), (190.0, "max", 2),

@@ -12,6 +12,7 @@ import os
 import sys
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import xarray as xr
@@ -34,21 +35,21 @@ DATASETS = [
 ]
 
 # WAPER configuration (shared across datasets)
-WAPER_KWARGS = dict(
-    scalar_name="v",
-    latitude_label="latitude",
-    longitude_label="longitude",
-    time_label="time",
-    clip_value=2,
-    extrema_threshold=10,
-    min_latitude=20,
-    max_latitude=80,
-    node_pruning_threshold=20,
-    edge_pruning_threshold=0.02,
-    max_edge_weight=1,
-    track_pruning_threshold=0.3,
-    penalty_length_scale_km=4000,
-)
+WAPER_KWARGS = {
+    "scalar_name": "v",
+    "latitude_label": "latitude",
+    "longitude_label": "longitude",
+    "time_label": "time",
+    "clip_value": 2,
+    "extrema_threshold": 10,
+    "min_latitude": 20,
+    "max_latitude": 80,
+    "node_pruning_threshold": 20,
+    "edge_pruning_threshold": 0.02,
+    "max_edge_weight": 1,
+    "track_pruning_threshold": 0.3,
+    "penalty_length_scale_km": 4000,
+}
 
 # Use a generous distance threshold for track display (keep all plausible tracks)
 TRACK_DISPLAY_THRESHOLD_KM = 8000

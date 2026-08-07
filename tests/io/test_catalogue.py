@@ -1,8 +1,10 @@
-import json
 from pathlib import Path
+
 import networkx as nx
 from shapely import wkb
-from waper.io.catalogue import write_meta, read_meta, save_catalogue, load_catalogue
+
+from waper.io.catalogue import load_catalogue, read_meta, save_catalogue, write_meta
+
 
 def test_meta_roundtrip(tmp_path):
     meta = {"units": "m s**-1", "resolution_deg": 1.0, "cadence_hours": 6,

@@ -1,6 +1,7 @@
 """Phase vs group velocity check: is eastward motion carried by ONE trough
 (phase) or by a SUCCESSION of distinct troughs appearing downstream (group)?"""
-import pickle, numpy as np
+import pickle
+
 with open("/tmp/diag_fb.pkl", "rb") as fh:
     fb, thr = pickle.load(fh)
 
@@ -16,7 +17,7 @@ print(f"\nPurple = #{3}: {purple.node_type} @ lon={purple.lon:.1f}\n")
 # If group velocity is eastward, the *set* of trough longitudes marches east
 # even though each individual trough is near-stationary.
 print("Strong MIN (trough) longitudes in 30-55N band, per hour:")
-for t in range(0, 18):
+for t in range(18):
     mins = [f for f in fb[t]
             if f.node_type == "min" and f.strength == "strong" and 30 <= f.lat <= 55]
     lons = sorted(round(f.lon) for f in mins)
@@ -25,7 +26,7 @@ for t in range(0, 18):
 # How many DISTINCT strong troughs does any single eastward-propagating
 # packet envelope pass through? Track the easternmost trough each step.
 print("\nEasternmost strong trough (30-55N) per hour, lon & lat:")
-for t in range(0, 30):
+for t in range(30):
     mins = [f for f in fb[t]
             if f.node_type == "min" and f.strength == "strong" and 30 <= f.lat <= 55]
     if not mins:

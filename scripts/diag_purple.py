@@ -4,9 +4,14 @@ Caches feature extraction to /tmp/diag_fb.pkl so the tracking logic can be
 re-examined instantly. Reports, at each step, what the purple head overlaps,
 which fragment the root follows, and what happens to the split children.
 """
-import os, pickle, warnings
+import os
+import pickle
+import warnings
+
 warnings.filterwarnings("ignore")
-import numpy as np, xarray as xr
+import numpy as np
+import xarray as xr
+
 from waper.interface.api import Waper
 from waper.tracking.feature_tracks import extract_features, feature_overlap
 
@@ -61,7 +66,7 @@ for t in range(1, len(fb)):
               f"head was lon={head.lon:.1f} lat={head.lat:.1f} "
               f"area={head.footprint.area:.2e}  -> track would DIE here")
         # show nearest few by centroid distance for context
-        def dist(f):
+        def dist(f, head=head):
             dlon = ((f.lon - head.lon + 180) % 360) - 180
             return (dlon**2 + (f.lat - head.lat)**2) ** 0.5
         near = sorted(same_type, key=dist)[:4]

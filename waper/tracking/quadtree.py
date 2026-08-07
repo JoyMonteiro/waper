@@ -1,11 +1,10 @@
-from operator import add
-from functools import reduce
-import networkx as nx
 import math
-import numpy as np
 from collections import defaultdict
 
-from .rwp_polygon import WAPER_NUM_PIXELS, WAPER_IMAGE_SIZE
+import networkx as nx
+import numpy as np
+
+from .rwp_polygon import WAPER_IMAGE_SIZE, WAPER_NUM_PIXELS
 
 # function to split input raster image into 4 equal images
 # returns the 4 split images
@@ -152,11 +151,7 @@ def compute_pixels(quadtree):
 
 
 def contains_no_features(node):
-    if len(node["features"]) == 1:
-        if node["features"][0] == 0:
-            return True
-
-    return False
+    return len(node["features"]) == 1 and node["features"][0] == 0
 
 
 def contains_more_than_one_feature(node):
@@ -164,11 +159,7 @@ def contains_more_than_one_feature(node):
 
 
 def contains_one_feature(node):
-    if len(node["features"]) == 1:
-        if node["features"][0] != 0:
-            return True
-
-    return False
+    return len(node["features"]) == 1 and node["features"][0] != 0
 
 
 # function to construct a certain branch of the merge quadtree

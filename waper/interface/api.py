@@ -1,4 +1,6 @@
+import logging
 from dataclasses import dataclass
+from typing import Optional
 
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
@@ -18,6 +20,8 @@ from .visualization import (
     _plot_raster,
     _plot_rwp_paths,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(eq=False, frozen=True)
@@ -79,9 +83,9 @@ class WaperSingleTimestepData:
     rwp_info: dict
 
     raster_data: ndarray
-    raster_features: list
+    raster_features: set
     quadtree: Graph
-    energy_raster: ndarray = None  # set by _identify_rwps
+    energy_raster: Optional[ndarray] = None  # set by _identify_rwps
 
     def __init__(self, input_data: DataArray, config: WaperConfig) -> None:
         self.input_data = input_data
@@ -93,11 +97,6 @@ class WaperSingleTimestepData:
         )
         self.rwp_info = {}
         return
-
-
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 def _identify_rwps(
@@ -142,8 +141,8 @@ def _identify_rwps(
     )
 
     (
-        cluster_max_arr,
-        cluster_max_point,
+        _cluster_max_arr,
+        _cluster_max_point,
         max_pt_dict,
         num_max_clusters,
     ) = topology.max_cluster_assign(clustered_points, config.scalar_name)
@@ -185,8 +184,8 @@ def _identify_rwps(
     )
 
     (
-        cluster_min_arr,
-        cluster_min_point,
+        _cluster_min_arr,
+        _cluster_min_point,
         min_pt_dict,
         num_min_clusters,
     ) = topology.min_cluster_assign(clustered_points, config.scalar_name)
@@ -329,7 +328,7 @@ class Waper:
 
         self.data_array = data_array
         self._num_time_steps = len(data_array[time_label])
-        self._time_step_data = []
+        self._time_step_data: list = []
 
         if debug:
             logging.basicConfig(level=logging.DEBUG)

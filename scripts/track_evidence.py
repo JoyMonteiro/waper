@@ -4,18 +4,20 @@ energy-maximum disk highlighted. Evidence that the energy-weighted track moves.
 """
 import os
 import warnings
+
 warnings.filterwarnings("ignore")
+import matplotlib
 import numpy as np
 import xarray as xr
-import matplotlib
+
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
+import matplotlib.pyplot as plt
 
 from waper import Waper
+from waper.interface.colormaps import joy_nl8
 from waper.tracking import tracking_graph as tg
 from waper.tracking.rwp_polygon import energy_disks, transform_to_stereographic
-from waper.interface.colormaps import joy_nl8
 
 OUT = "/tmp/track_frames"
 os.makedirs(OUT, exist_ok=True)
@@ -111,14 +113,14 @@ for k, (t, feat) in enumerate(track):
     da = ds["v"].isel(time=t)
     da.plot.contourf(ax=ax, transform=pc, levels=15, cmap=joy_nl8,
                      vmin=-vmax, vmax=vmax, add_colorbar=True,
-                     cbar_kwargs=dict(shrink=0.7, label="v (m s$^{-1}$)"))
+                     cbar_kwargs={"shrink": 0.7, "label": "v (m s$^{-1}$)"})
     ax.coastlines(linewidth=0.5, color="0.4")
     ax.gridlines(draw_labels=True, linewidth=0.3, color="0.7",
                  xlabel_style={"size": 7}, ylabel_style={"size": 7})
 
     energies = [abs(s) ** 2 for (_, _, s, _) in nodes]
     emax_idx = int(np.argmax(energies))
-    for i, (lon, lat, scalar, info) in enumerate(nodes):
+    for i, (lon, lat, scalar, _info) in enumerate(nodes):
         lons, lats = disk_lonlat(lon, lat)
         is_max = (i == emax_idx)
         ax.plot(lons, lats, transform=pc,
@@ -130,7 +132,7 @@ for k, (t, feat) in enumerate(track):
                 markeredgecolor="k", zorder=7)
 
     # past centroids as faint dots (no line: avoids dateline streaks), current as star
-    for (pt, plo, pla) in trail[:k]:
+    for (_pt, plo, pla) in trail[:k]:
         ax.plot(plo, pla, transform=pc, marker="o", markersize=5,
                 markerfacecolor="gold", markeredgecolor="k", alpha=0.45, zorder=5)
     cx, cy = trail[k][1], trail[k][2]

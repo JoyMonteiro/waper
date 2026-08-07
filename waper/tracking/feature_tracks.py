@@ -5,9 +5,15 @@ primitive is a single extremum (crest/trough), which moves continuously, rather
 than the RWP group, whose membership flips between timesteps.
 """
 from dataclasses import dataclass, field
+from typing import Optional
+
+import numpy as np
+import pandas as pd
 from shapely.geometry import MultiPoint
+from shapely.geometry.base import BaseGeometry
+
 from ..identification import topology
-from .rwp_polygon import get_region_points_and_values, transform_to_stereographic
+from .rwp_polygon import transform_to_stereographic
 
 
 @dataclass
@@ -18,7 +24,7 @@ class Feature:
     lon: float
     lat: float
     scalar: float           # signed amplitude
-    footprint: object       # shapely geometry in stereographic metres
+    footprint: BaseGeometry  # shapely geometry in stereographic metres
     strength: str           # "strong" | "weak"
 
 
@@ -81,7 +87,7 @@ class TrackStep:
 class FeatureTrack:
     track_id: int
     steps: list = field(default_factory=list)
-    parent_id: int = None  # set when this track split off from another
+    parent_id: Optional[int] = None  # set when this track split off from another
 
 
 def _step(feature: Feature, recovered: bool) -> TrackStep:
@@ -127,8 +133,10 @@ def track_features(features_by_time, max_recover_steps: int = 2,
     next_id = 0
     if features_by_time:
         for f in _strong(features_by_time[0]):
-            tr = FeatureTrack(next_id, [_step(f, recovered=False)]); next_id += 1
-            tracks.append(tr); active.append([tr, f, 0])
+            tr = FeatureTrack(next_id, [_step(f, recovered=False)])
+            next_id += 1
+            tracks.append(tr)
+            active.append([tr, f, 0])
 
     for t in range(1, len(features_by_time)):
         curr_strong = _strong(features_by_time[t])
@@ -163,7 +171,7 @@ def track_features(features_by_time, max_recover_steps: int = 2,
                     if feature_overlap(head, f) < min_split_iou:
                         continue
                     tr = FeatureTrack(next_id,
-                                      parent_history + [_step(f, recovered=False)],
+                                      [*parent_history, _step(f, recovered=False)],
                                       parent_id=a[0].track_id)
                     next_id += 1
                     tracks.append(tr)
@@ -183,7 +191,7 @@ def track_features(features_by_time, max_recover_steps: int = 2,
                     if not _in_band(f, lat_bounds) or a[2] + 1 > max_recover_steps:
                         continue
                     tr = FeatureTrack(next_id,
-                                      parent_history + [_step(f, recovered=True)],
+                                      [*parent_history, _step(f, recovered=True)],
                                       parent_id=a[0].track_id)
                     next_id += 1
                     tracks.append(tr)
@@ -197,23 +205,21 @@ def track_features(features_by_time, max_recover_steps: int = 2,
             if j not in matched_curr:
                 if not _in_band(f, lat_bounds):
                     continue
-                tr = FeatureTrack(next_id, [_step(f, recovered=False)]); next_id += 1
-                tracks.append(tr); new_active.append([tr, f, 0])
+                tr = FeatureTrack(next_id, [_step(f, recovered=False)])
+                next_id += 1
+                tracks.append(tr)
+                new_active.append([tr, f, 0])
         active = new_active
 
     return tracks
-
-
-import numpy as np
-import pandas as pd
 
 
 def feature_tracks_to_dataframe(tracks) -> pd.DataFrame:
     rows = []
     for tr in tracks:
         for s in tr.steps:
-            rows.append(dict(track_id=tr.track_id, time=s.time, lon=s.lon, lat=s.lat,
-                             scalar=s.scalar, node_type=s.node_type, recovered=s.recovered))
+            rows.append({"track_id": tr.track_id, "time": s.time, "lon": s.lon, "lat": s.lat,
+                             "scalar": s.scalar, "node_type": s.node_type, "recovered": s.recovered})
     return pd.DataFrame(rows, columns=["track_id", "time", "lon", "lat", "scalar",
                                        "node_type", "recovered"])
 

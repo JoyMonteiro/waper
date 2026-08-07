@@ -1,11 +1,19 @@
 """Render the first N frames from cached features so we can LOOK at the
 split. Highlights the purple seed's footprint family in heavy purple."""
-import pickle, warnings
+import contextlib
+import pickle
+import warnings
+
+import matplotlib
+
 warnings.filterwarnings("ignore")
-import numpy as np, xarray as xr
-import matplotlib; matplotlib.use("Agg")
-import matplotlib.pyplot as plt
+matplotlib.use("Agg")
+
 import cartopy.crs as ccrs
+import matplotlib.pyplot as plt
+import numpy as np
+import xarray as xr
+
 from waper.interface.colormaps import joy_nl8
 
 with open("/tmp/diag_fb.pkl", "rb") as fh:
@@ -51,12 +59,10 @@ for t in range(NSHOW):
         if f.node_type != "min":
             continue
         strong = f.strength == "strong"
-        try:
+        with contextlib.suppress(Exception):
             ax.add_geometries([f.footprint], crs=stereo, facecolor="none",
                               edgecolor="blue", linewidth=1.8 if strong else 0.7,
                               linestyle="-" if strong else "--", zorder=4)
-        except Exception:
-            pass
         ax.plot(f.lon, f.lat, transform=pc, marker="o", markersize=5,
                 color="blue", markeredgecolor="k", zorder=5)
         ax.text(f.lon, f.lat + 0.8, f"{f.lon:.0f}/{f.scalar:.0f}", transform=pc,

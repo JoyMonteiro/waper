@@ -2,10 +2,16 @@ import os
 
 import networkx as nx
 import pytest
-from waper.identification.rwp_graph import get_ranked_paths
+
 from waper.identification.rwp_graph import (
-    _path_lon_span, _arcs_overlap, _path_lat_range,
-    _lat_ranges_within, _paths_interleave_in_band, _arc_bins,
+    _arc_bins,
+    _arcs_overlap,
+    _lat_ranges_within,
+    _path_lat_range,
+    _path_lon_span,
+    _paths_interleave_in_band,
+    get_ranked_paths,
+    reassign_orphans,
 )
 
 
@@ -109,7 +115,6 @@ def test_pass1_keeps_different_waveguide():
 # ---------------------------------------------------------------------------
 # Task 4: reassign_orphans tests
 # ---------------------------------------------------------------------------
-from waper.identification.rwp_graph import reassign_orphans
 
 
 def test_orphan_extends_chain_end():
@@ -207,8 +212,11 @@ DATASET = "datasets/forecast_bust_hourly.nc"
 
 
 def _load_t95():
-    import warnings; warnings.filterwarnings("ignore")
+    import warnings
+
     import xarray as xr
+
+    warnings.filterwarnings("ignore")
     raw = xr.open_dataset(DATASET)
     da = (raw["v"].rename({"valid_time": "time"})
           .squeeze("pressure_level", drop=True)

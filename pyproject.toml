@@ -82,6 +82,77 @@ dev = ["pytest >= 7.0", "pytest-cov", "mypy", "ruff", "nbstripout"]
 pythonpath = ["."]
 markers = ["slow: integration runs that load data"]
 
+
+# LINTING
+
+[tool.ruff]
+line-length = 100
+# `target-version` is inferred from `project.requires-python` (py39).
+extend-exclude = [
+    # Standalone research code from before the package existed. It imports
+    # modules that are not dependencies (myCmap, cmocean) and nothing in the
+    # package or tests imports it.
+    "misc",
+    # Exploratory notebooks: outputs are stripped on commit, but the code in
+    # them is scratch work and is not held to package style.
+    "*.ipynb",
+]
+
+[tool.ruff.lint]
+# Pinned explicitly rather than relying on ruff's default selection, which
+# varies between ruff releases.
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+    "PIE",  # flake8-pie
+    "RUF",  # ruff-specific
+]
+ignore = [
+    # No autoformatter runs on this repo, so line length is advisory; the
+    # `line-length` setting above still drives fixes that wrap code.
+    "E501",
+    # En dashes and multiplication signs in prose ("18–24 h", "5 × 5") are
+    # deliberate, not typos for ASCII lookalikes.
+    "RUF001",
+    "RUF002",
+    "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Unused imports in `__init__.py` are the re-export surface.
+"__init__.py" = ["F401"]
+# Diagnostic scripts must run side effects before importing: `matplotlib.use("Agg")`
+# ahead of `pyplot`, `warnings.filterwarnings` ahead of the vtk/pyvista chain.
+# They also use the same compact `a = f(); a.x = 1` idiom as the tests.
+"scripts/*" = ["E402", "E702"]
+"datasets/*" = ["E402", "E702"]
+"docs/conf.py" = ["E402"]
+# Tests set up fixtures with a deliberately compact one-line idiom
+# (`f0 = _feat(0, "max", 0); f0.lat = 60.0`).
+"tests/*" = ["E702"]
+
+[tool.mypy]
+files = ["waper"]
+# No `python_version` pin: it defaults to the interpreter mypy runs under, and
+# numpy's bundled stubs need 3.12+ syntax to parse.
+# The scientific stack this package builds on (vtk, pyvista, geovista, cartopy,
+# rasterio, hvplot, ...) ships no type information, so unresolved imports from
+# third-party packages are not actionable findings.
+ignore_missing_imports = true
+# Most of the package is unannotated; checking function bodies without
+# annotations produces noise rather than signal. Annotated code is checked
+# normally, so typing can be tightened file by file.
+check_untyped_defs = false
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_optional = true
+show_error_codes = true
+
 [tool.setuptools]
 packages=["waper", "waper.identification", "waper.tracking", "waper.interface", "waper.io"]
 

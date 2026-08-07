@@ -1,5 +1,7 @@
 import numpy as np
+
 from waper.tracking.energy_overlap import feature_energies, overlap_energies
+
 
 def test_feature_energies_sums_per_feature():
     F = np.array([[0, 1, 1], [2, 2, 0]])

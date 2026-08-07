@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import networkx as nx
 from networkx import Graph
@@ -10,7 +11,7 @@ from .energy_overlap import feature_energies, overlap_energies
 logger = logging.getLogger(__name__)
 
 
-def build_tracking_graph(time_step_data, number_steps: int = None) -> Graph:
+def build_tracking_graph(time_step_data, number_steps: Optional[int] = None) -> Graph:
     """Build tracking graph based on energy overlap between consecutive timesteps
 
     Args:
@@ -140,8 +141,8 @@ def get_track_paths(tracking_graph):
 
     topo_order = list(nx.topological_sort(tracking_graph))
 
-    best_weight = {node: 0.0 for node in topo_order}
-    predecessor = {node: None for node in topo_order}
+    best_weight = dict.fromkeys(topo_order, 0.0)
+    predecessor = dict.fromkeys(topo_order)
 
     for node in topo_order:
         for succ in tracking_graph.successors(node):

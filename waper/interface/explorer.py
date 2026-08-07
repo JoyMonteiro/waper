@@ -2,14 +2,17 @@ import cartopy.crs as ccrs
 import geopandas as gpd
 import geoviews as gv
 import holoviews as hv
-import hvplot.pandas  # noqa
-import hvplot.xarray  # noqa
+
+# Imported for their side effect: they register the `.hvplot` accessor on
+# pandas DataFrames and xarray DataArrays respectively.
+import hvplot.pandas
+import hvplot.xarray  # noqa: F401
 import numpy as np
-import pandas as pd
-from shapely import wkb
 import panel as pn
 import param
-from .colormaps import joy_nl8, bokeh_palette
+from shapely import wkb
+
+from .colormaps import bokeh_palette, joy_nl8
 
 pn.extension(throttled=True)
 
@@ -128,7 +131,7 @@ class RWPExplorer(pn.viewable.Viewer):
         # Determine available layers
         layer_objects = ["nodes", "edges", "polygons"]
         if self.field_da is not None:
-            layer_objects = ["field"] + layer_objects
+            layer_objects = ["field", *layer_objects]
 
         super().__init__(**params)
         self.param.time.bounds = (0, max(0, n_times - 1))

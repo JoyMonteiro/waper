@@ -13,7 +13,7 @@ def get_point_data_label(scalar_name):
 
 
 def get_cell_data_label(scalar_name):
-    return "Cell Value {}".format(scalar_name)
+    return f"Cell Value {scalar_name}"
 
 
 def get_vtk_object_from_data_array(data_array, lons, lats, array_name="v"):
@@ -36,7 +36,7 @@ def get_vtk_object_from_data_array(data_array, lons, lats, array_name="v"):
 
     mesh_lons, mesh_lats = np.meshgrid(lons, lats, indexing="xy")
 
-    grid.cell_data["{} Cell Value".format(array_name)] = grid.point_data_to_cell_data()[
+    grid.cell_data[f"{array_name} Cell Value"] = grid.point_data_to_cell_data()[
         array_name
     ]
 

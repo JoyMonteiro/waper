@@ -11,11 +11,12 @@ Usage:
     python datasets/gt_sensitivity.py
 """
 
+import math
 import os
 import sys
-import math
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -30,20 +31,20 @@ DATASETS_DIR = os.path.dirname(os.path.abspath(__file__))
 FIGURES_DIR = os.path.join(DATASETS_DIR, "figures", "sensitivity")
 DATASET_FILE = "forecast_bust.nc"
 
-BASE_KWARGS = dict(
-    scalar_name="v",
-    latitude_label="latitude",
-    longitude_label="longitude",
-    time_label="time",
-    clip_value=2,
-    extrema_threshold=11,
-    min_latitude=20,
-    max_latitude=80,
-    node_pruning_threshold=20,
-    edge_pruning_threshold=3e-5,
-    max_edge_weight=1,
-    track_pruning_threshold=0.3,
-)
+BASE_KWARGS = {
+    "scalar_name": "v",
+    "latitude_label": "latitude",
+    "longitude_label": "longitude",
+    "time_label": "time",
+    "clip_value": 2,
+    "extrema_threshold": 11,
+    "min_latitude": 20,
+    "max_latitude": 80,
+    "node_pruning_threshold": 20,
+    "edge_pruning_threshold": 3e-5,
+    "max_edge_weight": 1,
+    "track_pruning_threshold": 0.3,
+}
 
 GT_VALUES = [0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]
 

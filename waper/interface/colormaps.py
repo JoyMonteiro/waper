@@ -1,9 +1,16 @@
 """Vendored non-linear diverging colormaps (white plateau near zero).
 Copied from the user's myCmap.py (the self-contained cdict variants only)."""
+from collections.abc import Sequence
+from typing import Literal
+
 import matplotlib.colors as mc
 from matplotlib.colors import LinearSegmentedColormap
 
-cdictDivergeNL8 = {
+# Annotated so the keys narrow to the channel literals `LinearSegmentedColormap`
+# expects, rather than plain `str`.
+ColorDict = dict[Literal["red", "green", "blue", "alpha"], Sequence[tuple[float, ...]]]
+
+cdictDivergeNL8: ColorDict = {
     'red': ((0.0, 0.192, 0.192), (0.2, 0.270, 0.270), (0.3, 0.455, 0.455), (0.4, .67, .67),
             (0.45, .77, .77), (0.5, 1., 1.), (0.525, 1., 1.), (0.55, 1., 1.), (0.6, .992, .992),
             (0.65, .95, .95), (0.7, 0.9, 0.9), (0.8, 0.843, 0.843), (1.0, 0.647, 0.647)),

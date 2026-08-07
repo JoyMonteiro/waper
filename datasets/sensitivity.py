@@ -15,17 +15,17 @@ Usage:
     python datasets/sensitivity.py
 """
 
+import math
 import os
 import sys
-import math
-import itertools
 
 import matplotlib
+
 matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
-from collections import defaultdict
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -38,20 +38,20 @@ FIGURES_DIR = os.path.join(DATASETS_DIR, "figures", "sensitivity")
 # ------------------------------------------------------------------ #
 #  Base configuration (same as visualize.py)                          #
 # ------------------------------------------------------------------ #
-BASE_KWARGS = dict(
-    scalar_name="v",
-    latitude_label="latitude",
-    longitude_label="longitude",
-    time_label="time",
-    clip_value=2,
-    extrema_threshold=11,
-    min_latitude=20,
-    max_latitude=80,
-    node_pruning_threshold=20,
-    edge_pruning_threshold=3e-5,
-    max_edge_weight=1,
-    track_pruning_threshold=0.3,
-)
+BASE_KWARGS = {
+    "scalar_name": "v",
+    "latitude_label": "latitude",
+    "longitude_label": "longitude",
+    "time_label": "time",
+    "clip_value": 2,
+    "extrema_threshold": 11,
+    "min_latitude": 20,
+    "max_latitude": 80,
+    "node_pruning_threshold": 20,
+    "edge_pruning_threshold": 3e-5,
+    "max_edge_weight": 1,
+    "track_pruning_threshold": 0.3,
+}
 
 # ------------------------------------------------------------------ #
 #  Parameter sweeps                                                   #
@@ -205,7 +205,7 @@ def plot_sweep(results, param_values, param_label, filename_prefix):
     ax.set_xlabel(param_label)
     ax.set_title("No of Timesteps with RWP")
     lines = l1 + l2
-    ax.legend(lines, [l.get_label() for l in lines], fontsize=8)
+    ax.legend(lines, [line.get_label() for line in lines], fontsize=8)
 
     plt.tight_layout()
     path = os.path.join(FIGURES_DIR, f"{filename_prefix}.png")

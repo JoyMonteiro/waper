@@ -1,12 +1,5 @@
-import numpy as np
 import pytest
-from shapely.geometry import MultiPoint
-from shapely.ops import unary_union
 
-from waper.tracking.rwp_polygon import (
-    get_polygon_for_rwp_path,
-    transform_to_stereographic,
-)
 from waper.interface.api import WaperConfig, _identify_rwps
 
 

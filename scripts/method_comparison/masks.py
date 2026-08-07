@@ -87,7 +87,7 @@ def temporal_running_mean(stack, hours, time_values):
     dt_h = np.median(
         np.diff(np.asarray(time_values)).astype("timedelta64[s]").astype(float)
     ) / 3600.0
-    win = max(1, int(round(hours / dt_h)))
+    win = max(1, round(hours / dt_h))
     if win <= 1:
         return stack
     return uniform_filter1d(stack, size=win, axis=0, mode="nearest")
@@ -95,8 +95,8 @@ def temporal_running_mean(stack, hours, time_values):
 
 from scipy.interpolate import RegularGridInterpolator
 
-from waper.tracking.rwp_polygon import rasterize_all_rwps
 from waper.tracking.feature_tracks import _footprint_from_region
+from waper.tracking.rwp_polygon import rasterize_all_rwps
 
 
 def _empty_mask():
@@ -112,7 +112,7 @@ def zimin_mask(envelope, ds_lon, ds_lat, band, threshold=14.0, hemisphere="north
     )
     pts = np.stack([plat.ravel(), plon.ravel()], axis=-1)
     E = interp(pts).reshape(plat.shape)
-    return (E >= threshold) & band
+    return (threshold <= E) & band
 
 
 def edge_pruning_mask(time_step_data, band):

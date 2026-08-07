@@ -1,19 +1,30 @@
 import os
 
-import pytest
-import numpy as np
 import networkx as nx
-from scripts.method_comparison.metrics import (
-    iou, disagreement_decomposition, detection_agreement,
-)
+import numpy as np
+import pytest
+
 from scripts.method_comparison.masks import (
-    pixel_lonlat_grid, band_mask, compute_rwp_envelope,
-    zimin_mask, edge_pruning_mask, node_amplitude_mask,
-    t21_truncate, temporal_running_mean,
+    band_mask,
+    compute_rwp_envelope,
+    edge_pruning_mask,
+    node_amplitude_mask,
+    pixel_lonlat_grid,
+    t21_truncate,
+    temporal_running_mean,
+    zimin_mask,
 )
-from scripts.method_comparison.run_sweep import load_dataset, run_base_waper
-from scripts.method_comparison.run_sweep import compute_zimin_masks, sweep
-from scripts.method_comparison.run_sweep import DATA_PATH
+from scripts.method_comparison.metrics import (
+    detection_agreement,
+    disagreement_decomposition,
+    iou,
+)
+from scripts.method_comparison.run_sweep import (
+    DATA_PATH,
+    load_dataset,
+    run_base_waper,
+    sweep,
+)
 
 # The slow tests below read DATA_PATH, which is gitignored and absent on a fresh clone.
 needs_data = pytest.mark.skipif(
@@ -75,7 +86,7 @@ def test_pixel_lonlat_grid_shapes_and_ranges():
 
 def test_band_mask_excludes_outside():
     bm = band_mask(20.0, 80.0, "north")
-    lon, lat = pixel_lonlat_grid("north")
+    _lon, lat = pixel_lonlat_grid("north")
     inside = bm
     # every True pixel must have latitude in [20, 80]
     assert (lat[inside] >= 20.0).all()

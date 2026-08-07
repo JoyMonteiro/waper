@@ -5,17 +5,25 @@ Strong features are opaque; weak features are semi-transparent with a dashed edg
 
 Run: ~/miniconda3/envs/waper/bin/python scripts/feature_tracks_gif.py
 """
-import glob, os, warnings
+import glob
+import os
+import warnings
+
+import matplotlib
+
 warnings.filterwarnings("ignore")
-import numpy as np, xarray as xr
-import matplotlib; matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
+matplotlib.use("Agg")
+
 import cartopy.crs as ccrs
+import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
+import numpy as np
+import xarray as xr
 from PIL import Image
+
 from waper.interface.api import Waper
-from waper.tracking.feature_tracks import extract_features, track_features
 from waper.interface.colormaps import joy_nl8
+from waper.tracking.feature_tracks import extract_features, track_features
 
 # Clear old frames
 for f in glob.glob("/tmp/feature_tracks_???.png"):

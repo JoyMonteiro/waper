@@ -8,19 +8,23 @@ full-hemisphere PlateCarree GIF of forecast_bust with:
   - the 500 km energy disks used for tracking, outlined at each crest/trough
 One GIF per threshold so the effect of the threshold can be compared.
 """
-import os, glob, warnings
+import glob
+import os
+import warnings
+
 warnings.filterwarnings("ignore")
+import matplotlib
 import numpy as np
 import xarray as xr
-import matplotlib
+
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
+import matplotlib.pyplot as plt
 from PIL import Image
 
 from waper import Waper
-from waper.tracking.rwp_polygon import energy_disks
 from waper.interface.colormaps import joy_nl8
+from waper.tracking.rwp_polygon import energy_disks
 
 PERCENTILES = [85, 90, 95, 99]
 OUTDIR = "/tmp/rwp_sweep"

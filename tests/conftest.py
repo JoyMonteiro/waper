@@ -87,7 +87,7 @@ def flat_field():
     """A field that is identically zero everywhere."""
     lons = np.arange(0, 360, 2.5)
     lats = np.arange(20, 80.1, 2.5)
-    lon2d, lat2d = np.meshgrid(lons, lats)
+    lon2d, _lat2d = np.meshgrid(lons, lats)
 
     v = np.zeros_like(lon2d)
 
@@ -170,7 +170,7 @@ def tracked_waper(two_timestep_field):
 
 @pytest.fixture
 def cat(tracked_waper, tmp_path):
-    from waper.io.catalogue import save_catalogue, load_catalogue
+    from waper.io.catalogue import load_catalogue, save_catalogue
     p = tmp_path / "cat"
     save_catalogue(tracked_waper, p, meta={"units": "m s**-1", "dt_hours": 6})
     return load_catalogue(p)

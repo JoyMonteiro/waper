@@ -1,7 +1,5 @@
-import pytest
-import numpy as np
 import pandas as pd
-from shapely import wkb
+
 
 def test_filter_and_accessors(cat):
     assert len(cat.rwps()) == len(cat.table("rwps"))

@@ -1,6 +1,19 @@
+import os
+
 import pytest
+import xarray as xr
 from shapely.geometry import box
-from waper.tracking.feature_tracks import Feature, feature_overlap, match_features, track_features, FeatureTrack
+
+from waper.interface.api import Waper
+from waper.tracking.feature_tracks import (
+    Feature,
+    extract_features,
+    feature_overlap,
+    feature_tracks_to_dataframe,
+    match_features,
+    phase_velocity,
+    track_features,
+)
 
 
 def _feat(t, ntype, x0, strength="strong", scalar=20.0):
@@ -93,10 +106,6 @@ def test_track_ends_when_feature_leaves_lat_band():
     assert len(tracks) == 1 and len(tracks[0].steps) == 1
 
 
-import pandas as pd
-from waper.tracking.feature_tracks import feature_tracks_to_dataframe, phase_velocity
-
-
 def test_dataframe_has_one_row_per_step():
     fb = [[_feat(0, "max", 0)], [_feat(1, "max", 4)]]
     df = feature_tracks_to_dataframe(track_features(fb))
@@ -116,11 +125,6 @@ def test_phase_velocity_handles_dateline():
     f1 = _feat(1, "max", 4); f1.lon = -179.0   # +2 deg east across dateline
     (track,) = track_features([[f0], [f1]])
     assert abs(phase_velocity(track, dt_hours=2.0) - 1.0) < 1e-9
-
-
-import xarray as xr
-from waper.interface.api import Waper
-from waper.tracking.feature_tracks import extract_features, Feature
 
 
 def test_extract_features_from_real_timestep(two_timestep_field):
@@ -143,14 +147,14 @@ def test_extract_features_from_real_timestep(two_timestep_field):
     assert len(feats) >= n_pruned_nodes
 
 
-import os
-
 DATASET = "datasets/forecast_bust.nc"
 
 
 @pytest.mark.skipif(not os.path.exists(DATASET), reason="forecast_bust.nc not present")
 def test_feature_tracks_are_continuous_on_real_data():
-    import numpy as np, xarray as xr
+    import numpy as np
+    import xarray as xr
+
     from waper.interface.api import Waper
     from waper.tracking.feature_tracks import extract_features, track_features
 

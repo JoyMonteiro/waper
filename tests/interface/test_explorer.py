@@ -1,7 +1,9 @@
 import holoviews as hv
 import pytest
 import xarray as xr
+
 from waper.interface import explorer
+
 
 def test_layer_builders_return_elements(cat):
     hv.extension("bokeh")
