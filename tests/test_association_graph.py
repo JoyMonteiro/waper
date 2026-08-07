@@ -18,7 +18,7 @@ def default_config():
         min_latitude=20,
         node_pruning_threshold=15,
         edge_pruning_threshold=3e-5,
-        track_pruning_threshold=0.3,
+        track_pruning_threshold=8000,
         max_edge_weight=1,
     )
 
@@ -59,7 +59,7 @@ def test_node_pruning_removes_weak_nodes(simple_wave_field):
         min_latitude=20,
         node_pruning_threshold=25,  # high pruning threshold
         edge_pruning_threshold=1e-5,
-        track_pruning_threshold=0.3,
+        track_pruning_threshold=8000,
         max_edge_weight=1,
     )
 
@@ -87,7 +87,7 @@ def test_edge_pruning_removes_low_gradient(simple_wave_field):
         min_latitude=20,
         node_pruning_threshold=15,
         edge_pruning_threshold=0.5,  # very high gradient threshold
-        track_pruning_threshold=0.3,
+        track_pruning_threshold=8000,
         max_edge_weight=100,
     )
 

@@ -462,6 +462,10 @@ This prevents tracking connections between features that are spatially far
 apart even if they happen to overlap in the raster (e.g., due to large
 polygons).
 
+The threshold is a haversine distance **in kilometres**, matching the `distance`
+edge attribute stored in §10.1 — it is not an overlap weight. Values below a few
+hundred km prune every edge and leave an empty graph.
+
 ### 10.3 Track extraction
 
 Tracks are extracted as heaviest-weight paths through the tracking DAG using
@@ -503,7 +507,7 @@ simple paths.
 | `max_aspect_ratio` | 1.5 | §6.2 | Maximum `|Δlat|/|Δlon|` per edge |
 | `hull_method` | `"per_node"` | §8 | Polygon construction method |
 | `hemisphere` | `"north"` | §8–9 | Stereographic projection pole |
-| `track_pruning_threshold` | 0.3 | §10.2 | Maximum centroid distance for tracking edges |
+| `track_pruning_threshold` | 8000 km | §10.2 | Maximum centroid distance for tracking edges |
 | `debug` | False | All | Enable debug logging |
 
 ## Appendix B: Constants

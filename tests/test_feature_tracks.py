@@ -133,7 +133,7 @@ def test_extract_features_from_real_timestep(two_timestep_field):
               latitude_label="latitude", longitude_label="longitude", time_label="time",
               clip_value=2, extrema_threshold=10, min_latitude=20, max_latitude=80.1,
               node_pruning_threshold=15, edge_pruning_threshold=3e-5,
-              track_pruning_threshold=0.3, max_edge_weight=1, debug=False)
+              track_pruning_threshold=8000, max_edge_weight=1, debug=False)
     w.identify_rwps()
     feats = extract_features(w._time_step_data[0], time=0, scalar_name="v",
                              clip_value=2, amplitude_threshold=10)
@@ -165,7 +165,7 @@ def test_feature_tracks_are_continuous_on_real_data():
               latitude_label="latitude", longitude_label="longitude", time_label="time",
               clip_value=2, extrema_threshold=10, min_latitude=20, max_latitude=80,
               node_pruning_threshold=20, edge_pruning_threshold=0.02, max_edge_weight=1,
-              track_pruning_threshold=0.3)
+              track_pruning_threshold=8000)
     w.identify_rwps()
     fb = [extract_features(w._time_step_data[t], t, "v", 2, thr)
           for t in range(ds.sizes["time"])]

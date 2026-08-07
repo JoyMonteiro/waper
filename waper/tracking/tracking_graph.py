@@ -75,12 +75,18 @@ def build_tracking_graph(time_step_data, number_steps: int | None = None) -> Gra
     return tracking_graph
 
 
-def prune_tracking_graph(tracking_graph, threshold) -> Graph:
-    """Remove edges with weight below threshold
+def prune_tracking_graph(tracking_graph, threshold=None) -> Graph:
+    """Remove edges whose centroid displacement exceeds threshold
+
+    The edge attribute tested is ``distance``, the haversine distance **in km**
+    between the two weighted centroids -- not the overlap ``weight``. A
+    threshold of a few thousand km is the meaningful scale; sub-km values prune
+    every edge and leave an empty graph.
 
     Args:
         tracking_graph (Graph): tracking graph
-        threshold (float): threshold to prune at
+        threshold (float | None): maximum centroid displacement in km. ``None``
+            keeps every edge.
 
     Returns:
         Graph: pruned tracking graph
@@ -89,7 +95,7 @@ def prune_tracking_graph(tracking_graph, threshold) -> Graph:
     pruned_graph = nx.DiGraph()
 
     for edge in tracking_graph.edges:
-        if tracking_graph.edges[edge]["distance"] < threshold:
+        if threshold is None or tracking_graph.edges[edge]["distance"] < threshold:
             pruned_graph.add_node(
                 edge[0], coords=tracking_graph.nodes[edge[0]]["coords"]
             )

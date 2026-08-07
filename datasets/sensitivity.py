@@ -50,7 +50,7 @@ BASE_KWARGS = {
     "node_pruning_threshold": 20,
     "edge_pruning_threshold": 3e-5,
     "max_edge_weight": 1,
-    "track_pruning_threshold": 0.3,
+    "track_pruning_threshold": 8000,
 }
 
 # ------------------------------------------------------------------ #

@@ -35,7 +35,7 @@ WAPER_KWARGS = {
     "node_pruning_threshold": 20,
     "edge_pruning_threshold": 0.02,
     "max_edge_weight": 1,
-    "track_pruning_threshold": 0.3,
+    "track_pruning_threshold": 8000,
     "penalty_length_scale_km": 4000,
 }
 

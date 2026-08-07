@@ -18,7 +18,7 @@ def test_full_pipeline_synthetic(two_timestep_field):
         min_latitude=20,
         node_pruning_threshold=15,
         edge_pruning_threshold=3e-5,
-        track_pruning_threshold=0.3,
+        track_pruning_threshold=8000,
         max_edge_weight=1,
         debug=False,
     )
@@ -68,7 +68,7 @@ def test_full_pipeline_flat_field_graceful(flat_field):
         min_latitude=20,
         node_pruning_threshold=15,
         edge_pruning_threshold=3e-5,
-        track_pruning_threshold=0.3,
+        track_pruning_threshold=8000,
         max_edge_weight=1,
         debug=False,
     )

@@ -41,7 +41,8 @@ class WaperConfig:
     edge_pruning_threshold: float
     max_edge_weight: float
 
-    track_pruning_threshold: float
+    # maximum centroid displacement of a tracking edge, in km
+    track_pruning_threshold: float = 8000.0
 
     cluster_max_eps_km: float = 3000.0
     cluster_min_samples: int = 2
@@ -300,7 +301,7 @@ class Waper:
         min_latitude=None,
         node_pruning_threshold=20,
         edge_pruning_threshold=3e-5,
-        track_pruning_threshold=0.3,
+        track_pruning_threshold=8000.0,
         max_edge_weight=1,
         debug=False,
         penalty_length_scale_km=2000.0,
@@ -427,6 +428,8 @@ class Waper:
         return _plot_raster(time_step_data.raster_data)
 
     def plot_tracks(self, threshold=None):
+        if threshold is None:
+            threshold = self._config.track_pruning_threshold
         pruned = tracking_graph.prune_tracking_graph(
             self._tracking_graph, threshold=threshold
         )

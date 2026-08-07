@@ -44,7 +44,7 @@ BASE_KWARGS = {
     "node_pruning_threshold": 20,
     "edge_pruning_threshold": 0.03,
     "max_edge_weight": 1,
-    "track_pruning_threshold": 0.3,
+    "track_pruning_threshold": 8000,
 }
 
 PENALTY_VALUES = [250, 500, 750, 1000, 1500, 2000, 3000, 4000, 5000, 7500, 10000]

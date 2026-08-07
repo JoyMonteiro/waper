@@ -32,7 +32,7 @@ def default_config():
         min_latitude=20,
         node_pruning_threshold=15,
         edge_pruning_threshold=3e-5,
-        track_pruning_threshold=0.3,
+        track_pruning_threshold=8000,
         max_edge_weight=1,
     )
 
@@ -100,6 +100,49 @@ def test_tracking_path_extraction(simple_wave_field, default_config):
             assert p[2][0] == 2
 
     assert found_long_path
+
+
+def _two_node_graph(distance_km):
+    g = nx.DiGraph()
+    g.add_node((0, 1), coords=(0.0, 50.0))
+    g.add_node((1, 1), coords=(10.0, 50.0))
+    g.add_edge((0, 1), (1, 1), weight=0.8, distance=distance_km)
+    return g
+
+
+def test_prune_threshold_is_in_kilometres():
+    """Regression: the threshold is a haversine distance in km, not a weight.
+
+    A 700 km centroid displacement is a perfectly ordinary one-step motion and
+    must survive a km-scale threshold.
+    """
+    pruned = tracking_graph.prune_tracking_graph(_two_node_graph(700.0), 8000.0)
+    assert pruned.number_of_edges() == 1
+
+    pruned = tracking_graph.prune_tracking_graph(_two_node_graph(9000.0), 8000.0)
+    assert pruned.number_of_edges() == 0
+
+
+def test_default_track_pruning_threshold_does_not_empty_the_graph(two_timestep_field):
+    """Regression: the old default of 0.3 was read as 0.3 km and pruned every edge."""
+    ds = xr.Dataset({"v": two_timestep_field})
+    w = Waper(data_array=ds, scalar_name="v",
+              latitude_label="latitude", longitude_label="longitude", time_label="time",
+              clip_value=2, extrema_threshold=10, min_latitude=20, max_latitude=80.1,
+              node_pruning_threshold=15, edge_pruning_threshold=3e-5,
+              max_edge_weight=1, debug=False)
+    w.identify_rwps()
+    w.track_rwps()
+
+    assert w._tracking_graph.number_of_edges() > 0
+    assert w._pruned_tracking_graph.number_of_edges() == (
+        w._tracking_graph.number_of_edges()
+    )
+
+
+def test_prune_threshold_none_keeps_every_edge():
+    pruned = tracking_graph.prune_tracking_graph(_two_node_graph(9000.0), None)
+    assert pruned.number_of_edges() == 1
 
 
 def test_dag_dp_completes_fast():
@@ -248,7 +291,7 @@ def test_energy_raster_built_and_aligned(two_timestep_field):
               latitude_label="latitude", longitude_label="longitude", time_label="time",
               clip_value=2, extrema_threshold=10, min_latitude=20, max_latitude=80.1,
               node_pruning_threshold=15, edge_pruning_threshold=3e-5,
-              track_pruning_threshold=0.3, max_edge_weight=1, debug=False)
+              track_pruning_threshold=8000, max_edge_weight=1, debug=False)
     w.identify_rwps()
     tsd = w._time_step_data[0]
     assert tsd.energy_raster is not None
@@ -268,7 +311,7 @@ def test_energy_tracks_show_eastward_motion():
               latitude_label="latitude", longitude_label="longitude", time_label="time",
               clip_value=2, extrema_threshold=10, min_latitude=20, max_latitude=80,
               node_pruning_threshold=20, edge_pruning_threshold=0.02, max_edge_weight=1,
-              track_pruning_threshold=0.3)
+              track_pruning_threshold=8000)
     w.identify_rwps(); w.track_rwps()
     g = w._tracking_graph
     # at least one tracked edge exists, and centroids move (not frozen)

@@ -17,7 +17,7 @@ def default_config():
         min_latitude=20,
         node_pruning_threshold=15,
         edge_pruning_threshold=3e-5,
-        track_pruning_threshold=0.3,
+        track_pruning_threshold=8000,
         max_edge_weight=1,
     )
 
@@ -62,7 +62,7 @@ def test_southern_hemisphere_no_crash(southern_hemisphere_wave_field):
         min_latitude=-80,
         node_pruning_threshold=15,
         edge_pruning_threshold=3e-5,
-        track_pruning_threshold=0.3,
+        track_pruning_threshold=8000,
         max_edge_weight=1,
         hemisphere="south",
     )
