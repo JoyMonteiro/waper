@@ -9,9 +9,10 @@ def _feat(t, ntype, x0, strength="strong", scalar=20.0):
                    scalar=scalar, footprint=box(x0, 0, x0 + 10, 10), strength=strength)
 
 
-def test_overlap_same_type_area():
+def test_overlap_same_type_iou():
     a = _feat(0, "max", 0); b = _feat(1, "max", 5)
-    assert feature_overlap(a, b) == 50.0          # 5 wide x 10 tall
+    # intersection=50, union=150  →  IoU=1/3
+    assert feature_overlap(a, b) == pytest.approx(1 / 3)
 
 
 def test_overlap_zero_for_different_type():
@@ -19,11 +20,22 @@ def test_overlap_zero_for_different_type():
     assert feature_overlap(a, b) == 0.0
 
 
-def test_match_is_one_to_one_greedy_by_overlap():
+def test_match_split_one_prev_multiple_curr():
+    # prev[0] overlaps both curr features (split); prev[1] (far away) overlaps neither
     prev = [_feat(0, "max", 0), _feat(0, "max", 100)]
-    curr = [_feat(1, "max", 2), _feat(1, "max", 4)]   # both overlap prev[0]; prev[1] overlaps neither
+    curr = [_feat(1, "max", 2), _feat(1, "max", 4)]
     m = match_features(prev, curr)
-    assert m == {0: 0}                                # prev[0] takes its best (curr[0], overlap 8>6); curr[1] free but prev exhausted
+    assert set(m[0]) == {0, 1}   # prev[0] claims both children
+    assert 1 not in m             # prev[1] has no match
+
+
+def test_match_curr_claimed_at_most_once():
+    # Two prev features that both overlap the same curr: only one prev wins it
+    prev = [_feat(0, "max", 0), _feat(0, "max", 2)]
+    curr = [_feat(1, "max", 1)]
+    m = match_features(prev, curr)
+    all_claimed = [j for children in m.values() for j in children]
+    assert all_claimed.count(0) == 1   # curr[0] claimed exactly once
 
 
 def test_shifted_feature_becomes_one_track():
