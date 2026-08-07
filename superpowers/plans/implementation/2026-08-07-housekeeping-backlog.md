@@ -173,9 +173,10 @@ credentials.
   penalty=4000 / ST=20 while `WaperConfig` defaults stay GT=3e-5 / penalty=2000
   (`waper/interface/api.py:305-308`). Flagged 2026-03-21 as "implicit, not yet codified";
   unchanged since. Looks like housekeeping, isn't — two configurations are live at once.
-- **`track_pruning_threshold=0.3`**, flagged in memory as a likely bug (prunes by distance
-  in km, so 0.3 empties the graph; `visualize.py` bypasses it with 8000). Verifying the bug
-  needs no input; changing the default does.
+- ~~**`track_pruning_threshold=0.3`**, flagged in memory as a likely bug (prunes by distance
+  in km, so 0.3 empties the graph; `visualize.py` bypasses it with 8000).~~ **Closed
+  2026-08-07** — Joy authorised the change; the default is now 8000 km everywhere and the
+  unit is documented. See `af4874b`.
 - **The group-velocity question** — envelope primitive vs trough-to-trough handoff vs
   dropping the expectation. Blocks the feature-track line of work. See
   `assessments/2026-08-07.md`.

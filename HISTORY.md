@@ -43,6 +43,11 @@ account) whose only two real entries have been folded in at the bottom of this f
   energy-weighted overlap (`waper/tracking/energy_overlap.py`), not plain footprint overlap.
 
 #### Fixed
+- `track_pruning_threshold` is a haversine distance **in km**, not an overlap weight. The
+  old default of `0.3` pruned every tracking edge and left an empty graph; it is now
+  `8000` km — the value `datasets/visualize.py` had been passing directly to work around
+  the bug — in `WaperConfig`, `Waper.__init__`, and every script and test. `plot_tracks()`
+  falls back to the configured threshold rather than comparing against `None`.
 - `_arc_bins` off-by-one in `waper/identification/rwp_graph.py`: `range(n + 1)` → `range(n)`.
   Adjacent-but-disjoint arcs (`[10,30]` and `[31,41]`) no longer read as overlapping.
 - `numpy` capped below 2.5 (numba, pulled in via datashader, requires `numpy <= 2.4`), and
