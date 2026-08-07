@@ -1,4 +1,5 @@
 import json
+from itertools import pairwise
 from pathlib import Path
 
 import numpy as np
@@ -99,7 +100,7 @@ class Catalogue:
             if len(lons) < 2:
                 wn = np.nan
             else:
-                gaps = [_longitude_separation(a, b) for a, b in zip(lons[:-1], lons[1:])]
+                gaps = [_longitude_separation(a, b) for a, b in pairwise(lons)]
                 spacing = float(np.mean(gaps))
                 wn = 180.0 / spacing if spacing > 0 else np.nan
             out.append({"time": t, "rwp_id": rid, "implied_wavenumber": wn})

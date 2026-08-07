@@ -231,7 +231,10 @@ def get_polygon_for_rwp_path(
         all_values.extend(values)
 
         xs_node, ys_node = transform_to_stereographic(lons, lats, hemisphere=hemisphere)
-        pts = list(zip(xs_node, ys_node))
+        # strict (here and below): every `zip` in this function pairs the two
+        # return values of a single `transform_to_stereographic` call, which
+        # emits one x and one y per input coordinate.
+        pts = list(zip(xs_node, ys_node, strict=True))
         if len(pts) >= 3:
             per_node_polygons.append(MultiPoint(pts).convex_hull)
         elif len(pts) > 0:
@@ -242,17 +245,17 @@ def get_polygon_for_rwp_path(
     elif hull_method == "concave" and per_node_polygons:
         from shapely import concave_hull
         xs_all, ys_all = transform_to_stereographic(all_lons, all_lats, hemisphere=hemisphere)
-        rwp_poly = concave_hull(MultiPoint(list(zip(xs_all, ys_all))), ratio=0.3)
+        rwp_poly = concave_hull(MultiPoint(list(zip(xs_all, ys_all, strict=True))), ratio=0.3)
     else:
         xs_all, ys_all = transform_to_stereographic(all_lons, all_lats, hemisphere=hemisphere)
-        rwp_poly = MultiPoint(list(zip(xs_all, ys_all))).convex_hull
+        rwp_poly = MultiPoint(list(zip(xs_all, ys_all, strict=True))).convex_hull
 
     xs, ys = transform_to_stereographic(all_lons, all_lats, hemisphere=hemisphere)
     weighted_longitude, weighted_latitude = _amplitude_weighted_lonlat_centroid(
         all_lons, all_lats, all_values
     )
 
-    list_rwp_points = list(zip(xs[::WAPER_SUBSAMPLE], ys[::WAPER_SUBSAMPLE]))
+    list_rwp_points = list(zip(xs[::WAPER_SUBSAMPLE], ys[::WAPER_SUBSAMPLE], strict=True))
 
     return (
         rwp_poly,

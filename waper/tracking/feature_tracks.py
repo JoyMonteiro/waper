@@ -5,7 +5,7 @@ primitive is a single extremum (crest/trough), which moves continuously, rather
 than the RWP group, whose membership flips between timesteps.
 """
 from dataclasses import dataclass, field
-from typing import Optional
+from itertools import pairwise
 
 import numpy as np
 import pandas as pd
@@ -87,7 +87,7 @@ class TrackStep:
 class FeatureTrack:
     track_id: int
     steps: list = field(default_factory=list)
-    parent_id: Optional[int] = None  # set when this track split off from another
+    parent_id: int | None = None  # set when this track split off from another
 
 
 def _step(feature: Feature, recovered: bool) -> TrackStep:
@@ -231,7 +231,7 @@ def phase_velocity(track, dt_hours: float) -> float:
     if len(steps) < 2:
         return float("nan")
     east = 0.0
-    for a, b in zip(steps[:-1], steps[1:]):
+    for a, b in pairwise(steps):
         east += ((b.lon - a.lon + 180.0) % 360.0) - 180.0
     span_hours = (steps[-1].time - steps[0].time) * dt_hours
     return east / span_hours if span_hours else float("nan")
@@ -240,7 +240,8 @@ def phase_velocity(track, dt_hours: float) -> float:
 def _footprint_from_region(lons, lats, hemisphere):
     xs, ys = transform_to_stereographic(np.asarray(lons), np.asarray(lats),
                                         hemisphere=hemisphere)
-    pts = list(zip(np.atleast_1d(xs), np.atleast_1d(ys)))
+    # strict: xs/ys are the paired outputs of one pyproj transform call.
+    pts = list(zip(np.atleast_1d(xs), np.atleast_1d(ys), strict=True))
     geom = MultiPoint(pts)
     return geom.convex_hull if len(pts) >= 3 else geom.buffer(1e4)
 
@@ -255,7 +256,9 @@ def _build_point_adjacency(mesh, mask):
         for ca, cb in ((0, 1), (1, 2), (0, 2)):
             a_arr, b_arr = tris[:, ca], tris[:, cb]
             both = mask[a_arr] & mask[b_arr]
-            for a, b in zip(a_arr[both].tolist(), b_arr[both].tolist()):
+            # strict: both columns come from the same `tris` array and are
+            # filtered by the same boolean mask, so they select equally.
+            for a, b in zip(a_arr[both].tolist(), b_arr[both].tolist(), strict=True):
                 adj[a].add(b)
                 adj[b].add(a)
     else:

@@ -11,6 +11,7 @@ One GIF per threshold so the effect of the threshold can be compared.
 import glob
 import os
 import warnings
+from itertools import pairwise
 
 warnings.filterwarnings("ignore")
 import matplotlib
@@ -73,7 +74,7 @@ def render_frame(w, t, pct, thresh, outdir):
                   tsd.pruned_graph.nodes[n]["coords"][1],
                   tsd.pruned_graph.nodes[n]["scalar"]) for n in path]
         # edges of the RWP graph (great-circle segments between consecutive nodes)
-        for (lo0, la0, _), (lo1, la1, _) in zip(nodes[:-1], nodes[1:]):
+        for (lo0, la0, _), (lo1, la1, _) in pairwise(nodes):
             ax.plot([lo0, lo1], [la0, la1], transform=geod,
                     color="k", linewidth=1.8, zorder=6)
         # disks + node markers

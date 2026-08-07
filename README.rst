@@ -3,12 +3,11 @@ Waper
 A rossby Wave Packet trackER
 .. start-badges
 
-| |build| |docs| |coverage| |maintainability| |tech-debt|
-| |release_version| |wheel| |supported_versions| |gh-lic| |commits_since_specific_tag_on_master| |commits_since_latest_github_release|
+| |build| |release_version| |wheel| |gh-lic|
 
 |
 | **Code:** https://github.com/JoyMonteiro/waper
-| **Docs:** https://waper.readthedocs.io/en/master/
+| **Docs:** https://waper.readthedocs.io/en/latest/
 | **PyPI:** https://pypi.org/project/waper/
 | **CI:** https://github.com/JoyMonteiro/waper/actions/
 
@@ -20,7 +19,7 @@ Features
 
    a. TODO Document a **Great Feature**
    b. TODO Document another **Nice Feature**
-2. Tested against multiple `platforms` and `python` versions
+2. Tested on Python 3.11 and 3.12
 
 
 Development
@@ -31,17 +30,19 @@ Here are some useful notes related to doing development on this project.
 2. **Documentation Pages**, hosted on `readthedocs` server, located in `docs` dir
 3. **CI Pipeline**, running on `Github Actions`_, defined in `.github/`
 
-   a. **Job Matrix**, spanning different `platform`'s and `python version`'s
+   a. **Job Matrix**, spanning the supported `python version`'s
 
-      1. Platforms: `ubuntu-latest`, `macos-latest`
-      2. Python Interpreters: `3.6`, `3.7`, `3.8`, `3.9`, `3.10`
+      1. Platforms: `ubuntu-latest`
+      2. Python Interpreters: `3.11`, `3.12`
    b. **Parallel Job** execution, generated from the `matrix`, that runs the `Test Suite`
+   c. A separate **lint job** running `ruff` and `mypy`
 
 
 Prerequisites
 =============
 
-You need to have `Python` installed. The code has been tested only with `Python=3.10`
+You need to have `Python` installed. `waper` requires `Python >= 3.11`; CI tests it on
+`Python 3.11` and `3.12`, on Linux.
 
 You will also need the following packages, all of which must be installed from the `conda-forge channel` (in a fresh environment preferably)
 
@@ -89,30 +90,25 @@ License
 
 .. _Github Actions: https://github.com/JoyMonteiro/waper/actions
 
-.. _BSD 3-Clause License: https://github.com/JoyMonteiro/waper/blob/master/LICENSE
+.. _BSD 3-Clause License: https://github.com/JoyMonteiro/waper/blob/main/LICENSE
 
 
 .. BADGE ALIASES
+..
+.. Only badges backed by a service this project actually uses are kept. The
+.. Read the Docs, Codecov, Code Climate, `pypi/pyversions` and `commits-since`
+.. badges were removed: RTD has no finished builds, CI uploads coverage as a
+.. workflow artifact rather than to Codecov, Code Climate is retired at shields,
+.. and there are no git tags or GitHub releases to count commits since. The
+.. `pyversions` badge reports the interpreters of the last PyPI release (0.0.1),
+.. which predates the `requires-python = ">= 3.11"` floor and so misstated it.
 
 .. Build Status
-.. Github Actions: Test Workflow Status for specific branch <branch>
+.. Github Actions: Test Workflow Status on the default branch
 
-.. |build| image:: https://img.shields.io/github/workflow/status/JoyMonteiro/waper/Test%20Python%20Package/master?label=build&logo=github-actions&logoColor=%233392FF
+.. |build| image:: https://img.shields.io/github/actions/workflow/status/JoyMonteiro/waper/test.yaml?branch=main&label=build&logo=github-actions&logoColor=%233392FF
     :alt: GitHub Workflow Status (branch)
-    :target: https://github.com/JoyMonteiro/waper/actions/workflows/test.yaml?query=branch%3Amaster
-
-
-.. Documentation
-
-.. |docs| image:: https://img.shields.io/readthedocs/waper/master?logo=readthedocs&logoColor=lightblue
-    :alt: Read the Docs (version)
-    :target: https://waper.readthedocs.io/en/master/
-
-.. Code Coverage
-
-.. |coverage| image:: https://img.shields.io/codecov/c/github/JoyMonteiro/waper/master?logo=codecov
-    :alt: Codecov
-    :target: https://app.codecov.io/gh/JoyMonteiro/waper
+    :target: https://github.com/JoyMonteiro/waper/actions/workflows/test.yaml?query=branch%3Amain
 
 .. PyPI
 
@@ -124,36 +120,9 @@ License
     :alt: PyPI - Wheel
     :target: https://pypi.org/project/waper
 
-.. |supported_versions| image:: https://img.shields.io/pypi/pyversions/waper?color=blue&label=python&logo=python&logoColor=%23ccccff
-    :alt: Supported Python versions
-    :target: https://pypi.org/project/waper
-
-.. Github Releases & Tags
-
-.. |commits_since_specific_tag_on_master| image:: https://img.shields.io/github/commits-since/JoyMonteiro/waper/v0.0.1/master?color=blue&logo=github
-    :alt: GitHub commits since tagged version (branch)
-    :target: https://github.com/JoyMonteiro/waper/compare/v0.0.1..master
-
-.. |commits_since_latest_github_release| image:: https://img.shields.io/github/commits-since/JoyMonteiro/waper/latest?color=blue&logo=semver&sort=semver
-    :alt: GitHub commits since latest release (by SemVer)
-
 .. LICENSE (eg AGPL, MIT)
 .. Github License
 
 .. |gh-lic| image:: https://img.shields.io/github/license/JoyMonteiro/waper
     :alt: GitHub
-    :target: https://github.com/JoyMonteiro/waper/blob/master/LICENSE
-
-
-.. CODE QUALITY
-
-.. Code Climate CI
-.. Code maintainability & Technical Debt
-
-.. |maintainability| image:: https://img.shields.io/codeclimate/maintainability/JoyMonteiro/waper
-    :alt: Code Climate Maintainability
-    :target: https://codeclimate.com/github/JoyMonteiro/waper/maintainability
-
-.. |tech-debt| image:: https://img.shields.io/codeclimate/tech-debt/JoyMonteiro/waper
-    :alt: Technical Debt
-    :target: https://codeclimate.com/github/JoyMonteiro/waper/maintainability
+    :target: https://github.com/JoyMonteiro/waper/blob/main/LICENSE

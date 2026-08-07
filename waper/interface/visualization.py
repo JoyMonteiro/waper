@@ -83,8 +83,10 @@ def _plot_clusters(
     )
 
     out = pv.wrap(maxima_points)
+    # strict: all three are point-data arrays on the same PolyData, so they carry
+    # one value per point by construction.
     for lon, lat, region_id in zip(
-        out[vtk_lon_label], out[vtk_lat_label], out[vtk_region_label]
+        out[vtk_lon_label], out[vtk_lat_label], out[vtk_region_label], strict=True
     ):
 
         ax.annotate(
@@ -96,8 +98,9 @@ def _plot_clusters(
         )
 
     out = pv.wrap(minima_points)
+    # strict: as above, three point-data arrays on one PolyData.
     for lon, lat, region_id in zip(
-        out[vtk_lon_label], out[vtk_lat_label], out[vtk_region_label]
+        out[vtk_lon_label], out[vtk_lat_label], out[vtk_region_label], strict=True
     ):
 
         ax.annotate(
@@ -314,7 +317,11 @@ def _plot_polygons(
             )
 
     if weighted_lat_list is not None:
-        for index, coords in enumerate(list(zip(weighted_lon_list, weighted_lat_list))):
+        # strict: callers build the two lists in lockstep from the same
+        # `rwp_info` iteration, so they are parallel per-RWP coordinates.
+        for index, coords in enumerate(
+            zip(weighted_lon_list, weighted_lat_list, strict=True)
+        ):
             lon, lat = coords
             ax.scatter(
                 lon, lat,

@@ -158,7 +158,9 @@ fig, axes = plt.subplots(nrow, ncol, figsize=(ncol * 7, nrow * 3.3))
 axes = np.array(axes).reshape(-1)
 for ax in axes:
     ax.axis("off")
-for ax, fn in zip(axes, frames):
+# not strict: the grid is ceil(n/2) x 2, so it has one spare axis when n is
+# odd. The spare stays blank (all axes were switched off above).
+for ax, fn in zip(axes, frames, strict=False):
     ax.imshow(plt.imread(fn))
 fig.tight_layout()
 fig.savefig("/tmp/track_montage.png", dpi=110, bbox_inches="tight")

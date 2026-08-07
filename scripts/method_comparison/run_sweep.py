@@ -102,7 +102,10 @@ def compute_zimin_masks(v_da, band, threshold=ZIMIN_THRESHOLD, t21=True, tempora
 
 def _aggregate(method_masks, zimin_masks, band, method_name, threshold):
     ious, dets, m_onlys, z_onlys = [], [], [], []
-    for mm, zm in zip(method_masks, zimin_masks):
+    # strict: both sequences are one entry per timestep of the same input
+    # DataArray, so a length mismatch would be a bug that silently biases the
+    # mean agreement scores rather than something to tolerate.
+    for mm, zm in zip(method_masks, zimin_masks, strict=True):
         ious.append(iou(mm, zm))
         dets.append(detection_agreement(mm, zm))
         m_only, z_only = disagreement_decomposition(mm, zm, band)

@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import networkx as nx
 from networkx import Graph
@@ -11,7 +10,7 @@ from .energy_overlap import feature_energies, overlap_energies
 logger = logging.getLogger(__name__)
 
 
-def build_tracking_graph(time_step_data, number_steps: Optional[int] = None) -> Graph:
+def build_tracking_graph(time_step_data, number_steps: int | None = None) -> Graph:
     """Build tracking graph based on energy overlap between consecutive timesteps
 
     Args:

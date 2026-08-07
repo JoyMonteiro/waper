@@ -21,7 +21,7 @@ authors = [{name="Malavika Biju"},
 maintainers = [{name="Joy Monteiro", email="joy.merwin@gmail.com"}]
 license = {file= "LICENSE"}
 readme = "README.rst"
-requires-python = ">= 3.9"
+requires-python = ">= 3.11"
 
 keywords = [
     "python package",
@@ -37,8 +37,6 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development",
@@ -87,7 +85,7 @@ markers = ["slow: integration runs that load data"]
 
 [tool.ruff]
 line-length = 100
-# `target-version` is inferred from `project.requires-python` (py39).
+# `target-version` is inferred from `project.requires-python` (py311).
 extend-exclude = [
     # Standalone research code from before the package existed. It imports
     # modules that are not dependencies (myCmap, cmocean) and nothing in the

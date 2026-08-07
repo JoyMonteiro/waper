@@ -1,3 +1,5 @@
+from itertools import pairwise
+
 import pandas as pd
 from shapely import wkb
 
@@ -31,7 +33,7 @@ def extract_edges(waper) -> pd.DataFrame:
     for t, tsd in enumerate(waper._time_step_data):
         for path in tsd.identified_rwp_paths:
             rwp_id = tsd.rwp_info[tuple(path)]["rwp_id"]
-            for a, b in zip(path[:-1], path[1:]):
+            for a, b in pairwise(path):
                 rows.append({"time": t, "rwp_id": rwp_id,
                                  "src_node_id": int(_serialize_node_id(a)),
                                  "dst_node_id": int(_serialize_node_id(b))})
@@ -77,7 +79,9 @@ def extract_samples(waper) -> pd.DataFrame:
             xs = [p[0] for p in pts]
             ys = [p[1] for p in pts]
             lons, lats = transform_to_stereographic(xs, ys, hemisphere=hemisphere, inverse=True)
-            for i, (lon, lat) in enumerate(zip(lons, lats)):
+            # strict: pyproj returns one output per input coordinate, so the two
+            # arrays are the same length as `pts`.
+            for i, (lon, lat) in enumerate(zip(lons, lats, strict=True)):
                 rows.append({"time": t, "rwp_id": info["rwp_id"], "pt_idx": i,
                                  "lon": float(lon), "lat": float(lat)})
     return pd.DataFrame(rows)

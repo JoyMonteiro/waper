@@ -108,7 +108,9 @@ fig, axes = plt.subplots(nrow, ncol, figsize=(ncol * 8.5, nrow * 3.0))
 axes = np.array(axes).reshape(-1)
 for a in axes:
     a.axis("off")
-for a, fn in zip(axes, sel):
+# strict: the 4x2 grid and the 8 sampled frames are both fixed at 8, so a
+# mismatch means the grid shape and the sample count drifted apart.
+for a, fn in zip(axes, sel, strict=True):
     a.imshow(plt.imread(fn))
 fig.tight_layout()
 fig.savefig("/tmp/hemis_montage.png", dpi=110, bbox_inches="tight")

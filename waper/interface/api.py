@@ -1,6 +1,5 @@
 import logging
 from dataclasses import dataclass
-from typing import Optional
 
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
@@ -85,7 +84,7 @@ class WaperSingleTimestepData:
     raster_data: ndarray
     raster_features: set
     quadtree: Graph
-    energy_raster: Optional[ndarray] = None  # set by _identify_rwps
+    energy_raster: ndarray | None = None  # set by _identify_rwps
 
     def __init__(self, input_data: DataArray, config: WaperConfig) -> None:
         self.input_data = input_data
