@@ -79,10 +79,20 @@ git clone git@github.com:JoyMonteiro/waper.git
 cd waper
 virtualenv env --python=python3
 source env/bin/activate
-pip install -e .
+pip install -e ".[dev]"
 ```
 
-4. Create a branch for local development:
+4. Install the notebook output filter. This is **per-clone** — git will not apply it
+   otherwise, and checkouts will fail with "required filter nbstripout failed":
+
+```bash
+nbstripout --install --attributes .gitattributes
+```
+
+It keeps notebook outputs in your working copy while stopping them from entering git
+history. Notebook output blobs of several MB each have already been committed here once.
+
+5. Create a branch for local development:
 
 ```bash
 git checkout -b name-of-your-bugfix-or-feature
@@ -90,15 +100,19 @@ git checkout -b name-of-your-bugfix-or-feature
 
 Now you can make your changes locally.
 
-1. When you're done making changes, check that your changes pass the tests locally:
+6. When you're done making changes, check that your changes pass the tests locally:
 
 ```bash
-pip install tox
-alias tox='PKG_VERSION=$(./scripts/parse_version.py) tox'
-tox
+pytest -m "not slow"
 ```
 
-Please note that tox runs test test suite against multiple python versions, if they are found available on the host machine.
+The `slow` tests are excluded because they read large NetCDF files that are gitignored and
+absent from a fresh clone. If you have those datasets locally, run the whole suite with
+plain `pytest`; anything still missing will skip rather than fail.
+
+Note: `tox.ini` is unmodified cookiecutter scaffolding — it targets a `src/my_new_project`
+layout that has never existed in this repo, and none of its environments work. CI runs
+pytest directly. Do not rely on `tox` here.
 
 If you want to produce a built tar.gz and wheel distributions:
 

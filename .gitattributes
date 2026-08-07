@@ -1,0 +1,8 @@
+# Strip notebook outputs on the way into the index. Outputs stay in your working
+# copy; git just never sees them. `scripts/method_comparison/method_comparison.ipynb`
+# had accumulated five committed output blobs of 1.5-6.2 MB before this existed.
+#
+# The filter is per-clone: after cloning, run
+#     pip install nbstripout && nbstripout --install --attributes .gitattributes
+# Without it git errors on checkout ("required filter nbstripout failed").
+*.ipynb filter=nbstripout diff=ipynb
