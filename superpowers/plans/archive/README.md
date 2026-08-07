@@ -50,6 +50,10 @@ adjudication.
 
 ## What deliberately stayed active
 
+- **`implementation/2026-08-07-housekeeping-backlog.md`** — open housekeeping and
+  engineering items that need no scientific input, plus an explicit list of the ones
+  that *do* and must not be actioned as housekeeping.
+
 - **`implementation/waper_refactoring_spec.md`** — Phases 0–4 are done (see the
   table above), but **Phase 5 (VTK → PyVista/SciPy) has not started**:
   `waper/identification/{utils,max_min,topology}.py` still import VTK and there is
