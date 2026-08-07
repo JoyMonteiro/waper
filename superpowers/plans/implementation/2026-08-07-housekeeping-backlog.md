@@ -62,9 +62,17 @@
     an OpenGL runtime even headless.
   - **Not gated on lint.** `ruff check .` reports **319 errors** (193 auto-fixable) against a
     repo with no `[tool.ruff]` config. Gating now would pin CI red forever. See Tier 2 below.
-  - **Caveat:** verified only as far as local green (126 passed, 1 skipped, 4 deselected in
-    71 s) plus YAML parse. The ubuntu dependency solve for the geo stack (vtk, geovista,
-    cartopy, rasterio, datashader) is unverified until the first real run.
+  - **Verified on the real thing.** First-ever run: `31136489671`. The ubuntu dependency
+    solve for the geo stack (vtk, geovista, cartopy, rasterio, datashader) succeeded, and
+    the OpenGL/off-screen setup was enough — no collection errors. 126 passed on both 3.11
+    and 3.12, matching local.
+  - One genuine gap it surfaced: `spharm` (pyspharm) is imported lazily by
+    `scripts/method_comparison/masks.py::t21_truncate` but was **never a declared
+    dependency** — it only ever worked because it is present in the local conda env. It has
+    no wheels and needs a Fortran toolchain, so it is now an `importorskip` rather than a
+    CI dependency, matching the datashader precedent in `tests/interface/test_explorer.py`.
+  - Cosmetic: GitHub warns that `checkout@v4` / `setup-python@v5` / `upload-artifact@v4`
+    target Node 20 and are being forced onto Node 24. Not a failure; no action needed yet.
 
 - [x] **Guard tests against absent data.** Found while wiring CI, not in the original list:
       `test_acceptance_t95` opened `datasets/forecast_bust_hourly.nc` (652 MB, gitignored)
@@ -98,12 +106,13 @@
       documents the broken tox workflow in places. `requires-python = ">= 3.9"` and the 3.9/3.10
       classifiers claim support that CI does not verify — either test those or narrow the claim.
 
-- [ ] **Reclaim ~4 GB of local git bloat.** `.git` is 4.2 GB; reachable objects are under
-      100 MB. A single unreachable 4,015 MB blob, hash-verified as `datasets/validation.nc`,
-      is dangling from an old commit (a 242 MB pack is probably `forecast_bust_hourly.nc`).
-      It is unreachable from any branch, so it never reached the remote. `git gc --prune=now`
-      with reflog expiry reclaims it. The data is safe in the working tree — but expiring
-      the reflog permanently discards recovery of those old commits, **so confirm first**.
+- [x] **Reclaim ~4 GB of local git bloat — done 2026-08-07.** Re-verified before acting:
+      `git hash-object datasets/validation.nc` returned `4a5d3e41…`, byte-identical to the
+      unreachable 4,015 MB blob, so pruning discarded no data that is not still on disk.
+      Joy authorised the reflog expiry. Ran `git reflog expire --expire=now
+      --expire-unreachable=now --all` then `git gc --prune=now --aggressive`.
+      **`.git`: 4.2 GB → 65 MB** (26 packs → 1, 62 MiB). `git fsck` clean, history intact,
+      suite still 126 passed. Commits were pushed to `origin` first.
 
 ## Tier 3 — large, still no scientific input
 

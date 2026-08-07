@@ -135,6 +135,10 @@ def test_zimin_mask_thresholds_within_band():
 
 
 def test_t21_truncate_smooths_and_preserves_shape():
+    # t21_truncate imports spharm (pyspharm) lazily. It has no wheels and needs a
+    # Fortran toolchain to build, so it is not a declared dependency — skip rather
+    # than fail where it is absent, as with datashader in tests/interface/.
+    pytest.importorskip("spharm", exc_type=ImportError)
     # large-scale (wavenumber 6) + small-scale (wavenumber 40) on an ascending NH grid
     nlat, nlon = 90, 360
     lat = np.linspace(0.5, 89.5, nlat)
