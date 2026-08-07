@@ -23,6 +23,25 @@ account) whose only two real entries have been folded in at the bottom of this f
   outright. Exposed on `WaperConfig`, `Waper.__init__`, `Waper.plot_tracks`, and
   `prune_tracking_graph`.
 
+### 2026-08-07 — VTK removal (refactoring spec Phase 5, tasks 5.1 and 5.3)
+
+#### Removed
+- `get_iso_contour` and `compute_gradients` (`waper/identification/utils.py`) and
+  `interpolate_cell_values` (`waper/identification/max_min.py`), with the `import vtk` each
+  file carried for them. All three were dead — the only references in the tree were their
+  own definitions and the refactoring spec. `interpolate_cell_values` in particular was
+  redundant rather than merely unused: `get_vtk_object_from_data_array` already fills
+  `"<name> Cell Value"` via PyVista's `point_data_to_cell_data()` on every grid it builds.
+
+#### Changed
+- `add_maxima_data`/`add_minima_data` use PyVista's `.n_cells` instead of raw
+  `GetNumberOfCells()`. The four docstrings in `max_min.py` that declared
+  `vtk.vtkUnstructuredGrid` parameters now say `pv.UnstructuredGrid`; those functions have
+  taken PyVista objects for as long as they have called `.n_points` and `.extract_points`.
+
+`waper/identification/topology.py` is now the only module importing vtk — task 5.2, the
+`vtkDijkstraGraphGeodesicPath` → `scipy.sparse.csgraph` rewrite, is untouched.
+
 ### 2026-08-07 — housekeeping
 
 #### Added

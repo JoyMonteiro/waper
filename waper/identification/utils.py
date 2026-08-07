@@ -2,7 +2,6 @@ import math
 
 import geovista as gv
 import numpy as np
-import vtk
 
 RADIUS_SPHERE = 63.71
 RADIUS_EARTH_KM = 6371.0
@@ -44,29 +43,6 @@ def get_vtk_object_from_data_array(data_array, lons, lats, array_name="v"):
     grid.point_data["Latitude"] = mesh_lats.ravel()
 
     return grid
-
-
-def get_iso_contour(scalar_field, value, scalar_name):
-
-    contour_filter = vtk.vtkContourFilter()
-    scalar_field.GetPointData().SetScalars(
-        scalar_field.GetPointData().GetArray(scalar_name)
-    )
-    contour_filter.SetValue(0, value)
-    contour_filter.SetInputData(scalar_field)
-    contour_filter.Update()
-    return contour_filter.GetOutput()
-
-
-def compute_gradients(scalar_field, scalar_name):
-
-    gradient_filter = vtk.vtkGradientFilter()
-    scalar_field.GetPointData().SetScalars(
-        scalar_field.GetPointData().GetArray(scalar_name)
-    )
-    gradient_filter.SetInputData(scalar_field)
-    gradient_filter.Update()
-    return gradient_filter.GetOutput()
 
 
 def haversine_distance(lat1, lon1, lat2, lon2):

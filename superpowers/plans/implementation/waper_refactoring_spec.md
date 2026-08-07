@@ -1269,8 +1269,15 @@ The current code mixes raw VTK API calls (e.g., `vtk.vtkDijkstraGraphGeodesicPat
 3. Remove `import vtk` from `utils.py`.
 
 **Definition of Done:**
-- [ ] No `vtk.vtkContourFilter` or `vtk.vtkGradientFilter` in the codebase.
-- [ ] `import vtk` is removed from `utils.py`.
+- [x] No `vtk.vtkContourFilter` or `vtk.vtkGradientFilter` in the codebase.
+- [x] `import vtk` is removed from `utils.py`.
+
+**Done 2026-08-07.** Both functions were dead — the only references anywhere in the tree
+were their own definitions and this spec. Neither was replaced with a PyVista call; both
+were deleted, along with `import vtk`. `api.py` keeps doing its own
+`time_step_data.vtk_data.contour(...)`, which is what the note above anticipated. Two more
+dead helpers survive in this file and are *not* covered by this task:
+`get_point_data_label` and `get_cell_data_label`, both unreferenced one-liners.
 
 ---
 
@@ -1397,8 +1404,20 @@ This is the largest single refactoring task. Take it in sub-steps.
 3. The `clip_dataset` function already uses PyVista's `clip_scalar` — no change needed.
 
 **Definition of Done:**
-- [ ] `import vtk` is removed from `max_min.py`.
-- [ ] `interpolate_cell_values` uses PyVista API.
+- [x] `import vtk` is removed from `max_min.py`.
+- [x] `interpolate_cell_values` uses PyVista API. — *deleted instead; see below.*
+
+**Done 2026-08-07.** `interpolate_cell_values` had no callers, so it was deleted rather than
+ported to `point_data_to_cell_data()`. The work it did is not lost: `get_vtk_object_from_data_array`
+in `utils.py` already populates `f"{array_name} Cell Value"` via `point_data_to_cell_data()`
+on every grid it builds, which is why nothing called this. Two raw `GetNumberOfCells()` calls
+the task did not list were also found and replaced with PyVista's `.n_cells`, and four
+docstrings claiming `vtk.vtkUnstructuredGrid` parameters were corrected to
+`pv.UnstructuredGrid` — those functions have taken PyVista objects since they started using
+`.n_points` / `.extract_points`.
+
+Verified by `test_acceptance_t95`, the real-data end-to-end run through identification: it
+passes unchanged, as does the rest of the suite (139 passed, 1 skipped).
 
 ---
 

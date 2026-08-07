@@ -186,8 +186,27 @@
 ## Tier 3 — large, still no scientific input
 
 - [ ] **Refactoring spec Phase 5: VTK → PyVista/SciPy.** The only live remainder of
-      `waper_refactoring_spec.md`. `waper/identification/{utils,max_min,topology}.py` still
-      import VTK and there is no `scipy.sparse` shortest-path. Multi-day; not a wrap-up item.
+      `waper_refactoring_spec.md`. **Tasks 5.1 and 5.3 are done (2026-08-07)** —
+      `utils.py` and `max_min.py` no longer import VTK. All three functions the tasks
+      targeted (`get_iso_contour`, `compute_gradients`, `interpolate_cell_values`) turned
+      out to be dead and were deleted rather than ported; `test_acceptance_t95` confirms
+      the real-data pipeline is unchanged. Two raw `GetNumberOfCells()` calls became
+      `.n_cells` on the way past.
+
+      **Task 5.2 is what remains, and it is the whole of the difficulty**:
+      `waper/identification/topology.py` is now the only module importing VTK, and it
+      needs `vtkDijkstraGraphGeodesicPath` replaced by `scipy.sparse.csgraph`. Unlike 5.1
+      and 5.3 this is not a deletion — it changes clustering numerics, so the output has
+      to be compared against the current run, not just kept green. Multi-day; not a
+      wrap-up item.
+
+      Loose ends noticed while doing 5.1/5.3, neither actioned:
+  - `get_point_data_label` and `get_cell_data_label` in `utils.py` are unreferenced
+    one-liners. Outside the VTK tasks' remit, so left alone.
+  - `waper/tracking/quadtree.py` is dead on the tracking path — still built into
+    `WaperSingleTimestepData.quadtree` each time step, but read only by
+    `tests/test_tracking.py` since energy overlap replaced quadtree merge. Deleting it
+    touches a public dataclass field, so it wants a deliberate decision.
 
 ---
 
