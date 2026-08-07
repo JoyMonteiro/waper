@@ -1,3 +1,5 @@
+import os
+
 import networkx as nx
 import pytest
 from waper.identification.rwp_graph import get_ranked_paths
@@ -201,10 +203,13 @@ def test_orphan_cascade_multi_iteration():
 # ---------------------------------------------------------------------------
 
 
+DATASET = "datasets/forecast_bust_hourly.nc"
+
+
 def _load_t95():
     import warnings; warnings.filterwarnings("ignore")
     import xarray as xr
-    raw = xr.open_dataset("datasets/forecast_bust_hourly.nc")
+    raw = xr.open_dataset(DATASET)
     da = (raw["v"].rename({"valid_time": "time"})
           .squeeze("pressure_level", drop=True)
           .coarsen(latitude=4, longitude=4, boundary="trim").mean()
@@ -267,6 +272,9 @@ def test_orphan_absorb_blocked_by_in_band_overlap():
 
 
 @pytest.mark.slow
+@pytest.mark.skipif(
+    not os.path.exists(DATASET), reason="forecast_bust_hourly.nc not present"
+)
 def test_acceptance_t95():
     from waper import Waper
     from waper.identification.rwp_graph import (

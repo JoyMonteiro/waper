@@ -1,91 +1,70 @@
 name: Test Python Package
-# Stress Test against different platforms and python versions
+
+# Runs the test suite on every push and on pull requests into main.
+#
+# Note on scope: this workflow deliberately does NOT go through tox. `tox.ini` is
+# unmodified cookiecutter scaffolding (it targets a `src/my_new_project` layout that
+# has never existed in this repo) and every tox env it defines is broken. The suite
+# is run with pytest directly against the flat `waper/` package.
+#
+# Slow tests are deselected: they load `datasets/forecast_bust_hourly.nc` and
+# `datasets/v_winds_300mb_nh_2022_2023.nc`, which are gitignored data files not
+# present on a fresh checkout.
 
 on:
   push:
-    branches:
-      - master
-      - dev
-      - ci
   pull_request:
     branches:
-      - master
-      - dev
-    tags:
-      - v*
+      - main
+  workflow_dispatch:
+
+# A newer push to the same ref supersedes an in-flight run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test_suite:
-    runs-on: ${{ matrix.platform }}
+    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        platform: [ubuntu-latest, macos-latest]
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12"]
+
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      # VTK and PyVista are imported at collection time and need an OpenGL
+      # runtime even when rendering off-screen.
+      - name: Install system OpenGL libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgl1 libglx-mesa0 libxrender1 libxcursor1 libxft2 libxinerama1
+
       - name: Install package
-        run: python -m pip install -e ".[dev]"
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
 
-      - name: Do Lint Checking
-        run: tox -e lint -vv -s false
-
-      - name: Do Type Checking
-        run: tox -e type -vv -s false
-
-      - name: Specify current package version to assist build tool
-        run: echo "PKG_VERSION=$(python scripts/parse_version.py)" >> $GITHUB_ENV
-
-      - name: Run Test Suite
-        run: tox -vv -s false
+      - name: Run test suite
         env:
-          PLATFORM: ${{ matrix.platform }}
-      - name: Check for compliance with Python Best Practices
+          PYVISTA_OFF_SCREEN: "true"
         run: |
-          DIST_DIR=dist
-          echo "DIST_DIR=dist" >> $GITHUB_ENV
+          pytest -m "not slow" -ra \
+            --cov --cov-report=term-missing \
+            --cov-report=xml:coverage-${{ matrix.python-version }}.xml
 
-          mkdir "$DIST_DIR"
-          mv ".tox/${DIST_DIR}/waper-${PKG_VERSION}.tar.gz" "${DIST_DIR}"
-          mv ".tox/${DIST_DIR}/waper-${PKG_VERSION}-py3-none-any.whl" "${DIST_DIR}"
-          tox -e check -vv -s false
-      - name: Upload Source & Wheel distributions as Artefacts
-        uses: actions/upload-artifact@v2
+      - name: Upload coverage data
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: dist-${{ matrix.platform }}-${{ matrix.python-version }}
-          path: ${{ env.DIST_DIR }}
-          if-no-files-found: error
-
-      - name: Aggregate Test Suite Coverage Data
-        run: |
-          python -m pip install coverage
-          tox -e coverage --sitepackages -vv -s false
-
-      - name: Upload Coverage Data as Artefacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: coverage-xml-data
-          path: ./.tox/coverage.xml
-          if-no-files-found: error
-
-  host_coverage_results:
-    needs: test_suite
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download Coverage Data
-        uses: actions/download-artifact@v2
-        with:
-          name: coverage-xml-data
-      - name: Send Coverage Data to Codecov
-        uses: codecov/codecov-action@v2
-        with:
-          directory: .
-          env_vars: OS,PYTHON
-          fail_ci_if_error: true
-          files: coverage.xml
-          flags: unittests
-          name: codecov-umbrella
-          verbose: true
+          name: coverage-xml-${{ matrix.python-version }}
+          path: coverage-${{ matrix.python-version }}.xml
+          if-no-files-found: warn

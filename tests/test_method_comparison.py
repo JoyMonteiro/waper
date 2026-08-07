@@ -1,3 +1,5 @@
+import os
+
 import pytest
 import numpy as np
 import networkx as nx
@@ -11,6 +13,12 @@ from scripts.method_comparison.masks import (
 )
 from scripts.method_comparison.run_sweep import load_dataset, run_base_waper
 from scripts.method_comparison.run_sweep import compute_zimin_masks, sweep
+from scripts.method_comparison.run_sweep import DATA_PATH
+
+# The slow tests below read DATA_PATH, which is gitignored and absent on a fresh clone.
+needs_data = pytest.mark.skipif(
+    not os.path.exists(DATA_PATH), reason=f"{DATA_PATH} not present"
+)
 
 
 def test_iou_disjoint_is_zero():
@@ -176,6 +184,7 @@ def test_node_amplitude_mask_keeps_only_strong_nodes():
 
 
 @pytest.mark.slow
+@needs_data
 def test_load_dataset_shape():
     v = load_dataset()
     assert set(v.dims) == {"time", "latitude", "longitude"}
@@ -186,6 +195,7 @@ def test_load_dataset_shape():
 
 
 @pytest.mark.slow
+@needs_data
 def test_run_base_waper_has_association_graphs():
     v = load_dataset().isel(time=slice(0, 2))
     w = run_base_waper(v)
@@ -194,6 +204,7 @@ def test_run_base_waper_has_association_graphs():
 
 
 @pytest.mark.slow
+@needs_data
 def test_sweep_smoke_two_timesteps():
     v = load_dataset().isel(time=slice(0, 2))
     df = sweep(v, gt_grid=[0.02], st_grid=[20])
