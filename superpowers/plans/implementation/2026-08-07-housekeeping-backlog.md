@@ -60,8 +60,8 @@
   - Runs `pytest -m "not slow"`. Installs `libgl1`/`libglx-mesa0` and sets
     `PYVISTA_OFF_SCREEN`, because VTK and PyVista are imported at collection time and need
     an OpenGL runtime even headless.
-  - **Not gated on lint.** `ruff check .` reports **319 errors** (193 auto-fixable) against a
-    repo with no `[tool.ruff]` config. Gating now would pin CI red forever. See Tier 2 below.
+  - *(since gated)* A `lint` job now runs `ruff check .` and `mypy` alongside the suite. See
+    the Tier 2 entry below for what had to happen first.
   - **Verified on the real thing.** First-ever run: `31136489671`. The ubuntu dependency
     solve for the geo stack (vtk, geovista, cartopy, rasterio, datashader) succeeded, and
     the OpenGL/off-screen setup was enough — no collection errors. 126 passed on both 3.11
@@ -95,10 +95,31 @@
       entries in `pyproject.toml` — a malformed bug tracker (`github.com/waper/issues`), and
       two links to `.rst` files on a `master` branch that does not exist.
 
-- [ ] **Ruff/mypy: configure, then gate.** `ruff check .` → 319 errors, 193 auto-fixable, no
-      `[tool.ruff]` section in `pyproject.toml`. Wants a deliberate rule selection and a
-      formatting pass before CI can enforce it. `mypy` is in the `dev` extra and equally
-      unconfigured.
+- [x] **Ruff/mypy: configure, then gate.** Both are configured in `pyproject.toml`, the tree
+      is clean, and the CI `lint` job enforces them.
+  - Ruff selects `E, F, I, UP, B, C4, SIM, PIE, RUF` explicitly. Relying on the default
+    selection was the trap: it is not `E4,E7,E9,F` in current releases and it moves between
+    them, so "319 errors" was never a stable number to work against.
+  - `misc/` and `*.ipynb` are excluded (dead pre-package research code; scratch notebooks).
+    `E501` is off — no autoformatter runs here, and 34 lines were over 100. The side-effect
+    import ordering in `scripts/` (`matplotlib.use("Agg")` before `pyplot`) and the compact
+    `a = f(); a.x = 1` idiom in `tests/` are per-file exemptions rather than rewrites; the
+    same idiom *was* cleaned up inside `waper/`, which is held to a higher bar.
+  - One genuine bug among the 319: `scripts/diag_purple.py::dist` closed over the loop
+    variable `head` (B023). The rest were style, dead code, or mid-file imports that had
+    accumulated from appending to files.
+  - Mypy needed two workarounds before it would even start: 2.3 rejects
+    `python_version = "3.9"`, and numpy's bundled stubs use `type` statements that only
+    parse on 3.12+. No version pin, and the CI lint job runs on 3.12.
+  - It found **8 real errors**, all fixed — three implicit-`Optional` defaults,
+    `raster_features` declared `list` but always assigned a `set`, `Feature.footprint`
+    typed `object`, an unannotated `_time_step_data`, two colormap dicts whose keys needed
+    to narrow to the channel literals. `check_untyped_defs` stays off: the package is
+    largely unannotated and turning it on buries these.
+  - The lint job installs the **full** dependency set, not just the linters — numpy, pandas
+    and matplotlib ship `py.typed`, and mypy silently degrades to `Any` without them, which
+    is exactly how these 8 would have been missed. Ruff and mypy are version-pinned there so
+    a new release cannot fail an unrelated push; bump deliberately.
 
 - [ ] **Retire the cookiecutter scaffolding.** Now that nothing depends on it: `tox.ini`
       (400 lines targeting `src/my_new_project`, poetry, prospector, sphinx), `.prospector.yml`,
