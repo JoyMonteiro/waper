@@ -199,6 +199,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#candidate-enumeration" id="toc-candidate-enumeration" class="nav-link" data-scroll-target="#candidate-enumeration">7.1 Candidate enumeration</a></li>
   <li><a href="#region-wrap-detection-and-splitting" id="toc-region-wrap-detection-and-splitting" class="nav-link" data-scroll-target="#region-wrap-detection-and-splitting">7.2 Region-wrap detection and splitting</a></li>
   <li><a href="#path-scoring-and-greedy-selection" id="toc-path-scoring-and-greedy-selection" class="nav-link" data-scroll-target="#path-scoring-and-greedy-selection">7.3 Path scoring and greedy selection</a></li>
+  <li><a href="#branch-resolution" id="toc-branch-resolution" class="nav-link" data-scroll-target="#branch-resolution">7.4 Branch resolution</a></li>
+  <li><a href="#orphan-reassignment" id="toc-orphan-reassignment" class="nav-link" data-scroll-target="#orphan-reassignment">7.5 Orphan reassignment</a></li>
   </ul></li>
   <li><a href="#polygon-footprints" id="toc-polygon-footprints" class="nav-link" data-scroll-target="#polygon-footprints">8. Polygon Footprints</a>
   <ul class="collapse">
@@ -206,11 +208,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#hull-construction" id="toc-hull-construction" class="nav-link" data-scroll-target="#hull-construction">8.2 Hull construction</a></li>
   <li><a href="#weighted-centroid" id="toc-weighted-centroid" class="nav-link" data-scroll-target="#weighted-centroid">8.3 Weighted centroid</a></li>
   </ul></li>
-  <li><a href="#rasterisation-and-quadtree" id="toc-rasterisation-and-quadtree" class="nav-link" data-scroll-target="#rasterisation-and-quadtree">9. Rasterisation and Quadtree</a>
+  <li><a href="#rasterisation" id="toc-rasterisation" class="nav-link" data-scroll-target="#rasterisation">9. Rasterisation</a>
   <ul class="collapse">
-  <li><a href="#rasterisation" id="toc-rasterisation" class="nav-link" data-scroll-target="#rasterisation">9.1 Rasterisation</a></li>
-  <li><a href="#quadtree-construction" id="toc-quadtree-construction" class="nav-link" data-scroll-target="#quadtree-construction">9.2 Quadtree construction</a></li>
-  <li><a href="#quadtree-merge" id="toc-quadtree-merge" class="nav-link" data-scroll-target="#quadtree-merge">9.3 Quadtree merge</a></li>
+  <li><a href="#feature-id-rasterisation" id="toc-feature-id-rasterisation" class="nav-link" data-scroll-target="#feature-id-rasterisation">9.1 Feature-ID rasterisation</a></li>
+  <li><a href="#energy-rasterisation" id="toc-energy-rasterisation" class="nav-link" data-scroll-target="#energy-rasterisation">9.2 Energy rasterisation</a></li>
   </ul></li>
   <li><a href="#temporal-tracking" id="toc-temporal-tracking" class="nav-link" data-scroll-target="#temporal-tracking">10. Temporal Tracking</a>
   <ul class="collapse">
@@ -249,7 +250,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>The pipeline has two main stages:</p>
 <ol type="1">
 <li><strong>Identification</strong> — For each time step, detect alternating maxima and minima, cluster them, build an association graph, prune it, and extract RWP paths.</li>
-<li><strong>Tracking</strong> — Connect RWP features across consecutive time steps using spatial overlap of rasterised polygon footprints.</li>
+<li><strong>Tracking</strong> — Connect RWP features across consecutive time steps using the <em>energy-weighted</em> overlap of their rasterised footprints. The weight counts each shared pixel by the amplitude carried there rather than by the pixel itself, so the energetic core of a packet drives the association and the weak periphery contributes almost nothing.</li>
 </ol>
 <section id="pipeline-diagram" class="level3">
 <h3 class="anchored" data-anchor-id="pipeline-diagram">Pipeline diagram</h3>
@@ -278,18 +279,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   ├─ Path Extraction &amp; Ranking (§7)
   │    ├─ Monotonic-eastward simple paths
   │    ├─ Region-wrap detection and splitting
-  │    └─ Greedy independent-set selection
+  │    ├─ Greedy independent-set selection + interleave-in-band gate
+  │    └─ Orphan reassignment
   │
   ├─ Polygon Footprints (§8)
   │    ├─ Per-node convex hulls in stereographic projection
   │    └─ Weighted centroid computation
   │
-  ├─ Rasterisation &amp; Quadtree (§9)
-  │    └─ 512×512 stereographic raster → quadtree decomposition
+  ├─ Rasterisation (§9)
+  │    ├─ 512×512 stereographic feature-ID raster
+  │    └─ 512×512 stereographic energy raster (disks around extrema)
   │
   └─ Temporal Tracking (§10)
-       ├─ Quadtree merge → overlap weights
-       ├─ Distance pruning
+       ├─ Energy overlap → edge weights
+       ├─ Distance pruning (and optional weight gate)
        └─ Topological-sort DP → track extraction</code></pre>
 <hr>
 </section>
@@ -583,10 +586,30 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <ol type="1">
 <li>Select the highest-weight path.</li>
 <li>Mark all its nodes as “used”.</li>
-<li>Select the next highest-weight path whose nodes are all disjoint from already-used nodes.</li>
-<li>Repeat until no more disjoint paths remain.</li>
+<li>Select the next highest-weight path whose nodes are all disjoint from already-used nodes <strong>and</strong> which does not interleave in band with any already-accepted path (§7.4).</li>
+<li>Repeat until no more admissible paths remain.</li>
 </ol>
 <p>This produces a set of non-overlapping RWP paths that maximise total weight.</p>
+</section>
+<section id="branch-resolution" class="level3">
+<h3 class="anchored" data-anchor-id="branch-resolution">7.4 Branch resolution</h3>
+<p>Node-disjointness alone is too weak a separation criterion. Two paths can use entirely different nodes and still trace the same wave train — one running along the ridge crests and the other along a parallel set of extrema a few degrees to the north — which reports one packet as two.</p>
+<p><strong>The interleave-in-band test.</strong> Two paths are considered the same branch when both hold:</p>
+<ul>
+<li>their longitude spans overlap (as arcs, so the test is wraparound-safe), and</li>
+<li>their latitude ranges lie within <code>lat_gate</code> degrees of each other — either overlapping outright, or separated by a gap of at most <code>lat_gate</code>.</li>
+</ul>
+<p>A candidate that interleaves in band with an accepted path is rejected, no matter how well it scores.</p>
+</section>
+<section id="orphan-reassignment" class="level3">
+<h3 class="anchored" data-anchor-id="orphan-reassignment">7.5 Orphan reassignment</h3>
+<p>Rejecting a whole path to resolve a branch leaves its nodes unassigned. A fixed-point pass (<code>reassign_orphans</code>, at most 50 iterations) tries to place each leftover node:</p>
+<ol type="1">
+<li>Find the orphan’s highest-weight neighbour that is already in a path and within <code>lat_gate</code> degrees of latitude. With no such neighbour the orphan is passed over and stays unassigned, so it reaches no output path.</li>
+<li>Determine which side of that neighbour the orphan sits on — east or west — and compare its edge weight against the <strong>arm weight</strong>: the summed edge weights of the path’s existing continuation on that same side. The orphan and that arm are rival branches out of the neighbour, and only one can be kept.</li>
+<li>If the orphan’s edge does not beat the arm weight, drop the orphan — an arm it merely ties is kept. Otherwise the orphan wins: the path is cut back to the neighbour and the orphan spliced on in the arm’s place, provided the result does not interleave in band (§7.4) with any other accepted path. If it would, the orphan is dropped and the arm survives.</li>
+</ol>
+<p>Only one change is applied per iteration, and the orphan set is recomputed afterwards — the nodes of a displaced arm become orphans themselves and may re-attach elsewhere on a later pass, which is what the iteration is for. Paths left with fewer than 2 nodes are discarded.</p>
 <hr>
 </section>
 </section>
@@ -637,38 +660,40 @@ weighted_y = Σ(yᵢ × |vᵢ|) / Σ|vᵢ|</code></pre>
 <hr>
 </section>
 </section>
-<section id="rasterisation-and-quadtree" class="level2">
-<h2 class="anchored" data-anchor-id="rasterisation-and-quadtree">9. Rasterisation and Quadtree</h2>
-<p><strong>Files:</strong> <code>waper/tracking/rwp_polygon.py</code> → <code>rasterize_all_rwps()</code>; <code>waper/tracking/quadtree.py</code></p>
-<section id="rasterisation" class="level3">
-<h3 class="anchored" data-anchor-id="rasterisation">9.1 Rasterisation</h3>
+<section id="rasterisation" class="level2">
+<h2 class="anchored" data-anchor-id="rasterisation">9. Rasterisation</h2>
+<p><strong>File:</strong> <code>waper/tracking/rwp_polygon.py</code> → <code>rasterize_all_rwps()</code>, <code>energy_disks()</code>, <code>rasterize_energy()</code></p>
+<p>Each time step produces <strong>two</strong> rasters on the same 512×512 stereographic grid: a feature-ID raster saying <em>which</em> RWP occupies a pixel, and an energy raster saying <em>how much amplitude</em> sits there. Tracking (§10) reads both.</p>
+<section id="feature-id-rasterisation" class="level3">
+<h3 class="anchored" data-anchor-id="feature-id-rasterisation">9.1 Feature-ID rasterisation</h3>
 <p>All RWP polygons for a given time step are rasterised onto a 512×512 stereographic grid. Each RWP is assigned a unique integer ID; pixels inside the polygon receive that ID, others remain 0. Overlapping polygons are resolved by the rasterisation order.</p>
 </section>
-<section id="quadtree-construction" class="level3">
-<h3 class="anchored" data-anchor-id="quadtree-construction">9.2 Quadtree construction</h3>
-<p>The raster image is recursively split into quadrants (4-ary tree). Each quadtree node stores:</p>
-<ul>
-<li><code>mean</code>: average pixel value</li>
-<li><code>features</code>: set of RWP IDs present in that quadrant</li>
-<li><code>level</code>: depth in the tree</li>
-<li><code>start_pixel</code>: top-left corner of the quadrant</li>
-</ul>
-<p>The quadtree enables efficient spatial overlap queries between time steps without comparing every pixel pair.</p>
-</section>
-<section id="quadtree-merge" class="level3">
-<h3 class="anchored" data-anchor-id="quadtree-merge">9.3 Quadtree merge</h3>
-<p>To compute overlap between RWPs at time <code>t-1</code> and time <code>t</code>, the two quadtrees are merged. The merge walks both trees simultaneously; at leaf nodes, the features from both trees are combined to detect which RWP IDs co-occur in the same spatial region. The overlap size (number of co-occurring pixels) is recorded per <code>(prev_feature, curr_feature)</code> pair.</p>
+<section id="energy-rasterisation" class="level3">
+<h3 class="anchored" data-anchor-id="energy-rasterisation">9.2 Energy rasterisation</h3>
+<p>The polygon footprint is a hull — it says where a packet is, not where its strength is concentrated. The energy raster supplies the second half.</p>
+<p>For every node of every identified RWP path, a disk of radius <code>energy_radius_km</code> (500 km by default) is drawn around the extremum in stereographic coordinates and burned in with a value of <code>scalar²</code>, the squared amplitude at that node. The disks are rasterised onto the same grid and transform as §9.1, with <code>all_touched=True</code>, giving a float raster that is 0 where no disk reaches.</p>
+<p>The result is peaked on the ridge and trough cores and near-zero over the broad quiet interior of a hull, which is exactly the weighting §10.1 wants.</p>
+<p><code>energy_radius_km</code> must stay large enough that the disks cover each RWP’s footprint: a feature whose pixels receive no disk has zero total energy and drops out of tracking entirely.</p>
+<blockquote class="blockquote">
+<p><strong>Historical note.</strong> Overlap between time steps used to go through a quadtree: each raster was recursively split into quadrants until every leaf was homogeneous, and merging two such trees yielded the <code>(prev_feature, curr_feature)</code> pixel-overlap counts that tracking consumed. The point was to answer overlap queries without comparing every pixel pair. §10.1 now reads the answer straight off the two rasters with masked NumPy — the co-occurring feature IDs come from <code>np.unique(curr[prev == a])</code> — which does more raw pixel work but in vectorised C rather than a Python-level tree walk, and in a small fraction of the code. <code>waper/tracking/quadtree.py</code> and the <code>WaperSingleTimestepData.quadtree</code> field were removed on 2026-08-07.</p>
+</blockquote>
 <hr>
 </section>
 </section>
 <section id="temporal-tracking" class="level2">
 <h2 class="anchored" data-anchor-id="temporal-tracking">10. Temporal Tracking</h2>
-<p><strong>File:</strong> <code>waper/tracking/tracking_graph.py</code></p>
+<p><strong>Files:</strong> <code>waper/tracking/tracking_graph.py</code>; <code>waper/tracking/energy_overlap.py</code></p>
 <section id="tracking-graph-construction" class="level3">
 <h3 class="anchored" data-anchor-id="tracking-graph-construction">10.1 Tracking graph construction</h3>
-<p>A directed graph is built with nodes <code>(time_index, rwp_id)</code>. For consecutive time steps, edges are added between RWP features that overlap spatially. The edge weight is:</p>
-<pre><code>weight = overlap_pixels / max(size_prev, size_curr)</code></pre>
-<p>where <code>size_prev</code> and <code>size_curr</code> are the total pixel counts of the respective RWP features. This normalisation ensures that the overlap is measured relative to the larger of the two features.</p>
+<p>A directed graph is built with nodes <code>(time_index, rwp_id)</code>. For consecutive time steps, edges are added between RWP features that overlap spatially, and the edge weight is their <strong>energy-weighted</strong> overlap.</p>
+<p>Each feature’s size is the energy it carries, summed over its pixels in the §9.2 energy raster:</p>
+<pre><code>E(f) = Σ_{p ∈ f} energy[p]</code></pre>
+<p>The overlap between a feature <code>a</code> at <code>t-1</code> and a feature <code>b</code> at <code>t</code> is the summed geometric mean of their per-pixel energies over the pixels they share:</p>
+<pre><code>O(a, b) = Σ_{p ∈ a ∩ b} sqrt(energy_prev[p] × energy_curr[p])</code></pre>
+<p>and the edge weight normalises that by the larger of the two:</p>
+<pre><code>weight = O(a, b) / max(E(a), E(b))</code></pre>
+<p>The geometric mean is 0 wherever either side is 0, so the pair only scores on pixels where <strong>both</strong> features are energetic — two hulls that graze each other across their quiet peripheries produce a weight near 0 even though their pixel overlap may be large. Compared with the pixel-count overlap this replaced, a core that moves changes the weight even while the broad footprints still overlap. Normalising by the larger energy keeps the weight in (0, 1].</p>
+<p>An edge is only created when the overlap is strictly positive and the larger energy is non-zero. Features absent from the energy raster therefore never acquire edges, and time steps missing either raster are skipped.</p>
 <p>The haversine distance between the weighted centroids is also stored on each edge.</p>
 </section>
 <section id="tracking-graph-pruning" class="level3">
@@ -813,16 +838,28 @@ weighted_y = Σ(yᵢ × |vᵢ|) / Σ|vᵢ|</code></pre>
 <td>Maximum <code>|Δlat|/|Δlon|</code> per edge</td>
 </tr>
 <tr class="even">
+<td><code>lat_gate</code></td>
+<td>15.0°</td>
+<td>§7.4–7.5</td>
+<td>Latitude band within which two paths count as the same branch, and the maximum latitude offset for absorbing an orphan</td>
+</tr>
+<tr class="odd">
 <td><code>hull_method</code></td>
 <td><code>"per_node"</code></td>
 <td>§8</td>
 <td>Polygon construction method</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>hemisphere</code></td>
 <td><code>"north"</code></td>
 <td>§8–9</td>
 <td>Stereographic projection pole</td>
+</tr>
+<tr class="odd">
+<td><code>energy_radius_km</code></td>
+<td>500</td>
+<td>§9.2</td>
+<td>Radius of the energy disk burned around each extremum</td>
 </tr>
 <tr class="even">
 <td><code>track_pruning_threshold</code></td>
