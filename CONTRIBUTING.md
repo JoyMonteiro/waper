@@ -4,12 +4,12 @@ Thank you for considering reading this guide!
 Contributions are welcome :)
 
 
-* [Types of Contributions](#Types-of-Contributions)
-* [Contributor Setup](#Setting-Up-the-Code-for-Local-Development)
-* [Contributor Guidelines](#Contributor-Guidelines)
-* [Contributor Testing](#Running-the-Tests)
-* [Building the Documentation](#Building-the-Documentation)
-* [Core Committer Guide](#Core-Committer-Guide)
+* [Types of Contributions](#types-of-contributions)
+* [Contributor Setup](#setting-up-the-code-for-local-development)
+* [Contributor Guidelines](#contributor-guidelines)
+* [Contributor Testing](#running-the-tests)
+* [Building the Documentation](#building-the-documentation)
+* [Core Committer Guide](#core-committer-guide)
 
 
 ## Types of Contributions
@@ -29,7 +29,7 @@ A bug means encountering different behaviour than the expected or advertised one
 
 ### Fix Bugs
 
-Look through the GitHub issues for bugs. Anything tagged with "bug" is open to whoever wants to implement it. See [Contributor Setup](#Setting-Up-the-Code-for-Local-Development) to get started.
+Look through the GitHub issues for bugs. Anything tagged with "bug" is open to whoever wants to implement it. See [Contributor Setup](#setting-up-the-code-for-local-development) to get started.
 
 ### Implement Features
 
@@ -37,11 +37,11 @@ Look through the GitHub issues for features. Anything tagged with "enhancement" 
 
 Please do not combine multiple feature enhancements into a single pull request.
 
-See [Contributor Setup](#Setting-Up-the-Code-for-Local-Development) to get started.
+See [Contributor Setup](#setting-up-the-code-for-local-development) to get started.
 
 ### Write Documentation
 
-WAPER could always use more documentation, whether as part of the official WAPER docs, in docstrings, etc. See [Building the Documentation](#Building-the-Documentation) for how to build the site locally.
+WAPER could always use more documentation, whether as part of the official WAPER docs, in docstrings, etc. See [Building the Documentation](#building-the-documentation) for how to build the site locally.
 
 ### Submit Feedback
 
@@ -92,7 +92,7 @@ git checkout -b name-of-your-bugfix-or-feature
 Now you can make your changes locally.
 
 6. When you're done making changes, check that your changes pass the tests and the
-   lint/type checks locally. See [Running the Tests](#Running-the-Tests) for the commands
+   lint/type checks locally. See [Running the Tests](#running-the-tests) for the commands
    — they are the same ones CI runs.
 
 7. Ensure that your feature or commit is covered by tests. To see which lines your change
@@ -255,7 +255,7 @@ How to prioritize pull requests, from most to least important:
 #### Pull Requests Review Guidelines
 - Think carefully about the long-term implications of the change. How will it affect existing projects that are dependent on this? If this is complicated, do we really want to maintain it forever?
 - Take the time to get things right, PRs almost always require additional improvements to meet the bar for quality. **Be very strict about quality.**
-- When you merge a pull request take care of closing/updating every related issue explaining how they were affected by those changes. Also, remember to add the author to `AUTHORS.md`.
+- When you merge a pull request take care of closing/updating every related issue explaining how they were affected by those changes. Credit the author in the merge commit; there is no separate authors file, and the `authors` list in `pyproject.toml` names the authors of the method the package implements, not every contributor.
 
 ### Process: Issues
 

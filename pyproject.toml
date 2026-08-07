@@ -1,13 +1,9 @@
 # BUILD
 
 [build-system]
-requires = ["setuptools>=61.2", "setuptools-scm"]
+requires = ["setuptools>=61.2"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools_scm]
-
-
-# Poetry
 
 # Information required for building (sdist/wheel)
 ## Also renders on pypi as 'subtitle'

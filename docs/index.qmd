@@ -7,8 +7,12 @@ subtitle: "A Rossby Wave Packet trackER"
 through time. Identification is purely spatial and graph-based: for each time step it
 detects alternating maxima and minima, clusters them, builds an association graph, prunes
 it, and extracts RWP paths. Tracking then connects features across consecutive time steps
-by the spatial overlap of their rasterised polygon footprints — no spectral envelope is
-computed at any stage.
+by an energy-weighted overlap: alongside each timestep's feature raster the package burns a
+raster of squared amplitude around the RWP extrema, and the weight on an edge between a
+feature at one step and a feature at the next is the sum of `sqrt(E_prev * E_curr)` over the
+pixels the two share, divided by the larger of the two features' total energies — so the
+association is driven by the energetic cores rather than by the extent of the footprints.
+No spectral envelope is computed at any stage.
 
 The method is described in [Pandey, Monteiro & Natarajan
 (2020)](https://doi.org/10.1175/MWR-D-20-0014.1), *An Integrated Geometric and Topological

@@ -12,7 +12,8 @@ account) whose only two real entries have been folded in at the bottom of this f
 - `.github/workflows/test.yaml` rewritten so CI can actually run: triggers on every push
   and on PRs into `main` (it previously watched `master`/`dev`, branches that do not
   exist here, and had never run once). Goes through pytest directly rather than `tox.ini`,
-  which is untouched cookiecutter scaffolding targeting a `src/my_new_project` layout.
+  which was untouched cookiecutter scaffolding targeting a `src/my_new_project` layout and
+  has since been deleted (see Removed, below).
 - `.gitattributes` with an `nbstripout` clean filter, so notebook outputs stop entering
   git history. `scripts/method_comparison/method_comparison.ipynb` had already deposited
   five output blobs of 1.5–6.2 MB.
@@ -20,6 +21,26 @@ account) whose only two real entries have been folded in at the bottom of this f
   untracked in `datasets/` (4.6 GB of NetCDF, with the small test fixtures un-ignored).
 - `assessments/`, `datasets/experiments/`, and `results/` are now tracked.
 - Regression test `test_arc_bins_do_not_run_past_the_arc_end`.
+- Documentation site: `docs/` is now a [Quarto](https://quarto.org) site — a landing page, the
+  pre-existing `docs/algorithm.md`, and a `quartodoc`-generated API reference — built and
+  deployed to GitHub Pages by the new `.github/workflows/docs.yml`. A `docs` extra
+  (`quartodoc`, `griffe`, `jupyter`) installs the Python side; Quarto itself is not a Python
+  package.
+
+#### Changed
+- `requires-python` narrowed from `>= 3.9` to `>= 3.11`, matching the interpreters CI actually
+  verifies. The 3.9/3.10 classifiers went with it, and ruff's inferred `target-version`
+  followed to py311, so the tree was re-cleaned under it (chiefly `zip(..., strict=)` on every
+  call site, each audited individually, and `itertools.pairwise` where it subsumed one).
+- `CONTRIBUTING.md` rewritten around the workflow that exists here — pytest directly, `ruff`
+  and `mypy`, the per-clone `nbstripout` filter, and how to build the docs. No "My New Project"
+  remains in it.
+- `README.rst`: the cookiecutter "TODO Document a **Great Feature**" placeholders are replaced
+  with real Features and Usage prose, and Quickstart now installs from a source checkout. The
+  sole PyPI release is `0.0.1`, which predates the `>= 3.11` floor, so `pip install waper`
+  would have handed users a release incompatible with the stated requirements.
+- The landing page's description of tracking now matches the code on this branch: an
+  energy-weighted overlap (`waper/tracking/energy_overlap.py`), not plain footprint overlap.
 
 #### Fixed
 - `_arc_bins` off-by-one in `waper/identification/rwp_graph.py`: `range(n + 1)` → `range(n)`.
@@ -29,6 +50,19 @@ account) whose only two real entries have been folded in at the bottom of this f
 - Real-data tests that read gitignored NetCDF (`test_acceptance_t95`, and the slow
   `test_method_comparison` cases) are guarded with `skipif` so a fresh clone no longer
   hard-fails on a missing file.
+- Licence classifier in `pyproject.toml` said AGPLv3 while `LICENSE` is a genuine BSD
+  3-Clause and the README said BSD. Now `License :: OSI Approved :: BSD License` (PyPI's
+  trove list has no 3-Clause-specific BSD entry).
+
+#### Removed
+- Cookiecutter scaffolding that nothing depended on: `tox.ini` (400 lines targeting a
+  `src/my_new_project` layout), `.prospector.yml`, `.pylintrc`, `.bettercodehub.yml`, the
+  Sphinx skeleton under `docs/` with its `my_new_project` autodoc, `.readthedocs.yml` (it
+  built a `.[docs]` extra that did not exist, and RTD has no finished builds), and an inert
+  `[tool.setuptools_scm]` table (the version is static, so it never applied).
+- README badges with no service behind them: Read the Docs, Codecov, Code Climate,
+  `commits-since`, and `pypi/pyversions` — the last reporting the interpreters of release
+  `0.0.1`, which misstates the supported range.
 
 ### 2026-06-15 – 2026-06-22 — RWP branch resolution, method comparison, feature tracks
 

@@ -15,11 +15,21 @@ A rossby Wave Packet trackER
 Features
 ========
 
-1. **waper** `python package`
-
-   a. TODO Document a **Great Feature**
-   b. TODO Document another **Nice Feature**
-2. Tested on Python 3.11 and 3.12
+1. **Identification** of Rossby wave packets in a meridional wind field, one time step at a
+   time. The method is purely spatial and graph-based: detect alternating maxima and minima,
+   cluster them, build an association graph, prune it, and extract RWP paths. No spectral
+   envelope is computed at any stage.
+2. **Tracking** of the identified packets through time, by the energy-weighted overlap of
+   their rasterised footprints between consecutive time steps, so that the association
+   follows the energetic cores rather than the full extent of a packet.
+3. **Catalogue I/O** (``waper.io``), which serialises the identified and tracked packets and
+   supports querying and filtering them.
+4. **An interactive explorer** (``waper.interface.explorer.RWPExplorer``), a Panel viewer for
+   a catalogue of identified and tracked packets.
+5. Implements the method of `Pandey, Monteiro & Natarajan (2020)`_, *An Integrated Geometric
+   and Topological Approach for the Identification and Visual Analysis of Rossby Wave
+   Packets*, Monthly Weather Review 148(8), 3139–3157.
+6. Tested on Python 3.11 and 3.12
 
 
 Development
@@ -59,14 +69,43 @@ Preferably install them all in a single command so that `mamba/conda` can figure
 Quickstart
 ==========
 
-Using `pip` is the approved way for installing `waper`.
+`waper` is installed from a source checkout, into the environment where you installed the
+prerequisites above.
 
 .. code-block:: sh
 
-    python3 -m pip install waper
+    git clone https://github.com/JoyMonteiro/waper.git
+    cd waper
+    python3 -m pip install -e .
 
+Add the `dev` extra (``pip install -e ".[dev]"``) for the test and lint tooling, or the
+`docs` extra to build the documentation site.
 
-TODO Document a use case
+Usage
+=====
+
+Point `Waper` at a dataset holding a meridional wind field, then identify and track.
+
+.. code-block:: python
+
+    import xarray as xr
+    from waper import Waper
+
+    ds = xr.open_dataset("v_winds_300mb.nc")
+
+    w = Waper(
+        data_array=ds,
+        scalar_name="v",
+        latitude_label="latitude",
+        longitude_label="longitude",
+        time_label="time",
+    )
+    w.identify_rwps()
+    w.track_rwps()
+
+`Waper` takes further parameters controlling clipping, extrema detection, the latitude band
+searched, and how aggressively the graphs and tracks are pruned. They are listed in the
+`API reference`_.
 
 
 License
@@ -85,6 +124,10 @@ License
 .. _Github Actions: https://github.com/JoyMonteiro/waper/actions
 
 .. _Quarto: https://quarto.org/
+
+.. _API reference: https://joymonteiro.github.io/waper/api/
+
+.. _Pandey, Monteiro & Natarajan (2020): https://doi.org/10.1175/MWR-D-20-0014.1
 
 .. _BSD 3-Clause License: https://github.com/JoyMonteiro/waper/blob/main/LICENSE
 

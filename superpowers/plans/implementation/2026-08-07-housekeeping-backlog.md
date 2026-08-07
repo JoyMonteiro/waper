@@ -121,11 +121,32 @@
     is exactly how these 8 would have been missed. Ruff and mypy are version-pinned there so
     a new release cannot fail an unrelated push; bump deliberately.
 
-- [ ] **Retire the cookiecutter scaffolding.** Now that nothing depends on it: `tox.ini`
-      (400 lines targeting `src/my_new_project`, poetry, prospector, sphinx), `.prospector.yml`,
-      `.pylintrc`, `.bettercodehub.yml`. `CONTRIBUTING.md` still says "My New Project" and
-      documents the broken tox workflow in places. `requires-python = ">= 3.9"` and the 3.9/3.10
-      classifiers claim support that CI does not verify — either test those or narrow the claim.
+- [x] **Retire the cookiecutter scaffolding — done 2026-08-07.** Deleted the four dead config
+      files (`tox.ini`, `.prospector.yml`, `.pylintrc`, `.bettercodehub.yml`) and rewrote
+      `CONTRIBUTING.md` around the workflow that actually exists here — pytest directly, `ruff`
+      and `mypy`, the per-clone `nbstripout` filter — with no "My New Project" left in it.
+      `README.rst` followed: the deletions had left dangling `tox` references and a Better Code
+      Hub badge with no config file, and its cookiecutter "TODO Document a **Great Feature**"
+      placeholders are now real Features/Usage prose. Its Quickstart installs from a source
+      checkout: the only PyPI release is `0.0.1`, which predates everything here.
+  - `requires-python` narrowed to `>= 3.11`, matching what CI verifies rather than testing
+    3.9/3.10; the 3.9/3.10 classifiers went with it, and ruff's inferred `target-version`
+    followed to py311, so the tree was re-cleaned under it in the same task. The
+    `pypi/pyversions` badge was deleted too — it renders the interpreters of release `0.0.1`
+    and so contradicted the new floor.
+  - A tree-wide re-grep afterwards found `docs/` was *also* untouched cookiecutter: a Sphinx
+    skeleton with `my_new_project` autodoc, a `.readthedocs.yml` building a nonexistent
+    `.[docs]` extra, and a `.coveragerc` sourcing `my_new_project`. Joy's ruling: drop
+    Sphinx/RTD entirely. `docs/` is now a Quarto site (landing page, the pre-existing
+    `docs/algorithm.md`, and a `quartodoc`-generated API reference) deployed to GitHub Pages
+    by `.github/workflows/docs.yml`. Manual step outstanding for Joy: enable Pages on the repo.
+  - The licence discrepancy surfaced on the way past and was settled: `pyproject.toml`
+    classified the project AGPLv3 while `LICENSE` is a genuine BSD 3-Clause. Joy ruled BSD;
+    the classifier is now `License :: OSI Approved :: BSD License`, PyPI having no
+    3-Clause-specific trove string.
+  - Deferred, not done here: `docs/algorithm.md` §1 still describes plain footprint overlap,
+    which the energy-weighted tracking on this branch supersedes; and the generated API pages
+    are signature-only because no public class carries a docstring yet.
 
 - [x] **Reclaim ~4 GB of local git bloat — done 2026-08-07.** Re-verified before acting:
       `git hash-object datasets/validation.nc` returned `4a5d3e41…`, byte-identical to the

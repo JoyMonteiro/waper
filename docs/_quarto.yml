@@ -1,10 +1,11 @@
 # Quarto site for waper. Built and deployed by .github/workflows/docs.yml.
 #
-# Build it locally with:
+# Build it locally, from the repository root, with:
 #     pip install -e ".[docs]"
-#     cd docs && quartodoc build      # writes docs/api/ from the package
-#     quarto render docs/             # writes docs/_site/
-# Both output directories are generated and gitignored.
+#     cd docs && quartodoc build   # writes docs/api/ from the package
+#     cd .. && quarto render docs/ # writes docs/_site/
+# Both output directories are generated and gitignored. See the "Building the
+# Documentation" section of CONTRIBUTING.md for the full instructions.
 
 project:
   type: website
