@@ -1,5 +1,7 @@
 # Serialization, Query Layer, and Interactive Visualization — Design & Implementation Plan
 
+> **Implementation plan:** `superpowers/plans/implementation/2026-06-06-serialization-query-viz.md` (executable, TDD, task-by-task).
+>
 > **Context:** Infrastructure that underpins the whole validation program (`conductor/validation_strategy_plan.md`). It is the concrete realization of **Layer 2.4** ("stream per-timestep RWP objects/footprints to disk") and turns the Phase 0 `per_rwp.csv` / `per_track.csv` MVP into a durable, queryable catalogue. Three layers, built in order:
 > 1. **Serialization** — a portable "RWP catalogue" on disk (no pickle).
 > 2. **Query / science layer** — a small API that returns the *scientifically meaningful* quantities from the references (Souders, Chang & Yu, Hunt, Shah & Monteiro) with no boilerplate.

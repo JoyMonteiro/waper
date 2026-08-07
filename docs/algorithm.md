@@ -1,6 +1,6 @@
 # WAPER Algorithm Documentation
 
-> **Phase 8.3 of the [refactoring spec](../conductor/waper_refactoring_spec.md).**
+> **Phase 8.3 of the [refactoring spec](superpowers/plans/implementation/waper_refactoring_spec.md).**
 > This document describes the algorithm as currently implemented. Sections may
 > be updated as further refactoring proceeds.
 

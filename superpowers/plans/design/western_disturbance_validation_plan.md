@@ -1,6 +1,6 @@
 # WAPER for Western Disturbances — Validation & Beyond-Hunt Plan
 
-> **Context:** A domain-specific application of WAPER to western disturbances (WDs), benchmarked against Hunt, Turner & Shaffrey (2018, *QJRMS* 144:278–290). This sits alongside the layers in `conductor/validation_strategy_plan.md` — treat it as **Layer 5 (applied extension + novel science)**. It depends on Phase 0 passing and on the subtropical-waveguide threshold tuning discussed below.
+> **Context:** A domain-specific application of WAPER to western disturbances (WDs), benchmarked against Hunt, Turner & Shaffrey (2018, *QJRMS* 144:278–290). This sits alongside the layers in `superpowers/plans/design/validation_strategy_plan.md` — treat it as **Layer 5 (applied extension + novel science)**. It depends on Phase 0 passing and on the subtropical-waveguide threshold tuning discussed below.
 >
 > **Framing (important):** the aim is **not to validate WAPER against Hunt's results — it is to update them.** WAPER's own correctness is established globally in Layer 2 (against the Souders climatology). Here we apply that validated tool, on **modern global ERA5** (not ERA-Interim), to produce an improved and richer WD climatology than Hunt could with a cyclone-only tracker. Hunt's numbers are the benchmark we expect to *recover-then-exceed*, not a ground truth we must match.
 

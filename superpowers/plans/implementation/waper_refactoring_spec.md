@@ -1048,7 +1048,7 @@ OPTICS (Ordering Points To Identify the Clustering Structure) computes a reachab
 
 **Remaining investigation (requires real data):**
 
-The implementation is complete, but the default parameters (`max_eps_km`, `xi`, `min_samples`) need tuning on real data. Follow the procedure in `conductor/clustering_investigation_plan.md`:
+The implementation is complete, but the default parameters (`max_eps_km`, `xi`, `min_samples`) need tuning on real data. Follow the procedure in `superpowers/plans/design/clustering_investigation_plan.md`:
 
 1. Run on 3–5 known synoptic events and verify results are reasonable.
 2. If `min_samples=1` produces a flat reachability plot, test `min_samples=2` with a slightly lowered `extrema_threshold`.

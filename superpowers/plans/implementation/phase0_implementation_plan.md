@@ -1,6 +1,6 @@
 # Phase 0 Implementation Plan — Small-Data Sanity Check
 
-> **Audience:** an implementer (Gemini Flash) executing Phase 0 of `conductor/validation_strategy_plan.md`. This document is self-contained: every API call, attribute name, data fact, and target number you need has been verified against the codebase and is written out below. Follow it literally. When in doubt, prefer the explicit recipe here over improvising.
+> **Audience:** an implementer (Gemini Flash) executing Phase 0 of `superpowers/plans/design/validation_strategy_plan.md`. This document is self-contained: every API call, attribute name, data fact, and target number you need has been verified against the codebase and is written out below. Follow it literally. When in doubt, prefer the explicit recipe here over improvising.
 
 ## 0. What you are doing and why
 
@@ -216,7 +216,7 @@ Write the final verdict in `phase0_report.md`: PASS only if **all** hold —
 - 2.4 a stable threshold plateau exists,
 - 2.5 the tracking graph captures real splits/merges and re-stitches flicker.
 
-Record the chosen default parameters (`node_pruning_threshold`, `edge_pruning_threshold`, plus the subset/resolution/cadence you used) and every caveat encountered. If any criterion fails, state precisely which metric failed and your hypothesis, and recommend the next investigation (likely feeding `conductor/clustering_investigation_plan.md`). Do **not** declare PASS to be agreeable — an honest FAIL here is the whole point of the gate.
+Record the chosen default parameters (`node_pruning_threshold`, `edge_pruning_threshold`, plus the subset/resolution/cadence you used) and every caveat encountered. If any criterion fails, state precisely which metric failed and your hypothesis, and recommend the next investigation (likely feeding `superpowers/plans/design/clustering_investigation_plan.md`). Do **not** declare PASS to be agreeable — an honest FAIL here is the whole point of the gate.
 
 ---
 

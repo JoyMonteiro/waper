@@ -1,6 +1,6 @@
 # Regimes → RWP Structure: a WAPER analysis of Shah & Monteiro (2025)
 
-> **Context:** A novel-science application of WAPER, sibling to the western-disturbance plan (`conductor/western_disturbance_validation_plan.md`) — same region, same data, same subtropical tuning. Depends on Phase 0 passing and on the §4 subtropical threshold tuning in the WD plan. Treat as part of **Layer 5**.
+> **Context:** A novel-science application of WAPER, sibling to the western-disturbance plan (`superpowers/plans/design/western_disturbance_validation_plan.md`) — same region, same data, same subtropical tuning. Depends on Phase 0 passing and on the §4 subtropical threshold tuning in the WD plan. Treat as part of **Layer 5**.
 
 ## 1. What Shah & Monteiro (2025) did
 
