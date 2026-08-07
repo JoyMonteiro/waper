@@ -76,7 +76,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest >= 7.0", "pytest-cov", "mypy", "ruff"]
+dev = ["pytest >= 7.0", "pytest-cov", "mypy", "ruff", "nbstripout"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
@@ -121,9 +121,9 @@ packages=["waper", "waper.identification", "waper.tracking", "waper.interface", 
 
 # PyPi url links, that appear in 'Project Links' section
 [project.urls]
-"Bug Tracker" = "https://github.com/waper/issues"
+"Bug Tracker" = "https://github.com/JoyMonteiro/waper/issues"
 "CI: Github Actions" = "https://github.com/JoyMonteiro/waper/actions"
 "Documentation" = "https://waper.readthedocs.io/"
 "Source Code" = "https://github.com/JoyMonteiro/waper"
-"Changelog" = "https://github.com/JoyMonteiro/waper/blob/master/CHANGELOG.rst"
-"Code of Conduct" = "https://github.com/JoyMonteiro/waper/blob/master/CONTRIBUTING.rst"
+"Changelog" = "https://github.com/JoyMonteiro/waper/blob/main/HISTORY.md"
+"Code of Conduct" = "https://github.com/JoyMonteiro/waper/blob/main/CONTRIBUTING.md"

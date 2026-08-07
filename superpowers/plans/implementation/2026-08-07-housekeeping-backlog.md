@@ -42,26 +42,61 @@
   - `datasets/experiments/README.md` — added `lat_gate` (15.0, flagged never-swept),
     `hull_method`, `hemisphere` to the parameter list.
 
-## Tier 2 — half a day
+## Tier 2 — half a day — **CI / notebooks / changelogs done 2026-08-07**
 
-- [ ] **Resurrect CI.** `.github/workflows/test.yaml` has never run on any of this work.
-      Three independent breakages:
-  - Triggers on `master` / `dev` / `ci`; this repo's default branch is `main` and work
-    happens on feature branches.
-  - Matrix requests Python 3.12, but `tox.ini`'s envlist stops at py311 (and still lists
-    EOL py36/37/38).
-  - `upload-artifact@v2`, `setup-python@v2`, `checkout@v3` are deprecated; the v2 artifact
-    actions are retired and hard-fail.
-  - Do this *after* the numpy pin (already done) or CI just goes red on the numba conflict.
+- [x] **Resurrect CI.** Rewritten in `.github/workflows/test.yaml`. The backlog listed three
+      breakages; there was a fourth, fatal one:
+  - *(fixed)* Triggered on `master` / `dev` / `ci`. Now runs on **every push** plus PRs into
+    `main`, with a `concurrency` group so a newer push cancels the in-flight run.
+  - *(fixed)* `checkout@v3` → `v4`, `setup-python@v2` → `v5` (with pip caching),
+    `upload-artifact@v2` → `v4`. The retired v2 artifact actions would have hard-failed.
+  - *(fixed)* Matrix is now `["3.11", "3.12"]` on `ubuntu-latest`.
+  - **Fourth breakage, not previously recorded:** the workflow drove everything through
+    `tox`, but `tox.ini` is unmodified cookiecutter scaffolding — `PY_PACKAGE = my_new_project`
+    and a `src/` layout that has never existed here (the package is a flat `waper/`). Every
+    tox env — `lint`, `type`, `check`, the test envs — points at `src/my_new_project`. CI
+    could never have gone green by fixing triggers and action versions alone. The workflow
+    now calls `pytest` directly and skips tox entirely.
+  - Runs `pytest -m "not slow"`. Installs `libgl1`/`libglx-mesa0` and sets
+    `PYVISTA_OFF_SCREEN`, because VTK and PyVista are imported at collection time and need
+    an OpenGL runtime even headless.
+  - **Not gated on lint.** `ruff check .` reports **319 errors** (193 auto-fixable) against a
+    repo with no `[tool.ruff]` config. Gating now would pin CI red forever. See Tier 2 below.
+  - **Caveat:** verified only as far as local green (126 passed, 1 skipped, 4 deselected in
+    71 s) plus YAML parse. The ubuntu dependency solve for the geo stack (vtk, geovista,
+    cartopy, rasterio, datashader) is unverified until the first real run.
 
-- [ ] **Strip notebook outputs.** `scripts/method_comparison/method_comparison.ipynb`
-      already has **five blobs of 1.5–6.2 MB** in history. Its current working-tree diff is
-      5,057 lines of pure output — code cells are byte-identical to HEAD. Add `nbstripout`
-      (or an equivalent filter) before committing notebooks again.
+- [x] **Guard tests against absent data.** Found while wiring CI, not in the original list:
+      `test_acceptance_t95` opened `datasets/forecast_bust_hourly.nc` (652 MB, gitignored)
+      with **no `skipif`** — it would hard-fail on CI and on any fresh clone. Same for the
+      three slow `test_method_comparison` cases via `run_sweep.DATA_PATH`. All four now skip
+      when the file is absent, matching the existing idiom in `test_feature_tracks.py`.
 
-- [ ] **Consolidate changelogs.** `CHANGELOG.rst` still carries cookiecutter boilerplate —
-      it references "my_new_project" and "john-doe-gh-account-name" — last real entry 2022.
-      `HISTORY.md` is the live one but stops at 2026-03-12. Pick one, backfill from git log.
+- [x] **Strip notebook outputs.** `.gitattributes` now applies an `nbstripout` clean filter
+      to `*.ipynb`; `nbstripout` added to the `dev` extra and the setup step documented in
+      `CONTRIBUTING.md`. The filter is **per-clone** — a fresh clone must run
+      `nbstripout --install --attributes .gitattributes` or checkouts fail.
+      Outputs stay in the working copy and simply stop reaching the index: the notebook's
+      diff went from `+3941/-1116` to `+109/-12116` while all 6 output cells remain on disk.
+      The five 1.5–6.2 MB blobs already in history are untouched — removing those needs a
+      history rewrite, which is **not** housekeeping.
+
+- [x] **Consolidate changelogs.** `HISTORY.md` is now the single changelog, backfilled from
+      the 88 commits since 2026-03-12 and grouped by theme. `CHANGELOG.rst` deleted; its two
+      real 2022 entries folded in at the bottom. Also fixed three dead `[project.urls]`
+      entries in `pyproject.toml` — a malformed bug tracker (`github.com/waper/issues`), and
+      two links to `.rst` files on a `master` branch that does not exist.
+
+- [ ] **Ruff/mypy: configure, then gate.** `ruff check .` → 319 errors, 193 auto-fixable, no
+      `[tool.ruff]` section in `pyproject.toml`. Wants a deliberate rule selection and a
+      formatting pass before CI can enforce it. `mypy` is in the `dev` extra and equally
+      unconfigured.
+
+- [ ] **Retire the cookiecutter scaffolding.** Now that nothing depends on it: `tox.ini`
+      (400 lines targeting `src/my_new_project`, poetry, prospector, sphinx), `.prospector.yml`,
+      `.pylintrc`, `.bettercodehub.yml`. `CONTRIBUTING.md` still says "My New Project" and
+      documents the broken tox workflow in places. `requires-python = ">= 3.9"` and the 3.9/3.10
+      classifiers claim support that CI does not verify — either test those or narrow the claim.
 
 - [ ] **Reclaim ~4 GB of local git bloat.** `.git` is 4.2 GB; reachable objects are under
       100 MB. A single unreachable 4,015 MB blob, hash-verified as `datasets/validation.nc`,
