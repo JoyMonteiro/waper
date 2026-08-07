@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>algorithm – waper</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-921ecb3ff3b004e91bddb2369f3a9636.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">waper</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="./index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link active" href="./algorithm.html" aria-current="page"> 
+<span class="menu-text">Algorithm</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./api/index.html"> 
+<span class="menu-text">API</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/JoyMonteiro/waper"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#waper-algorithm-documentation" id="toc-waper-algorithm-documentation" class="nav-link active" data-scroll-target="#waper-algorithm-documentation">WAPER Algorithm Documentation</a>
+  <ul class="collapse">
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  <li><a href="#overview" id="toc-overview" class="nav-link" data-scroll-target="#overview">1. Overview</a>
+  <ul class="collapse">
+  <li><a href="#pipeline-diagram" id="toc-pipeline-diagram" class="nav-link" data-scroll-target="#pipeline-diagram">Pipeline diagram</a></li>
+  </ul></li>
+  <li><a href="#extrema-detection" id="toc-extrema-detection" class="nav-link" data-scroll-target="#extrema-detection">2. Extrema Detection</a>
+  <ul class="collapse">
+  <li><a href="#key-parameters" id="toc-key-parameters" class="nav-link" data-scroll-target="#key-parameters">Key parameters</a></li>
+  </ul></li>
+  <li><a href="#connected-region-labelling" id="toc-connected-region-labelling" class="nav-link" data-scroll-target="#connected-region-labelling">3. Connected Region Labelling</a></li>
+  <li><a href="#extrema-clustering" id="toc-extrema-clustering" class="nav-link" data-scroll-target="#extrema-clustering">4. Extrema Clustering</a>
+  <ul class="collapse">
+  <li><a href="#distance-matrix-computation" id="toc-distance-matrix-computation" class="nav-link" data-scroll-target="#distance-matrix-computation">4.1 Distance matrix computation</a></li>
+  <li><a href="#hill-climbing-penalty" id="toc-hill-climbing-penalty" class="nav-link" data-scroll-target="#hill-climbing-penalty">4.2 Hill-climbing penalty</a></li>
+  <li><a href="#dbscan-clustering" id="toc-dbscan-clustering" class="nav-link" data-scroll-target="#dbscan-clustering">4.3 DBSCAN clustering</a></li>
+  <li><a href="#key-parameters-1" id="toc-key-parameters-1" class="nav-link" data-scroll-target="#key-parameters-1">Key parameters</a></li>
+  </ul></li>
+  <li><a href="#association-graph-construction" id="toc-association-graph-construction" class="nav-link" data-scroll-target="#association-graph-construction">5. Association Graph Construction</a>
+  <ul class="collapse">
+  <li><a href="#node-representation" id="toc-node-representation" class="nav-link" data-scroll-target="#node-representation">5.1 Node representation</a></li>
+  <li><a href="#edge-construction-via-the-zero-crossing-isocontour" id="toc-edge-construction-via-the-zero-crossing-isocontour" class="nav-link" data-scroll-target="#edge-construction-via-the-zero-crossing-isocontour">5.2 Edge construction via the zero-crossing isocontour</a></li>
+  </ul></li>
+  <li><a href="#graph-pruning" id="toc-graph-pruning" class="nav-link" data-scroll-target="#graph-pruning">6. Graph Pruning</a>
+  <ul class="collapse">
+  <li><a href="#node-pruning" id="toc-node-pruning" class="nav-link" data-scroll-target="#node-pruning">6.1 Node pruning</a></li>
+  <li><a href="#edge-pruning" id="toc-edge-pruning" class="nav-link" data-scroll-target="#edge-pruning">6.2 Edge pruning</a></li>
+  <li><a href="#key-parameters-2" id="toc-key-parameters-2" class="nav-link" data-scroll-target="#key-parameters-2">Key parameters</a></li>
+  </ul></li>
+  <li><a href="#path-extraction-and-ranking" id="toc-path-extraction-and-ranking" class="nav-link" data-scroll-target="#path-extraction-and-ranking">7. Path Extraction and Ranking</a>
+  <ul class="collapse">
+  <li><a href="#candidate-enumeration" id="toc-candidate-enumeration" class="nav-link" data-scroll-target="#candidate-enumeration">7.1 Candidate enumeration</a></li>
+  <li><a href="#region-wrap-detection-and-splitting" id="toc-region-wrap-detection-and-splitting" class="nav-link" data-scroll-target="#region-wrap-detection-and-splitting">7.2 Region-wrap detection and splitting</a></li>
+  <li><a href="#path-scoring-and-greedy-selection" id="toc-path-scoring-and-greedy-selection" class="nav-link" data-scroll-target="#path-scoring-and-greedy-selection">7.3 Path scoring and greedy selection</a></li>
+  </ul></li>
+  <li><a href="#polygon-footprints" id="toc-polygon-footprints" class="nav-link" data-scroll-target="#polygon-footprints">8. Polygon Footprints</a>
+  <ul class="collapse">
+  <li><a href="#region-point-extraction" id="toc-region-point-extraction" class="nav-link" data-scroll-target="#region-point-extraction">8.1 Region point extraction</a></li>
+  <li><a href="#hull-construction" id="toc-hull-construction" class="nav-link" data-scroll-target="#hull-construction">8.2 Hull construction</a></li>
+  <li><a href="#weighted-centroid" id="toc-weighted-centroid" class="nav-link" data-scroll-target="#weighted-centroid">8.3 Weighted centroid</a></li>
+  </ul></li>
+  <li><a href="#rasterisation-and-quadtree" id="toc-rasterisation-and-quadtree" class="nav-link" data-scroll-target="#rasterisation-and-quadtree">9. Rasterisation and Quadtree</a>
+  <ul class="collapse">
+  <li><a href="#rasterisation" id="toc-rasterisation" class="nav-link" data-scroll-target="#rasterisation">9.1 Rasterisation</a></li>
+  <li><a href="#quadtree-construction" id="toc-quadtree-construction" class="nav-link" data-scroll-target="#quadtree-construction">9.2 Quadtree construction</a></li>
+  <li><a href="#quadtree-merge" id="toc-quadtree-merge" class="nav-link" data-scroll-target="#quadtree-merge">9.3 Quadtree merge</a></li>
+  </ul></li>
+  <li><a href="#temporal-tracking" id="toc-temporal-tracking" class="nav-link" data-scroll-target="#temporal-tracking">10. Temporal Tracking</a>
+  <ul class="collapse">
+  <li><a href="#tracking-graph-construction" id="toc-tracking-graph-construction" class="nav-link" data-scroll-target="#tracking-graph-construction">10.1 Tracking graph construction</a></li>
+  <li><a href="#tracking-graph-pruning" id="toc-tracking-graph-pruning" class="nav-link" data-scroll-target="#tracking-graph-pruning">10.2 Tracking graph pruning</a></li>
+  <li><a href="#track-extraction" id="toc-track-extraction" class="nav-link" data-scroll-target="#track-extraction">10.3 Track extraction</a></li>
+  </ul></li>
+  <li><a href="#appendix-a-complete-parameter-reference" id="toc-appendix-a-complete-parameter-reference" class="nav-link" data-scroll-target="#appendix-a-complete-parameter-reference">Appendix A: Complete Parameter Reference</a></li>
+  <li><a href="#appendix-b-constants" id="toc-appendix-b-constants" class="nav-link" data-scroll-target="#appendix-b-constants">Appendix B: Constants</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"></header>
+
+
+
+
+<section id="waper-algorithm-documentation" class="level1">
+<h1>WAPER Algorithm Documentation</h1>
+<blockquote class="blockquote">
+<p>This document describes the algorithm as currently implemented. Sections may be updated as further refactoring proceeds.</p>
+</blockquote>
+<section id="references" class="level2">
+<h2 class="anchored" data-anchor-id="references">References</h2>
+<ul>
+<li>Pandey, K., Monteiro, J. M., &amp; Natarajan, V. (2020). An Integrated Geometric and Topological Approach for the Identification and Visual Analysis of Rossby Wave Packets. <em>Monthly Weather Review</em>, 148(8), 3139–3157.</li>
+<li>Biju, M. (2022). Identification and Tracking of Rossby Wave Packets. BS-MS Thesis, IISER Pune.</li>
+</ul>
+<hr>
+</section>
+<section id="overview" class="level2">
+<h2 class="anchored" data-anchor-id="overview">1. Overview</h2>
+<p>WAPER identifies and tracks Rossby Wave Packets (RWPs) in the meridional wind field using a purely spatial, graph-based approach. Unlike envelope-based methods that rely on spectral transforms, WAPER operates directly on the geometric and topological properties of the scalar field.</p>
+<p>The pipeline has two main stages:</p>
+<ol type="1">
+<li><strong>Identification</strong> — For each time step, detect alternating maxima and minima, cluster them, build an association graph, prune it, and extract RWP paths.</li>
+<li><strong>Tracking</strong> — Connect RWP features across consecutive time steps using spatial overlap of rasterised polygon footprints.</li>
+</ol>
+<section id="pipeline-diagram" class="level3">
+<h3 class="anchored" data-anchor-id="pipeline-diagram">Pipeline diagram</h3>
+<pre><code>Input scalar field (e.g. meridional wind at 300 hPa)
+  │
+  ├─ Extrema Detection (§2)
+  │    ├─ Local maxima (maximum_filter, size=3)
+  │    └─ Local minima (minimum_filter, size=3)
+  │
+  ├─ Connected Region Labelling (§3)
+  │    ├─ Clip field at ±clip_value → positive/negative regions
+  │    └─ VTK connectivity filter → RegionId per point
+  │
+  ├─ Extrema Clustering (§4)
+  │    ├─ Geodesic distances via Dijkstra on the mesh
+  │    ├─ Hill-climbing penalty for cross-ridge paths
+  │    └─ DBSCAN clustering within each connected region
+  │
+  ├─ Association Graph Construction (§5)
+  │    └─ K-D tree proximity on the zero-crossing isocontour
+  │
+  ├─ Graph Pruning (§6)
+  │    ├─ Node pruning (amplitude threshold)
+  │    └─ Edge pruning (weight, aspect ratio, longitude separation)
+  │
+  ├─ Path Extraction &amp; Ranking (§7)
+  │    ├─ Monotonic-eastward simple paths
+  │    ├─ Region-wrap detection and splitting
+  │    └─ Greedy independent-set selection
+  │
+  ├─ Polygon Footprints (§8)
+  │    ├─ Per-node convex hulls in stereographic projection
+  │    └─ Weighted centroid computation
+  │
+  ├─ Rasterisation &amp; Quadtree (§9)
+  │    └─ 512×512 stereographic raster → quadtree decomposition
+  │
+  └─ Temporal Tracking (§10)
+       ├─ Quadtree merge → overlap weights
+       ├─ Distance pruning
+       └─ Topological-sort DP → track extraction</code></pre>
+<hr>
+</section>
+</section>
+<section id="extrema-detection" class="level2">
+<h2 class="anchored" data-anchor-id="extrema-detection">2. Extrema Detection</h2>
+<p><strong>File:</strong> <code>waper/identification/max_min.py</code></p>
+<p>Local maxima and minima of the scalar field are detected using SciPy’s <code>maximum_filter</code> and <code>minimum_filter</code> with a 3×3 kernel. The longitude dimension uses <code>wrap</code> mode to handle the periodic boundary; the latitude dimension uses <code>constant</code> mode.</p>
+<p>A point is flagged as a maximum if its value equals the local maximum in the 3×3 neighbourhood. Minima are identified analogously.</p>
+<p>The detected extrema are then filtered by an amplitude threshold (<code>extrema_threshold</code>): only maxima exceeding this value (and minima below its negation) are retained. This is done via VTK’s <code>clip_scalar</code>, which also provides the connectivity information needed in the next step.</p>
+<section id="key-parameters" class="level3">
+<h3 class="anchored" data-anchor-id="key-parameters">Key parameters</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 42%">
+<col style="width: 34%">
+<col style="width: 23%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Parameter</th>
+<th>Default</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>clip_value</code></td>
+<td>2</td>
+<td>Threshold for clipping the scalar field into positive/negative regions</td>
+</tr>
+<tr class="even">
+<td><code>extrema_threshold</code></td>
+<td>10</td>
+<td>Minimum absolute value for an extremum to be retained</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+</section>
+<section id="connected-region-labelling" class="level2">
+<h2 class="anchored" data-anchor-id="connected-region-labelling">3. Connected Region Labelling</h2>
+<p><strong>File:</strong> <code>waper/identification/topology.py</code> → <code>identify_connected_regions()</code>, <code>add_connectivity_data_min()</code></p>
+<p>After clipping the scalar field at <code>±clip_value</code>, each contiguous region of the same sign is assigned a unique <code>RegionId</code> using VTK’s <code>vtkConnectivityFilter</code> (extraction mode: all regions, with colour-by-region enabled). This produces a labelling where every grid point in a positive (negative) region shares a <code>RegionId</code> with its spatially connected neighbours.</p>
+<p>The <code>RegionId</code> serves two purposes:</p>
+<ol type="1">
+<li><strong>Clustering scope</strong> — Extrema are only clustered with other extrema in the same connected region (§4).</li>
+<li><strong>Wrap detection</strong> — During path extraction (§7), if two same-type nodes in a candidate path share a <code>RegionId</code>, the path has “wrapped around” to revisit the same physical feature and is split.</li>
+</ol>
+<hr>
+</section>
+<section id="extrema-clustering" class="level2">
+<h2 class="anchored" data-anchor-id="extrema-clustering">4. Extrema Clustering</h2>
+<p><strong>File:</strong> <code>waper/identification/topology.py</code> → <code>cluster_extrema()</code></p>
+<p>Within each connected region, nearby extrema of the same sign are grouped into clusters. Each cluster represents a single wave component (a ridge or trough). The clustering proceeds as follows:</p>
+<section id="distance-matrix-computation" class="level3">
+<h3 class="anchored" data-anchor-id="distance-matrix-computation">4.1 Distance matrix computation</h3>
+<p>For every pair of extrema within the same <code>RegionId</code>, the geodesic distance along the mesh is computed using VTK’s <code>vtkDijkstraGraphGeodesicPath</code>. This gives the distance <em>along the scalar field surface</em>, not the great-circle distance — an important distinction because it respects the field’s geometry.</p>
+<p>Pairs in different connected regions are never compared (their distance is set to <code>CLUSTER_MAX_DISTANCE = 15000 km</code>).</p>
+</section>
+<section id="hill-climbing-penalty" class="level3">
+<h3 class="anchored" data-anchor-id="hill-climbing-penalty">4.2 Hill-climbing penalty</h3>
+<p>The raw geodesic distance is augmented with a penalty that discourages merging extrema separated by a region where the scalar field crosses back through zero or changes sign. This prevents two peaks on opposite sides of a ridge from being clustered together.</p>
+<p>For maxima (<code>sign &gt; 0</code>):</p>
+<ul>
+<li>The <strong>reference value</strong> is the weaker (smaller) of the two peak values.</li>
+<li>The <strong>path minimum</strong> is the smallest scalar value along the Dijkstra path.</li>
+<li>The <strong>fractional descent</strong> is <code>f = max(0, (reference − path_minimum) / |reference|)</code>.</li>
+</ul>
+<p>For minima (<code>sign &lt; 0</code>):</p>
+<ul>
+<li>The <strong>reference value</strong> is the weaker (least negative) trough.</li>
+<li>The <strong>path maximum</strong> is the largest scalar value along the Dijkstra path.</li>
+<li>The <strong>fractional descent</strong> is <code>f = max(0, (path_maximum − reference) / |reference|)</code>.</li>
+</ul>
+<p>The penalty added to the geodesic distance is:</p>
+<pre><code>penalty = f × penalty_length_scale_km</code></pre>
+<p><strong>Example:</strong> Two maxima at 30 and 25 m/s, with the Dijkstra path dipping to 10 m/s. Reference = 25, descent = 15, f = 0.6, penalty = 0.6 × 2000 = 1200 km added to the geodesic distance. This makes it harder for DBSCAN to place them in the same cluster.</p>
+</section>
+<section id="dbscan-clustering" class="level3">
+<h3 class="anchored" data-anchor-id="dbscan-clustering">4.3 DBSCAN clustering</h3>
+<p>The penalised distance matrix is passed to <code>sklearn.cluster.DBSCAN</code> with <code>metric="precomputed"</code> and <code>min_samples=1</code>. This means every extremum is assigned to a cluster (no noise label), but extrema that are too far apart (after penalty) end up in separate clusters.</p>
+<p>Any extrema left unassigned after the per-region DBSCAN passes are given singleton cluster IDs.</p>
+</section>
+<section id="key-parameters-1" class="level3">
+<h3 class="anchored" data-anchor-id="key-parameters-1">Key parameters</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 42%">
+<col style="width: 34%">
+<col style="width: 23%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Parameter</th>
+<th>Default</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>cluster_max_eps_km</code></td>
+<td>3000</td>
+<td>DBSCAN <code>eps</code> — maximum neighbourhood radius in km</td>
+</tr>
+<tr class="even">
+<td><code>cluster_min_samples</code></td>
+<td>2</td>
+<td>DBSCAN <code>min_samples</code></td>
+</tr>
+<tr class="odd">
+<td><code>cluster_xi</code></td>
+<td>0.15</td>
+<td>(Reserved for OPTICS; not currently used with DBSCAN)</td>
+</tr>
+<tr class="even">
+<td><code>penalty_length_scale_km</code></td>
+<td>2000</td>
+<td>Scaling factor for the hill-climbing penalty</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+</section>
+<section id="association-graph-construction" class="level2">
+<h2 class="anchored" data-anchor-id="association-graph-construction">5. Association Graph Construction</h2>
+<p><strong>File:</strong> <code>waper/identification/rwp_graph.py</code> → <code>compute_association_graph()</code></p>
+<p>The association graph is a bipartite graph connecting maxima clusters to minima clusters. It encodes which ridges and troughs are adjacent and potentially part of the same wave packet.</p>
+<section id="node-representation" class="level3">
+<h3 class="anchored" data-anchor-id="node-representation">5.1 Node representation</h3>
+<p>Each node in the graph is identified by a tuple <code>("max", cluster_id)</code> or <code>("min", cluster_id)</code>. Node attributes include:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 45%">
+<col style="width: 54%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Attribute</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>coords</code></td>
+<td><code>(longitude, latitude)</code> of the cluster’s peak/trough point</td>
+</tr>
+<tr class="even">
+<td><code>spherical_coords</code></td>
+<td>3D Cartesian coordinates on the VTK sphere</td>
+</tr>
+<tr class="odd">
+<td><code>cluster_id</code></td>
+<td>Integer cluster label</td>
+</tr>
+<tr class="even">
+<td><code>scalar</code></td>
+<td>Peak scalar value in the cluster</td>
+</tr>
+<tr class="odd">
+<td><code>node_type</code></td>
+<td><code>"max"</code> or <code>"min"</code></td>
+</tr>
+<tr class="even">
+<td><code>cluster_extrema</code></td>
+<td>List of all extrema points in the cluster</td>
+</tr>
+<tr class="odd">
+<td><code>region_id</code></td>
+<td><code>RegionId</code> of the connected component this cluster belongs to</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="edge-construction-via-the-zero-crossing-isocontour" class="level3">
+<h3 class="anchored" data-anchor-id="edge-construction-via-the-zero-crossing-isocontour">5.2 Edge construction via the zero-crossing isocontour</h3>
+<p>The zero-value isocontour of the scalar field is extracted using VTK’s <code>vtkContourFilter</code>. For each point on this isocontour, the nearest maximum cluster and nearest minimum cluster are found using two separate K-D trees (built from the 3D spherical coordinates of the extrema).</p>
+<p>If a <code>(max_id, min_id)</code> pair is linked by at least one isocontour point, an edge is added to the association graph. This ensures that only clusters separated by a zero-crossing — i.e., genuinely alternating ridges and troughs — are connected.</p>
+<hr>
+</section>
+</section>
+<section id="graph-pruning" class="level2">
+<h2 class="anchored" data-anchor-id="graph-pruning">6. Graph Pruning</h2>
+<p><strong>File:</strong> <code>waper/identification/rwp_graph.py</code> → <code>prune_association_graph_nodes()</code>, <code>prune_association_graph_edges()</code></p>
+<section id="node-pruning" class="level3">
+<h3 class="anchored" data-anchor-id="node-pruning">6.1 Node pruning</h3>
+<p>Edges whose weaker endpoint has <code>|scalar| &lt; node_pruning_threshold</code> are removed, along with any nodes that become disconnected. A maximum scalar cap (<code>WAPER_MAX_SCALAR_VALUE = 100</code>) also filters out unrealistically large values.</p>
+<p>The “weaker endpoint” is determined as the minimum of <code>max_scalar</code> and <code>|min_scalar|</code> for each edge, ensuring that both the ridge and trough are sufficiently strong.</p>
+</section>
+<section id="edge-pruning" class="level3">
+<h3 class="anchored" data-anchor-id="edge-pruning">6.2 Edge pruning</h3>
+<p>Each surviving edge is evaluated on three criteria. Edges failing any criterion are discarded.</p>
+<section id="longitude-separation" class="level4">
+<h4 class="anchored" data-anchor-id="longitude-separation">6.2.1 Longitude separation</h4>
+<p>The shortest angular separation in longitude between the two endpoints must exceed <code>min_longitude_separation</code> (default: 6°). This prevents spurious connections between very close clusters that happen to be separated by a zero-crossing.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>dlon <span class="op">=</span> _longitude_separation(lon_0, lon_1)  <span class="co"># handles wraparound</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> dlon <span class="op">&lt;=</span> min_longitude_separation:</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    discard</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="aspect-ratio" class="level4">
+<h4 class="anchored" data-anchor-id="aspect-ratio">6.2.2 Aspect ratio</h4>
+<p>The ratio <code>|Δlat| / |Δlon|</code> must not exceed <code>max_aspect_ratio</code> (default: 1.5). This rejects nearly-meridional connections that do not represent the zonal propagation characteristic of RWPs.</p>
+</section>
+<section id="edge-weight" class="level4">
+<h4 class="anchored" data-anchor-id="edge-weight">6.2.3 Edge weight</h4>
+<p>The edge weight is computed as:</p>
+<pre><code>weight = (max_scalar − min_scalar) / haversine_distance × zonal_fraction</code></pre>
+<p>where:</p>
+<ul>
+<li><code>max_scalar − min_scalar</code> is the amplitude contrast across the edge (always positive since max &gt; 0 and min &lt; 0).</li>
+<li><code>haversine_distance</code> is the great-circle distance between the cluster centres in km.</li>
+<li><code>zonal_fraction = Δlon / √(Δlon² + Δlat²)</code> is an orientation penalty that ranges from 1.0 (perfectly zonal edge) to 0.0 (perfectly meridional edge). This ensures that tilted edges receive lower weight, making the algorithm prefer zonally-oriented wave packet structures.</li>
+</ul>
+<p>Edges with weight outside the range <code>[edge_pruning_threshold, max_edge_weight]</code> are discarded.</p>
+</section>
+</section>
+<section id="key-parameters-2" class="level3">
+<h3 class="anchored" data-anchor-id="key-parameters-2">Key parameters</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 42%">
+<col style="width: 34%">
+<col style="width: 23%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Parameter</th>
+<th>Default</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>node_pruning_threshold</code></td>
+<td>20</td>
+<td>Minimum <code>|scalar|</code> for both endpoints</td>
+</tr>
+<tr class="even">
+<td><code>edge_pruning_threshold</code></td>
+<td>3×10⁻⁵</td>
+<td>Minimum edge weight</td>
+</tr>
+<tr class="odd">
+<td><code>max_edge_weight</code></td>
+<td>1.0</td>
+<td>Maximum edge weight (rejects unrealistic gradients)</td>
+</tr>
+<tr class="even">
+<td><code>min_longitude_separation</code></td>
+<td>6.0°</td>
+<td>Minimum Δlon between connected clusters</td>
+</tr>
+<tr class="odd">
+<td><code>max_aspect_ratio</code></td>
+<td>1.5</td>
+<td>Maximum <code>|Δlat|/|Δlon|</code> for an edge</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+</section>
+<section id="path-extraction-and-ranking" class="level2">
+<h2 class="anchored" data-anchor-id="path-extraction-and-ranking">7. Path Extraction and Ranking</h2>
+<p><strong>File:</strong> <code>waper/identification/rwp_graph.py</code> → <code>get_ranked_paths()</code></p>
+<p>After pruning, the association graph contains only physically plausible connections. RWP paths are extracted from this graph as the highest-weight non-overlapping simple paths.</p>
+<section id="candidate-enumeration" class="level3">
+<h3 class="anchored" data-anchor-id="candidate-enumeration">7.1 Candidate enumeration</h3>
+<p>All simple paths between all pairs of nodes are enumerated using <code>nx.all_simple_paths()</code>. Each candidate path must satisfy:</p>
+<ul>
+<li><strong>Monotonically eastward:</strong> Every successive node must be east of the previous one. This enforces the physical expectation that RWP components are arranged west-to-east.</li>
+</ul>
+<p>The <code>is_to_the_east()</code> utility handles longitude wraparound (e.g., 350° is west of 10°).</p>
+</section>
+<section id="region-wrap-detection-and-splitting" class="level3">
+<h3 class="anchored" data-anchor-id="region-wrap-detection-and-splitting">7.2 Region-wrap detection and splitting</h3>
+<p>A candidate path may span a very large fraction of the hemisphere, wrapping around to revisit the same connected component of the scalar field. This is non-physical — an RWP should not include the same ridge or trough twice.</p>
+<p><strong>Detection:</strong> For each candidate path, the algorithm checks whether any two same-type nodes (both <code>"max"</code> or both <code>"min"</code>) share the same <code>region_id</code>. Since <code>region_id</code> identifies connected components of the positive (for maxima) or negative (for minima) scalar field, a duplicate means the path has looped back to the same physical feature.</p>
+<p><strong>Splitting:</strong> When a wrap is detected, the path is split at its <strong>weakest edge</strong> (lowest weight). The weakest edge is the natural cut point because:</p>
+<ul>
+<li>It represents the least confident connection in the path.</li>
+<li>Thanks to the <code>zonal_fraction</code> penalty in the edge weight, tilted or long-distance edges tend to have lower weight, so they are preferentially cut.</li>
+</ul>
+<p>Splitting is applied <strong>recursively</strong>: each sub-path is checked for wrapping and split again if needed. Sub-paths with fewer than 2 nodes are discarded.</p>
+</section>
+<section id="path-scoring-and-greedy-selection" class="level3">
+<h3 class="anchored" data-anchor-id="path-scoring-and-greedy-selection">7.3 Path scoring and greedy selection</h3>
+<p>Each candidate path (after any splitting) is scored by the sum of its edge weights. Paths are sorted by score in descending order and selected greedily:</p>
+<ol type="1">
+<li>Select the highest-weight path.</li>
+<li>Mark all its nodes as “used”.</li>
+<li>Select the next highest-weight path whose nodes are all disjoint from already-used nodes.</li>
+<li>Repeat until no more disjoint paths remain.</li>
+</ol>
+<p>This produces a set of non-overlapping RWP paths that maximise total weight.</p>
+<hr>
+</section>
+</section>
+<section id="polygon-footprints" class="level2">
+<h2 class="anchored" data-anchor-id="polygon-footprints">8. Polygon Footprints</h2>
+<p><strong>File:</strong> <code>waper/tracking/rwp_polygon.py</code> → <code>get_polygon_for_rwp_path()</code></p>
+<p>Each identified RWP path is converted into a 2D polygon footprint for visualisation and for the overlap-based tracking in §10.</p>
+<section id="region-point-extraction" class="level3">
+<h3 class="anchored" data-anchor-id="region-point-extraction">8.1 Region point extraction</h3>
+<p>For each node in the path, the scalar field is clipped at <code>±(path_max / 3)</code>, where <code>path_max</code> is the strongest absolute scalar value in the path. Points in the connected region closest to the node’s spherical coordinates are collected.</p>
+</section>
+<section id="hull-construction" class="level3">
+<h3 class="anchored" data-anchor-id="hull-construction">8.2 Hull construction</h3>
+<p>Points are projected from <code>(lon, lat)</code> to a polar stereographic coordinate system (north or south pole, via <code>pyproj</code>). Three hull methods are available:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 38%">
+<col style="width: 61%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Method</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>"per_node"</code> (default)</td>
+<td>Convex hull of each node’s region points, then union of all per-node hulls. Produces a tighter fit that follows the wave structure.</td>
+</tr>
+<tr class="even">
+<td><code>"convex"</code></td>
+<td>Single convex hull of all points across all nodes. Simpler but may include large empty areas between nodes.</td>
+</tr>
+<tr class="odd">
+<td><code>"concave"</code></td>
+<td>Concave hull (Shapely <code>concave_hull</code>, ratio=0.3) of all points. Tighter than convex but more computationally expensive.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="weighted-centroid" class="level3">
+<h3 class="anchored" data-anchor-id="weighted-centroid">8.3 Weighted centroid</h3>
+<p>The representative location of the RWP is computed as the scalar-weighted average of all region points (in stereographic coordinates), then inverse-projected back to <code>(lon, lat)</code>:</p>
+<pre><code>weighted_x = Σ(xᵢ × |vᵢ|) / Σ|vᵢ|
+weighted_y = Σ(yᵢ × |vᵢ|) / Σ|vᵢ|</code></pre>
+<p>This centroid is stored as <code>weighted_longitude</code> and <code>weighted_latitude</code> and used as the node coordinate in the tracking graph.</p>
+<hr>
+</section>
+</section>
+<section id="rasterisation-and-quadtree" class="level2">
+<h2 class="anchored" data-anchor-id="rasterisation-and-quadtree">9. Rasterisation and Quadtree</h2>
+<p><strong>Files:</strong> <code>waper/tracking/rwp_polygon.py</code> → <code>rasterize_all_rwps()</code>; <code>waper/tracking/quadtree.py</code></p>
+<section id="rasterisation" class="level3">
+<h3 class="anchored" data-anchor-id="rasterisation">9.1 Rasterisation</h3>
+<p>All RWP polygons for a given time step are rasterised onto a 512×512 stereographic grid. Each RWP is assigned a unique integer ID; pixels inside the polygon receive that ID, others remain 0. Overlapping polygons are resolved by the rasterisation order.</p>
+</section>
+<section id="quadtree-construction" class="level3">
+<h3 class="anchored" data-anchor-id="quadtree-construction">9.2 Quadtree construction</h3>
+<p>The raster image is recursively split into quadrants (4-ary tree). Each quadtree node stores:</p>
+<ul>
+<li><code>mean</code>: average pixel value</li>
+<li><code>features</code>: set of RWP IDs present in that quadrant</li>
+<li><code>level</code>: depth in the tree</li>
+<li><code>start_pixel</code>: top-left corner of the quadrant</li>
+</ul>
+<p>The quadtree enables efficient spatial overlap queries between time steps without comparing every pixel pair.</p>
+</section>
+<section id="quadtree-merge" class="level3">
+<h3 class="anchored" data-anchor-id="quadtree-merge">9.3 Quadtree merge</h3>
+<p>To compute overlap between RWPs at time <code>t-1</code> and time <code>t</code>, the two quadtrees are merged. The merge walks both trees simultaneously; at leaf nodes, the features from both trees are combined to detect which RWP IDs co-occur in the same spatial region. The overlap size (number of co-occurring pixels) is recorded per <code>(prev_feature, curr_feature)</code> pair.</p>
+<hr>
+</section>
+</section>
+<section id="temporal-tracking" class="level2">
+<h2 class="anchored" data-anchor-id="temporal-tracking">10. Temporal Tracking</h2>
+<p><strong>File:</strong> <code>waper/tracking/tracking_graph.py</code></p>
+<section id="tracking-graph-construction" class="level3">
+<h3 class="anchored" data-anchor-id="tracking-graph-construction">10.1 Tracking graph construction</h3>
+<p>A directed graph is built with nodes <code>(time_index, rwp_id)</code>. For consecutive time steps, edges are added between RWP features that overlap spatially. The edge weight is:</p>
+<pre><code>weight = overlap_pixels / max(size_prev, size_curr)</code></pre>
+<p>where <code>size_prev</code> and <code>size_curr</code> are the total pixel counts of the respective RWP features. This normalisation ensures that the overlap is measured relative to the larger of the two features.</p>
+<p>The haversine distance between the weighted centroids is also stored on each edge.</p>
+</section>
+<section id="tracking-graph-pruning" class="level3">
+<h3 class="anchored" data-anchor-id="tracking-graph-pruning">10.2 Tracking graph pruning</h3>
+<p>Edges whose centroid distance exceeds <code>track_pruning_threshold</code> are removed. This prevents tracking connections between features that are spatially far apart even if they happen to overlap in the raster (e.g., due to large polygons).</p>
+<p>The threshold is a haversine distance <strong>in kilometres</strong>, matching the <code>distance</code> edge attribute stored in §10.1 — it is not an overlap weight. Values below a few hundred km prune every edge and leave an empty graph.</p>
+</section>
+<section id="track-extraction" class="level3">
+<h3 class="anchored" data-anchor-id="track-extraction">10.3 Track extraction</h3>
+<p>Tracks are extracted as heaviest-weight paths through the tracking DAG using a topological-sort dynamic programming algorithm:</p>
+<ol type="1">
+<li>Topologically sort the DAG.</li>
+<li>For each node in order, propagate the best cumulative weight to its successors.</li>
+<li>Starting from each sink node (out-degree 0), trace back through predecessors to reconstruct the heaviest path ending at that sink.</li>
+<li>Apply greedy independent-set selection (same algorithm as §7.3) to produce non-overlapping tracks.</li>
+</ol>
+<p>This runs in O(V + E) time, avoiding the factorial cost of enumerating all simple paths.</p>
+<hr>
+</section>
+</section>
+<section id="appendix-a-complete-parameter-reference" class="level2">
+<h2 class="anchored" data-anchor-id="appendix-a-complete-parameter-reference">Appendix A: Complete Parameter Reference</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 27%">
+<col style="width: 22%">
+<col style="width: 17%">
+<col style="width: 32%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Parameter</th>
+<th>Default</th>
+<th>Stage</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>scalar_name</code></td>
+<td>(required)</td>
+<td>All</td>
+<td>Name of the scalar variable in the input dataset</td>
+</tr>
+<tr class="even">
+<td><code>latitude_label</code></td>
+<td>(required)</td>
+<td>All</td>
+<td>Name of the latitude coordinate</td>
+</tr>
+<tr class="odd">
+<td><code>longitude_label</code></td>
+<td>(required)</td>
+<td>All</td>
+<td>Name of the longitude coordinate</td>
+</tr>
+<tr class="even">
+<td><code>time_label</code></td>
+<td>(required)</td>
+<td>All</td>
+<td>Name of the time coordinate</td>
+</tr>
+<tr class="odd">
+<td><code>clip_value</code></td>
+<td>2</td>
+<td>§2–3</td>
+<td>Threshold for clipping into positive/negative regions</td>
+</tr>
+<tr class="even">
+<td><code>extrema_threshold</code></td>
+<td>10</td>
+<td>§2</td>
+<td>Minimum absolute value for retained extrema</td>
+</tr>
+<tr class="odd">
+<td><code>max_latitude</code></td>
+<td>None</td>
+<td>§2</td>
+<td>Northern latitude bound (degrees)</td>
+</tr>
+<tr class="even">
+<td><code>min_latitude</code></td>
+<td>None</td>
+<td>§2</td>
+<td>Southern latitude bound (degrees)</td>
+</tr>
+<tr class="odd">
+<td><code>cluster_max_eps_km</code></td>
+<td>3000</td>
+<td>§4</td>
+<td>DBSCAN neighbourhood radius (km)</td>
+</tr>
+<tr class="even">
+<td><code>cluster_min_samples</code></td>
+<td>2</td>
+<td>§4</td>
+<td>DBSCAN minimum cluster size</td>
+</tr>
+<tr class="odd">
+<td><code>cluster_xi</code></td>
+<td>0.15</td>
+<td>§4</td>
+<td>Reserved for OPTICS</td>
+</tr>
+<tr class="even">
+<td><code>penalty_length_scale_km</code></td>
+<td>2000</td>
+<td>§4</td>
+<td>Hill-climbing penalty scale factor</td>
+</tr>
+<tr class="odd">
+<td><code>node_pruning_threshold</code></td>
+<td>20</td>
+<td>§6.1</td>
+<td>Minimum scalar magnitude for node retention</td>
+</tr>
+<tr class="even">
+<td><code>edge_pruning_threshold</code></td>
+<td>3×10⁻⁵</td>
+<td>§6.2</td>
+<td>Minimum edge weight</td>
+</tr>
+<tr class="odd">
+<td><code>max_edge_weight</code></td>
+<td>1.0</td>
+<td>§6.2</td>
+<td>Maximum edge weight</td>
+</tr>
+<tr class="even">
+<td><code>min_longitude_separation</code></td>
+<td>6.0°</td>
+<td>§6.2</td>
+<td>Minimum Δlon between connected clusters</td>
+</tr>
+<tr class="odd">
+<td><code>max_aspect_ratio</code></td>
+<td>1.5</td>
+<td>§6.2</td>
+<td>Maximum <code>|Δlat|/|Δlon|</code> per edge</td>
+</tr>
+<tr class="even">
+<td><code>hull_method</code></td>
+<td><code>"per_node"</code></td>
+<td>§8</td>
+<td>Polygon construction method</td>
+</tr>
+<tr class="odd">
+<td><code>hemisphere</code></td>
+<td><code>"north"</code></td>
+<td>§8–9</td>
+<td>Stereographic projection pole</td>
+</tr>
+<tr class="even">
+<td><code>track_pruning_threshold</code></td>
+<td>8000 km</td>
+<td>§10.2</td>
+<td>Maximum centroid distance for tracking edges</td>
+</tr>
+<tr class="odd">
+<td><code>debug</code></td>
+<td>False</td>
+<td>All</td>
+<td>Enable debug logging</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="appendix-b-constants" class="level2">
+<h2 class="anchored" data-anchor-id="appendix-b-constants">Appendix B: Constants</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 27%">
+<col style="width: 19%">
+<col style="width: 16%">
+<col style="width: 36%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Constant</th>
+<th>Value</th>
+<th>File</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>WAPER_MAX_SCALAR_VALUE</code></td>
+<td>100</td>
+<td><code>rwp_graph.py</code></td>
+<td>Upper cap on node scalar values</td>
+</tr>
+<tr class="even">
+<td><code>WAPER_MAX_NODE_DISTANCE</code></td>
+<td>1000</td>
+<td><code>rwp_graph.py</code></td>
+<td>(Defined but not actively used)</td>
+</tr>
+<tr class="odd">
+<td><code>CLUSTER_MAX_DISTANCE</code></td>
+<td>15000 km</td>
+<td><code>topology.py</code></td>
+<td>Default distance for cross-region pairs</td>
+</tr>
+<tr class="even">
+<td><code>RADIUS_EARTH_KM</code></td>
+<td>6371</td>
+<td><code>utils.py</code></td>
+<td>Earth radius for haversine</td>
+</tr>
+<tr class="odd">
+<td><code>RADIUS_SPHERE</code></td>
+<td>63.71</td>
+<td><code>utils.py</code></td>
+<td>VTK sphere radius (scaled)</td>
+</tr>
+<tr class="even">
+<td><code>WAPER_IMAGE_SIZE</code></td>
+<td>512</td>
+<td><code>rwp_polygon.py</code></td>
+<td>Raster grid resolution</td>
+</tr>
+<tr class="odd">
+<td><code>WAPER_SUBSAMPLE</code></td>
+<td>5</td>
+<td><code>rwp_polygon.py</code></td>
+<td>Polygon boundary subsampling factor</td>
+</tr>
+<tr class="even">
+<td><code>WAPER_CLUSTER_WIDTH</code></td>
+<td>60°</td>
+<td><code>rwp_polygon.py</code></td>
+<td>Longitude-wraparound detection threshold</td>
+</tr>
+</tbody>
+</table>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
