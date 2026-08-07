@@ -3,7 +3,7 @@ Waper
 A rossby Wave Packet trackER
 .. start-badges
 
-| |build| |docs| |coverage| |maintainability| |better_code_hub| |tech-debt|
+| |build| |docs| |coverage| |maintainability| |tech-debt|
 | |release_version| |wheel| |supported_versions| |gh-lic| |commits_since_specific_tag_on_master| |commits_since_latest_github_release|
 
 |
@@ -28,16 +28,8 @@ Development
 Here are some useful notes related to doing development on this project.
 
 1. **Test Suite**, using `pytest`_, located in `tests` dir
-2. **Parallel Execution** of Unit Tests, on multiple cpu's
-3. **Documentation Pages**, hosted on `readthedocs` server, located in `docs` dir
-4. **Automation**, using `tox`_, driven by single `tox.ini` file
-
-   a. **Code Coverage** measuring
-   b. **Build Command**, using the `build`_ python package
-   c. **Pypi Deploy Command**, supporting upload to both `pypi.org`_ and `test.pypi.org`_ servers
-   d. **Type Check Command**, using `mypy`_
-   e. **Lint** *Check* and `Apply` commands, using `isort`_ and `black`_
-5. **CI Pipeline**, running on `Github Actions`_, defined in `.github/`
+2. **Documentation Pages**, hosted on `readthedocs` server, located in `docs` dir
+3. **CI Pipeline**, running on `Github Actions`_, defined in `.github/`
 
    a. **Job Matrix**, spanning different `platform`'s and `python version`'s
 
@@ -93,21 +85,7 @@ License
 
 .. LINKS
 
-.. _tox: https://tox.wiki/en/latest/
-
 .. _pytest: https://docs.pytest.org/en/7.1.x/
-
-.. _build: https://github.com/pypa/build
-
-.. _pypi.org: https://pypi.org/
-
-.. _test.pypi.org: https://test.pypi.org/
-
-.. _mypy: https://mypy.readthedocs.io/en/stable/
-
-.. _isort: https://pycqa.github.io/isort/
-
-.. _black: https://black.readthedocs.io/en/stable/
 
 .. _Github Actions: https://github.com/JoyMonteiro/waper/actions
 
@@ -168,14 +146,6 @@ License
 
 
 .. CODE QUALITY
-
-.. Better Code Hub
-.. Software Design Patterns
-
-.. |better_code_hub| image:: https://bettercodehub.com/edge/badge/JoyMonteiro/waper?branch=master
-    :alt: Better Code Hub
-    :target: https://bettercodehub.com/
-
 
 .. Code Climate CI
 .. Code maintainability & Technical Debt
