@@ -129,7 +129,6 @@ ignore = [
 # They also use the same compact `a = f(); a.x = 1` idiom as the tests.
 "scripts/*" = ["E402", "E702"]
 "datasets/*" = ["E402", "E702"]
-"docs/conf.py" = ["E402"]
 # Tests set up fixtures with a deliberately compact one-line idiom
 # (`f0 = _feat(0, "max", 0); f0.lat = 60.0`).
 "tests/*" = ["E702"]

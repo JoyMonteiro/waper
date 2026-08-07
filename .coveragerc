@@ -1,6 +1,6 @@
 [run]
 source =
-    my_new_project
+    waper
     tests
 
 [report]
