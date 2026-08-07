@@ -1,6 +1,7 @@
 name: Test Python Package
 
-# Runs the test suite on every push and on pull requests into main.
+# Runs the test suite and the lint/type checks on every push and on pull
+# requests into main.
 #
 # Note on scope: this workflow deliberately does NOT go through tox. `tox.ini` is
 # unmodified cookiecutter scaffolding (it targets a `src/my_new_project` layout that
@@ -24,6 +25,38 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned to 3.12: mypy reads numpy's bundled stubs, which use `type`
+      # statement syntax that only parses on 3.12+.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      # Full dependencies, because numpy/pandas/matplotlib ship `py.typed` and
+      # mypy only sees their real types when they are installed. Neither tool
+      # imports the package, so the OpenGL runtime the test job needs is not
+      # required here. The linters are then pinned over whatever `[dev]`
+      # resolved, so a new ruff or mypy release cannot fail an unrelated push;
+      # bump these deliberately.
+      - name: Install package and linters
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip install ruff==0.16.1 mypy==2.3.0
+
+      - name: ruff
+        run: ruff check .
+
+      - name: mypy
+        run: mypy
+
   test_suite:
     runs-on: ubuntu-latest
     strategy:
