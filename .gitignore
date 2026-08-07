@@ -23,3 +23,32 @@ test-results/
 uml-diagrams/
 pydoer-graphs/
 .venv/
+
+# ---------------------------------------------------------------------------
+# Data files. These are large (validation.nc alone is 3.9 GB) and must never be
+# committed. The small fixtures below were already tracked before this rule
+# existed and are un-ignored so they stay visible as the canonical test data;
+# do not add new .nc files to that list without a good reason.
+*.nc
+!datasets/event_winds_abs_1.nc
+!datasets/event_winds_abs_2.nc
+!datasets/forecast_bust.nc
+!datasets/souders_v_1.nc
+!datasets/souders_v_2.nc
+!datasets/v_winds_300mb_nh_2022_2023.nc
+*.grib
+*.h5
+*.hdf5
+*.zarr/
+
+# Reference papers. Two were already tracked; the rest stay local.
+*.pdf
+!references/An_algorithm_for_Identification_and_Tracking_of_Rossby_Wave_Packets.pdf
+!"references/Pandey et al. - 2020 - An Integrated Geometric and Topological Approach for the Identification and Visual Analysis of Rossb.pdf"
+
+# Generated figure dumps (datasets/figures/ is covered above)
+zimin_comparison_plots/
+
+# Editor / tooling scratch
+*.chat
+.ipynb_checkpoints/
