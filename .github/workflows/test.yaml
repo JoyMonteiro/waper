@@ -3,10 +3,9 @@ name: Test Python Package
 # Runs the test suite and the lint/type checks on every push and on pull
 # requests into main.
 #
-# Note on scope: this workflow deliberately does NOT go through tox. `tox.ini` is
-# unmodified cookiecutter scaffolding (it targets a `src/my_new_project` layout that
-# has never existed in this repo) and every tox env it defines is broken. The suite
-# is run with pytest directly against the flat `waper/` package.
+# Note on scope: the suite is run with pytest directly against the flat `waper/`
+# package. There is no test-runner wrapper; these are the same commands a
+# contributor runs locally (see CONTRIBUTING.md).
 #
 # Slow tests are deselected: they load `datasets/forecast_bust_hourly.nc` and
 # `datasets/v_winds_300mb_nh_2022_2023.nc`, which are gitignored data files not
