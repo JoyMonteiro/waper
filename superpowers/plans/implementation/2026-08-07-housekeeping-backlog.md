@@ -144,9 +144,36 @@
     classified the project AGPLv3 while `LICENSE` is a genuine BSD 3-Clause. Joy ruled BSD;
     the classifier is now `License :: OSI Approved :: BSD License`, PyPI having no
     3-Clause-specific trove string.
-  - Deferred, not done here: `docs/algorithm.md` §1 still describes plain footprint overlap,
-    which the energy-weighted tracking on this branch supersedes; and the generated API pages
-    are signature-only because no public class carries a docstring yet.
+  - Deferred, not done here: ~~`docs/algorithm.md` §1 still describes plain footprint
+    overlap~~ (**closed 2026-08-07**, see below); and the generated API pages are
+    signature-only because no public class carries a docstring yet.
+
+- [x] **Resync `docs/algorithm.md` with the shipped algorithm — done 2026-08-07.** The
+      backlog listed only the stale §1 overview; re-reading the whole document against the
+      tree found the staleness ran through the entire tracking chain, plus two shipped
+      features that were never documented at all.
+  - §1 overview and pipeline diagram: footprint overlap → energy-weighted overlap; the
+    quadtree-merge and distance-pruning steps rewritten.
+  - §7.4 **Branch resolution** and §7.5 **Orphan reassignment** are new. `get_ranked_paths`
+    has rejected interleave-in-band candidates and run `reassign_orphans` since the
+    `lat_gate` work shipped, and §7.3 still described plain greedy disjoint-node selection.
+    Note for anyone reading the code next: on an orphan win the path is *cut back* to the
+    neighbour (`path[:j+1]`) and the arm's nodes re-orphan — it is a replacement, not an
+    append, which the function's own docstring states but the splice expression obscures.
+  - §9 is now "Rasterisation" (not "…and Quadtree") and gains §9.2 for the energy raster —
+    `energy_disks` burns a `scalar²` disk of radius `energy_radius_km` around each extremum
+    onto the §9.1 grid. §9.3 records that **the quadtree is no longer on the tracking path**:
+    it is still built per time step into `WaperSingleTimestepData.quadtree` and consumed by
+    nothing but `tests/test_tracking.py`. Deleting it is a live candidate, but it is a code
+    change on a public dataclass field, so it is not folded into a doc task.
+  - §10.1's `overlap_pixels / max(size_prev, size_curr)` replaced by the real formula:
+    `Σ sqrt(E_prev·E_curr)` over shared pixels, over `max(E(a), E(b))`. This also resolved
+    an internal contradiction — §10.2 already called it "the envelope-level energy overlap
+    of §10.1" while §10.1 still described pixel counts.
+  - Appendix A gained `lat_gate` (15.0°) and `energy_radius_km` (500), neither of which had
+    ever appeared in the parameter reference.
+  - Verified: `quarto render docs/algorithm.md` succeeds, every `§n.n` cross-reference in the
+    file resolves after the renumbering, `ruff check .` clean, suite 139 passed / 1 skipped.
 
 - [x] **Reclaim ~4 GB of local git bloat — done 2026-08-07.** Re-verified before acting:
       `git hash-object datasets/validation.nc` returned `4a5d3e41…`, byte-identical to the

@@ -58,6 +58,14 @@ account) whose only two real entries have been folded in at the bottom of this f
   would have handed users a release incompatible with the stated requirements.
 - The landing page's description of tracking now matches the code on this branch: an
   energy-weighted overlap (`waper/tracking/energy_overlap.py`), not plain footprint overlap.
+- `docs/algorithm.md` resynced with the shipped algorithm. Tracking is described as the
+  energy-weighted overlap it is throughout — §1, the pipeline diagram, and §10.1's weight
+  formula, which still gave `overlap_pixels / max(size_prev, size_curr)` and so contradicted
+  §10.2 one screen below it. Two shipped features are documented for the first time: §7.4
+  branch resolution and §7.5 orphan reassignment (the `lat_gate` machinery in
+  `get_ranked_paths`/`reassign_orphans`), and §9.2 the energy raster (`energy_disks` +
+  `rasterize_energy`). §9.3 now records that the quadtree, though still built per time step,
+  no longer feeds tracking. Appendix A gains `lat_gate` and `energy_radius_km`.
 
 #### Fixed
 - `track_pruning_threshold` is a haversine distance **in km**, not an overlap weight. The

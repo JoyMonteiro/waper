@@ -26,7 +26,10 @@ The pipeline has two main stages:
    minima, cluster them, build an association graph, prune it, and extract
    RWP paths.
 2. **Tracking** — Connect RWP features across consecutive time steps using
-   spatial overlap of rasterised polygon footprints.
+   the *energy-weighted* overlap of their rasterised footprints. The weight
+   counts each shared pixel by the amplitude carried there rather than by the
+   pixel itself, so the energetic core of a packet drives the association and
+   the weak periphery contributes almost nothing.
 
 ### Pipeline diagram
 
@@ -56,18 +59,21 @@ Input scalar field (e.g. meridional wind at 300 hPa)
   ├─ Path Extraction & Ranking (§7)
   │    ├─ Monotonic-eastward simple paths
   │    ├─ Region-wrap detection and splitting
-  │    └─ Greedy independent-set selection
+  │    ├─ Greedy independent-set selection + interleave-in-band gate
+  │    └─ Orphan reassignment
   │
   ├─ Polygon Footprints (§8)
   │    ├─ Per-node convex hulls in stereographic projection
   │    └─ Weighted centroid computation
   │
-  ├─ Rasterisation & Quadtree (§9)
-  │    └─ 512×512 stereographic raster → quadtree decomposition
+  ├─ Rasterisation (§9)
+  │    ├─ 512×512 stereographic feature-ID raster
+  │    ├─ 512×512 stereographic energy raster (disks around extrema)
+  │    └─ Quadtree decomposition (retained, off the tracking path)
   │
   └─ Temporal Tracking (§10)
-       ├─ Quadtree merge → overlap weights
-       ├─ Distance pruning
+       ├─ Energy overlap → edge weights
+       ├─ Distance pruning (and optional weight gate)
        └─ Topological-sort DP → track extraction
 ```
 
@@ -352,10 +358,53 @@ weights. Paths are sorted by score in descending order and selected greedily:
 1. Select the highest-weight path.
 2. Mark all its nodes as "used".
 3. Select the next highest-weight path whose nodes are all disjoint from
-   already-used nodes.
-4. Repeat until no more disjoint paths remain.
+   already-used nodes **and** which does not interleave in band with any
+   already-accepted path (§7.4).
+4. Repeat until no more admissible paths remain.
 
 This produces a set of non-overlapping RWP paths that maximise total weight.
+
+### 7.4 Branch resolution
+
+Node-disjointness alone is too weak a separation criterion. Two paths can use
+entirely different nodes and still trace the same wave train — one running
+along the ridge crests and the other along a parallel set of extrema a few
+degrees to the north — which reports one packet as two.
+
+**The interleave-in-band test.** Two paths are considered the same branch when
+both hold:
+
+- their longitude spans overlap (as arcs, so the test is wraparound-safe), and
+- their latitude ranges lie within `lat_gate` degrees of each other — either
+  overlapping outright, or separated by a gap of at most `lat_gate`.
+
+A candidate that interleaves in band with an accepted path is rejected, no
+matter how well it scores.
+
+### 7.5 Orphan reassignment
+
+Rejecting a whole path to resolve a branch leaves its nodes unassigned. A
+fixed-point pass (`reassign_orphans`, at most 50 iterations) tries to place
+each leftover node:
+
+1. Find the orphan's highest-weight neighbour that is already in a path and
+   within `lat_gate` degrees of latitude. With no such neighbour the orphan is
+   passed over and stays unassigned, so it reaches no output path.
+2. Determine which side of that neighbour the orphan sits on — east or west —
+   and compare its edge weight against the **arm weight**: the summed edge
+   weights of the path's existing continuation on that same side. The orphan
+   and that arm are rival branches out of the neighbour, and only one can be
+   kept.
+3. If the orphan's edge does not beat the arm weight, drop the orphan — an arm
+   it merely ties is kept. Otherwise the orphan wins: the path is cut back to
+   the neighbour and the orphan spliced on in the arm's place, provided the
+   result does not interleave in band (§7.4) with any other accepted path. If
+   it would, the orphan is dropped and the arm survives.
+
+Only one change is applied per iteration, and the orphan set is recomputed
+afterwards — the nodes of a displaced arm become orphans themselves and may
+re-attach elsewhere on a later pass, which is what the iteration is for. Paths
+left with fewer than 2 nodes are discarded.
 
 ---
 
@@ -399,19 +448,42 @@ used as the node coordinate in the tracking graph.
 
 ---
 
-## 9. Rasterisation and Quadtree
+## 9. Rasterisation
 
-**Files:** `waper/tracking/rwp_polygon.py` → `rasterize_all_rwps()`;
-`waper/tracking/quadtree.py`
+**Files:** `waper/tracking/rwp_polygon.py` → `rasterize_all_rwps()`,
+`energy_disks()`, `rasterize_energy()`; `waper/tracking/quadtree.py`
 
-### 9.1 Rasterisation
+Each time step produces **two** rasters on the same 512×512 stereographic
+grid: a feature-ID raster saying *which* RWP occupies a pixel, and an energy
+raster saying *how much amplitude* sits there. Tracking (§10) reads both.
+
+### 9.1 Feature-ID rasterisation
 
 All RWP polygons for a given time step are rasterised onto a 512×512
 stereographic grid. Each RWP is assigned a unique integer ID; pixels inside
 the polygon receive that ID, others remain 0. Overlapping polygons are
 resolved by the rasterisation order.
 
-### 9.2 Quadtree construction
+### 9.2 Energy rasterisation
+
+The polygon footprint is a hull — it says where a packet is, not where its
+strength is concentrated. The energy raster supplies the second half.
+
+For every node of every identified RWP path, a disk of radius
+`energy_radius_km` (500 km by default) is drawn around the extremum in
+stereographic coordinates and burned in with a value of `scalar²`, the squared
+amplitude at that node. The disks are rasterised onto the same grid and
+transform as §9.1, with `all_touched=True`, giving a float raster that is 0
+where no disk reaches.
+
+The result is peaked on the ridge and trough cores and near-zero over the
+broad quiet interior of a hull, which is exactly the weighting §10.1 wants.
+
+`energy_radius_km` must stay large enough that the disks cover each RWP's
+footprint: a feature whose pixels receive no disk has zero total energy and
+drops out of tracking entirely.
+
+### 9.3 Quadtree construction
 
 The raster image is recursively split into quadrants (4-ary tree). Each
 quadtree node stores:
@@ -421,36 +493,58 @@ quadtree node stores:
 - `level`: depth in the tree
 - `start_pixel`: top-left corner of the quadrant
 
-The quadtree enables efficient spatial overlap queries between time steps
-without comparing every pixel pair.
+The quadtree was built to answer spatial overlap queries between time steps
+without comparing every pixel pair, and a quadtree merge supplied the
+`(prev_feature, curr_feature)` pixel-overlap counts that tracking once used.
 
-### 9.3 Quadtree merge
-
-To compute overlap between RWPs at time `t-1` and time `t`, the two quadtrees
-are merged. The merge walks both trees simultaneously; at leaf nodes, the
-features from both trees are combined to detect which RWP IDs co-occur in the
-same spatial region. The overlap size (number of co-occurring pixels) is
-recorded per `(prev_feature, curr_feature)` pair.
+**It is no longer on the tracking path.** §10.1 now computes overlap directly
+from the two rasters, so the quadtree is built per time step
+(`WaperSingleTimestepData.quadtree`) and consumed by nothing but its own
+tests.
 
 ---
 
 ## 10. Temporal Tracking
 
-**File:** `waper/tracking/tracking_graph.py`
+**Files:** `waper/tracking/tracking_graph.py`;
+`waper/tracking/energy_overlap.py`
 
 ### 10.1 Tracking graph construction
 
 A directed graph is built with nodes `(time_index, rwp_id)`. For consecutive
-time steps, edges are added between RWP features that overlap spatially. The
-edge weight is:
+time steps, edges are added between RWP features that overlap spatially, and
+the edge weight is their **energy-weighted** overlap.
+
+Each feature's size is the energy it carries, summed over its pixels in the
+§9.2 energy raster:
 
 ```
-weight = overlap_pixels / max(size_prev, size_curr)
+E(f) = Σ_{p ∈ f} energy[p]
 ```
 
-where `size_prev` and `size_curr` are the total pixel counts of the respective
-RWP features. This normalisation ensures that the overlap is measured relative
-to the larger of the two features.
+The overlap between a feature `a` at `t-1` and a feature `b` at `t` is the
+summed geometric mean of their per-pixel energies over the pixels they share:
+
+```
+O(a, b) = Σ_{p ∈ a ∩ b} sqrt(energy_prev[p] × energy_curr[p])
+```
+
+and the edge weight normalises that by the larger of the two:
+
+```
+weight = O(a, b) / max(E(a), E(b))
+```
+
+The geometric mean is 0 wherever either side is 0, so the pair only scores on
+pixels where **both** features are energetic — two hulls that graze each other
+across their quiet peripheries produce a weight near 0 even though their pixel
+overlap may be large. Compared with the pixel-count overlap this replaced, a
+core that moves changes the weight even while the broad footprints still
+overlap. Normalising by the larger energy keeps the weight in (0, 1].
+
+An edge is only created when the overlap is strictly positive and the larger
+energy is non-zero. Features absent from the energy raster therefore never
+acquire edges, and time steps missing either raster are skipped.
 
 The haversine distance between the weighted centroids is also stored on each
 edge.
@@ -520,8 +614,10 @@ simple paths.
 | `max_edge_weight` | 1.0 | §6.2 | Maximum edge weight |
 | `min_longitude_separation` | 6.0° | §6.2 | Minimum Δlon between connected clusters |
 | `max_aspect_ratio` | 1.5 | §6.2 | Maximum `|Δlat|/|Δlon|` per edge |
+| `lat_gate` | 15.0° | §7.4–7.5 | Latitude band within which two paths count as the same branch, and the maximum latitude offset for absorbing an orphan |
 | `hull_method` | `"per_node"` | §8 | Polygon construction method |
 | `hemisphere` | `"north"` | §8–9 | Stereographic projection pole |
+| `energy_radius_km` | 500 | §9.2 | Radius of the energy disk burned around each extremum |
 | `track_pruning_threshold` | 8000 km | §10.2 | Maximum centroid distance for tracking edges |
 | `track_weight_threshold` | `None` | §10.2 | Minimum envelope overlap weight for tracking edges (disabled by default) |
 | `debug` | False | All | Enable debug logging |
