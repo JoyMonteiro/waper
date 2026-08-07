@@ -6,6 +6,23 @@ account) whose only two real entries have been folded in at the bottom of this f
 
 ## [Unreleased]
 
+### 2026-08-07 — tracking
+
+#### Added
+- `track_weight_threshold`: an optional gate on the envelope-level overlap `weight` of a
+  tracking edge, alongside the existing `track_pruning_threshold` distance gate. The two
+  are independent and prune in opposite directions — distance from above, weight from
+  below — so an edge must clear both. Weight is the energy overlap of two whole-RWP
+  footprints normalised to (0, 1] by the larger feature energy, so the gate also
+  suppresses merges and splits where a small packet is absorbed into a much larger one.
+
+  **Disabled (`None`) by default**, leaving existing behaviour unchanged: it has not been
+  calibrated against a reference dataset. Until now `weight` only influenced track
+  *selection* (the heaviest-path DP of §10.3 deprioritises a weak edge but still keeps it
+  when it is the only one available); this is the first way to remove such an edge
+  outright. Exposed on `WaperConfig`, `Waper.__init__`, `Waper.plot_tracks`, and
+  `prune_tracking_graph`.
+
 ### 2026-08-07 — housekeeping
 
 #### Added

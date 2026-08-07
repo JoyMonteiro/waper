@@ -75,18 +75,29 @@ def build_tracking_graph(time_step_data, number_steps: int | None = None) -> Gra
     return tracking_graph
 
 
-def prune_tracking_graph(tracking_graph, threshold=None) -> Graph:
-    """Remove edges whose centroid displacement exceeds threshold
+def prune_tracking_graph(tracking_graph, threshold=None, weight_threshold=None) -> Graph:
+    """Remove tracking edges that fail the distance and/or overlap-weight gate
 
-    The edge attribute tested is ``distance``, the haversine distance **in km**
-    between the two weighted centroids -- not the overlap ``weight``. A
-    threshold of a few thousand km is the meaningful scale; sub-km values prune
-    every edge and leave an empty graph.
+    The two gates are independent and an edge must clear both. They prune in
+    opposite directions, which is why they cannot share a parameter:
+
+    * ``threshold`` tests the ``distance`` attribute -- the haversine distance
+      **in km** between the two weighted centroids -- and prunes from *above*.
+      A few thousand km is the meaningful scale; sub-km values prune every edge
+      and leave an empty graph.
+    * ``weight_threshold`` tests the ``weight`` attribute -- the envelope-level
+      energy overlap of the two RWP footprints, normalised to (0, 1] by the
+      larger of the two feature energies -- and prunes from *below*. Note that
+      normalising by the larger energy means a small packet absorbed into a
+      much bigger one scores low, so this gate also suppresses size-mismatched
+      merges and splits.
 
     Args:
         tracking_graph (Graph): tracking graph
         threshold (float | None): maximum centroid displacement in km. ``None``
             keeps every edge.
+        weight_threshold (float | None): minimum overlap weight in (0, 1],
+            inclusive. ``None`` keeps every edge.
 
     Returns:
         Graph: pruned tracking graph
@@ -95,7 +106,14 @@ def prune_tracking_graph(tracking_graph, threshold=None) -> Graph:
     pruned_graph = nx.DiGraph()
 
     for edge in tracking_graph.edges:
-        if threshold is None or tracking_graph.edges[edge]["distance"] < threshold:
+        near_enough = (
+            threshold is None or tracking_graph.edges[edge]["distance"] < threshold
+        )
+        strong_enough = (
+            weight_threshold is None
+            or tracking_graph.edges[edge]["weight"] >= weight_threshold
+        )
+        if near_enough and strong_enough:
             pruned_graph.add_node(
                 edge[0], coords=tracking_graph.nodes[edge[0]]["coords"]
             )

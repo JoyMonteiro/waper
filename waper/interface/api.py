@@ -43,6 +43,9 @@ class WaperConfig:
 
     # maximum centroid displacement of a tracking edge, in km
     track_pruning_threshold: float = 8000.0
+    # minimum envelope-level overlap weight of a tracking edge, in (0, 1].
+    # None disables the gate, which is the default: it has not been calibrated.
+    track_weight_threshold: float | None = None
 
     cluster_max_eps_km: float = 3000.0
     cluster_min_samples: int = 2
@@ -302,6 +305,7 @@ class Waper:
         node_pruning_threshold=20,
         edge_pruning_threshold=3e-5,
         track_pruning_threshold=8000.0,
+        track_weight_threshold=None,
         max_edge_weight=1,
         debug=False,
         penalty_length_scale_km=2000.0,
@@ -320,6 +324,7 @@ class Waper:
             node_pruning_threshold=node_pruning_threshold,
             edge_pruning_threshold=edge_pruning_threshold,
             track_pruning_threshold=track_pruning_threshold,
+            track_weight_threshold=track_weight_threshold,
             max_edge_weight=max_edge_weight,
             debug=debug,
             penalty_length_scale_km=penalty_length_scale_km,
@@ -346,7 +351,9 @@ class Waper:
 
         self._tracking_graph = _track_rwps(self._time_step_data, num_time_steps)
         self._pruned_tracking_graph = tracking_graph.prune_tracking_graph(
-            self._tracking_graph, self._config.track_pruning_threshold
+            self._tracking_graph,
+            self._config.track_pruning_threshold,
+            weight_threshold=self._config.track_weight_threshold,
         )
 
     def plot_clusters(self, time_index):
@@ -427,11 +434,15 @@ class Waper:
 
         return _plot_raster(time_step_data.raster_data)
 
-    def plot_tracks(self, threshold=None):
+    def plot_tracks(self, threshold=None, weight_threshold=None):
         if threshold is None:
             threshold = self._config.track_pruning_threshold
+        if weight_threshold is None:
+            weight_threshold = self._config.track_weight_threshold
         pruned = tracking_graph.prune_tracking_graph(
-            self._tracking_graph, threshold=threshold
+            self._tracking_graph,
+            threshold=threshold,
+            weight_threshold=weight_threshold,
         )
         paths = tracking_graph.get_track_paths(pruned)
         return _plot_rwp_paths(

@@ -102,11 +102,11 @@ def test_tracking_path_extraction(simple_wave_field, default_config):
     assert found_long_path
 
 
-def _two_node_graph(distance_km):
+def _two_node_graph(distance_km, weight=0.8):
     g = nx.DiGraph()
     g.add_node((0, 1), coords=(0.0, 50.0))
     g.add_node((1, 1), coords=(10.0, 50.0))
-    g.add_edge((0, 1), (1, 1), weight=0.8, distance=distance_km)
+    g.add_edge((0, 1), (1, 1), weight=weight, distance=distance_km)
     return g
 
 
@@ -143,6 +143,70 @@ def test_default_track_pruning_threshold_does_not_empty_the_graph(two_timestep_f
 def test_prune_threshold_none_keeps_every_edge():
     pruned = tracking_graph.prune_tracking_graph(_two_node_graph(9000.0), None)
     assert pruned.number_of_edges() == 1
+
+
+def test_weight_threshold_drops_weakly_overlapping_edges():
+    """Weight prunes from below: an edge must carry at least the threshold."""
+    weak = _two_node_graph(500.0, weight=0.1)
+    strong = _two_node_graph(500.0, weight=0.8)
+
+    assert tracking_graph.prune_tracking_graph(
+        weak, weight_threshold=0.3
+    ).number_of_edges() == 0
+    assert tracking_graph.prune_tracking_graph(
+        strong, weight_threshold=0.3
+    ).number_of_edges() == 1
+
+
+def test_weight_threshold_is_inclusive_at_the_boundary():
+    exact = _two_node_graph(500.0, weight=0.3)
+    assert tracking_graph.prune_tracking_graph(
+        exact, weight_threshold=0.3
+    ).number_of_edges() == 1
+
+
+def test_weight_threshold_is_off_by_default():
+    """Adding the gate must not change existing behaviour until it is set."""
+    barely_overlapping = _two_node_graph(500.0, weight=1e-6)
+    assert tracking_graph.prune_tracking_graph(
+        barely_overlapping, 8000.0
+    ).number_of_edges() == 1
+
+
+def test_distance_and_weight_gates_both_apply():
+    """The two gates are independent; an edge must clear both."""
+    far_but_strong = _two_node_graph(9000.0, weight=0.8)
+    near_but_weak = _two_node_graph(500.0, weight=0.1)
+    near_and_strong = _two_node_graph(500.0, weight=0.8)
+
+    for g in (far_but_strong, near_but_weak):
+        assert tracking_graph.prune_tracking_graph(
+            g, 8000.0, weight_threshold=0.3
+        ).number_of_edges() == 0
+    assert tracking_graph.prune_tracking_graph(
+        near_and_strong, 8000.0, weight_threshold=0.3
+    ).number_of_edges() == 1
+
+
+def test_track_weight_threshold_plumbs_through_from_config(two_timestep_field):
+    """Waper(track_weight_threshold=...) must reach prune_tracking_graph."""
+    ds = xr.Dataset({"v": two_timestep_field})
+
+    def run(weight_threshold):
+        w = Waper(data_array=ds, scalar_name="v", latitude_label="latitude",
+                  longitude_label="longitude", time_label="time",
+                  clip_value=2, extrema_threshold=10, min_latitude=20,
+                  max_latitude=80.1, node_pruning_threshold=15,
+                  edge_pruning_threshold=3e-5, max_edge_weight=1, debug=False,
+                  track_weight_threshold=weight_threshold)
+        w.identify_rwps()
+        w.track_rwps()
+        return w
+
+    # the synthetic pair overlaps at ~0.52, so 0.3 keeps it and 0.9 does not
+    assert run(None)._pruned_tracking_graph.number_of_edges() > 0
+    assert run(0.3)._pruned_tracking_graph.number_of_edges() > 0
+    assert run(0.9)._pruned_tracking_graph.number_of_edges() == 0
 
 
 def test_dag_dp_completes_fast():

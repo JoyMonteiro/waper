@@ -466,6 +466,21 @@ The threshold is a haversine distance **in kilometres**, matching the `distance`
 edge attribute stored in §10.1 — it is not an overlap weight. Values below a few
 hundred km prune every edge and leave an empty graph.
 
+A second, independent gate gives the overlap weight itself a cutoff.
+`track_weight_threshold` removes edges whose `weight` — the envelope-level energy
+overlap of §10.1, normalised to (0, 1] — falls *below* the threshold. Note the
+opposite direction: distance prunes from above, weight from below, which is why
+they are separate parameters rather than one. Because the normalisation divides
+by the *larger* of the two feature energies, this gate also suppresses merges and
+splits where a small packet is absorbed into a much bigger one.
+
+The weight gate is `None` (disabled) by default — it has not been calibrated
+against a reference dataset, so enabling it changes which tracks survive.
+
+Note that weight already influences track *selection* even with the gate off:
+§10.3 maximises summed weight along a path, so a weak edge is deprioritised.
+The gate is what removes it outright when it is the only edge available.
+
 ### 10.3 Track extraction
 
 Tracks are extracted as heaviest-weight paths through the tracking DAG using
@@ -508,6 +523,7 @@ simple paths.
 | `hull_method` | `"per_node"` | §8 | Polygon construction method |
 | `hemisphere` | `"north"` | §8–9 | Stereographic projection pole |
 | `track_pruning_threshold` | 8000 km | §10.2 | Maximum centroid distance for tracking edges |
+| `track_weight_threshold` | `None` | §10.2 | Minimum envelope overlap weight for tracking edges (disabled by default) |
 | `debug` | False | All | Enable debug logging |
 
 ## Appendix B: Constants
