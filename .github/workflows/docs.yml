@@ -1,0 +1,79 @@
+name: Docs
+
+# Builds the Quarto site in docs/ and publishes it to GitHub Pages.
+#
+# The site is built on pull requests too, so a PR that breaks the docs fails
+# before it lands, but only a push to `main` deploys (see the `if` guard on the
+# deploy step). Feature branches never publish.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    # Needed by peaceiris/actions-gh-pages to push the built site to the
+    # gh-pages branch.
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - uses: quarto-dev/quarto-actions/setup@v2
+
+      # `quartodoc build` imports `waper` to introspect it, and importing the
+      # package pulls in the vtk/pyvista chain, which needs an OpenGL runtime
+      # even when nothing is rendered. Same libraries the test job installs.
+      - name: Install system OpenGL libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgl1 libglx-mesa0 libxrender1 libxcursor1 libxft2 libxinerama1
+
+      - name: Install package and docs toolchain
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[docs]"
+
+      # Regenerates docs/api/ from the package. Both this and the render below
+      # import waper, so both need the off-screen flag.
+      - name: Build API reference
+        env:
+          PYVISTA_OFF_SCREEN: "true"
+        run: cd docs && quartodoc build
+
+      - name: Render site
+        env:
+          PYVISTA_OFF_SCREEN: "true"
+        run: quarto render docs/
+
+      - name: Upload site artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: docs/_site/
+
+      - name: Deploy to GitHub Pages
+        if: github.event_name == 'push'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/_site

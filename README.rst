@@ -7,7 +7,7 @@ A rossby Wave Packet trackER
 
 |
 | **Code:** https://github.com/JoyMonteiro/waper
-| **Docs:** https://waper.readthedocs.io/en/latest/
+| **Docs:** https://joymonteiro.github.io/waper/
 | **PyPI:** https://pypi.org/project/waper/
 | **CI:** https://github.com/JoyMonteiro/waper/actions/
 
@@ -27,7 +27,7 @@ Development
 Here are some useful notes related to doing development on this project.
 
 1. **Test Suite**, using `pytest`_, located in `tests` dir
-2. **Documentation Pages**, hosted on `readthedocs` server, located in `docs` dir
+2. **Documentation Pages**, a `Quarto`_ site in the `docs` dir, published to `GitHub Pages`
 3. **CI Pipeline**, running on `Github Actions`_, defined in `.github/`
 
    a. **Job Matrix**, spanning the supported `python version`'s
@@ -89,6 +89,8 @@ License
 .. _pytest: https://docs.pytest.org/en/7.1.x/
 
 .. _Github Actions: https://github.com/JoyMonteiro/waper/actions
+
+.. _Quarto: https://quarto.org/
 
 .. _BSD 3-Clause License: https://github.com/JoyMonteiro/waper/blob/main/LICENSE
 

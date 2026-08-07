@@ -1,0 +1,71 @@
+---
+title: "waper"
+subtitle: "A Rossby Wave Packet trackER"
+---
+
+`waper` identifies Rossby wave packets (RWPs) in a meridional wind field and tracks them
+through time. Identification is purely spatial and graph-based: for each time step it
+detects alternating maxima and minima, clusters them, builds an association graph, prunes
+it, and extracts RWP paths. Tracking then connects features across consecutive time steps
+by the spatial overlap of their rasterised polygon footprints — no spectral envelope is
+computed at any stage.
+
+The method is described in [Pandey, Monteiro & Natarajan
+(2020)](https://doi.org/10.1175/MWR-D-20-0014.1), *An Integrated Geometric and Topological
+Approach for the Identification and Visual Analysis of Rossby Wave Packets*, Monthly
+Weather Review 148(8), 3139–3157. See [Algorithm](algorithm.md) for what the package
+currently implements, and the [API reference](api/index.qmd) for the public interface.
+
+## Installation
+
+`waper` is installed from a source checkout. It requires Python >= 3.11; CI tests it on
+Python 3.11 and 3.12 on Linux.
+
+Its geospatial dependencies build against compiled libraries (VTK, PROJ, GEOS), so install
+them from conda-forge into a fresh environment first, in a single command, so the solver
+can resolve them together:
+
+```bash
+mamba create -n waper -c conda-forge python=3.12 \
+    geovista vtk xarray networkx rasterio scikit-learn tqdm
+mamba activate waper
+```
+
+Then install the package itself from your clone:
+
+```bash
+git clone https://github.com/JoyMonteiro/waper.git
+cd waper
+pip install -e .
+```
+
+Add the `dev` extra (`pip install -e ".[dev]"`) for the test and lint tooling, or the
+`docs` extra to build this site.
+
+## Usage
+
+```python
+import xarray as xr
+from waper import Waper
+
+ds = xr.open_dataset("v_winds_300mb.nc")
+
+w = Waper(
+    data_array=ds,
+    scalar_name="v",
+    latitude_label="latitude",
+    longitude_label="longitude",
+    time_label="time",
+)
+w.identify_rwps()
+w.track_rwps()
+```
+
+`Waper` exposes further parameters controlling clipping, extrema detection, the latitude
+band searched, and how aggressively the graphs and tracks are pruned; they are listed in
+the [API reference](api/index.qmd).
+
+## License
+
+BSD 3-Clause. See
+[LICENSE](https://github.com/JoyMonteiro/waper/blob/main/LICENSE).

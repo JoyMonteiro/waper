@@ -1,0 +1,59 @@
+# Quarto site for waper. Built and deployed by .github/workflows/docs.yml.
+#
+# Build it locally with:
+#     pip install -e ".[docs]"
+#     cd docs && quartodoc build      # writes docs/api/ from the package
+#     quarto render docs/             # writes docs/_site/
+# Both output directories are generated and gitignored.
+
+project:
+  type: website
+  output-dir: _site
+  render:
+    - "index.qmd"
+    - "algorithm.md"
+    - "api/**/*.qmd"
+
+website:
+  title: "waper"
+  description: "Identification and tracking of Rossby wave packets"
+  repo-url: https://github.com/JoyMonteiro/waper
+  navbar:
+    left:
+      - text: "Home"
+        href: index.qmd
+      - text: "Algorithm"
+        href: algorithm.md
+      - text: "API"
+        href: api/index.qmd
+    right:
+      - icon: github
+        href: https://github.com/JoyMonteiro/waper
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+
+quartodoc:
+  package: waper
+  dir: api
+  title: "API Reference"
+  style: pkgdown
+  sections:
+    - title: "Pipeline"
+      desc: |
+        The package's public surface: `waper.__init__` exports exactly these
+        three names.
+      contents:
+        - Waper
+        - WaperConfig
+        - WaperSingleTimestepData
+    - title: "Interactive explorer"
+      desc: |
+        Panel-based viewer for a catalog of identified and tracked wave
+        packets. Not re-exported from the top level; import it from
+        `waper.interface.explorer`.
+      contents:
+        - name: RWPExplorer
+          package: waper.interface.explorer

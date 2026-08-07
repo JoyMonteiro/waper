@@ -75,6 +75,18 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest >= 7.0", "pytest-cov", "mypy", "ruff", "nbstripout"]
+# Docs toolchain. `quarto` itself is not a Python package: install it separately
+# (https://quarto.org/docs/get-started/), or let the CI action do it.
+#
+# `griffe` is quartodoc's introspection backend and would be pulled in anyway;
+# it is named here so it is the one place to add a constraint if a griffe
+# release breaks `quartodoc build`. Deliberately left unpinned: quartodoc 0.11
+# builds this package's API reference cleanly against griffe 2.1, so the
+# `griffe<2.0` bound some older quartodoc setups need does not apply.
+#
+# `jupyter` is what Quarto shells out to for executable code cells. No page has
+# one today, so it is here to keep adding one from becoming a CI change.
+docs = ["quartodoc >= 0.7", "griffe", "jupyter"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
@@ -161,7 +173,7 @@ packages=["waper", "waper.identification", "waper.tracking", "waper.interface", 
 [project.urls]
 "Bug Tracker" = "https://github.com/JoyMonteiro/waper/issues"
 "CI: Github Actions" = "https://github.com/JoyMonteiro/waper/actions"
-"Documentation" = "https://waper.readthedocs.io/"
+"Documentation" = "https://joymonteiro.github.io/waper/"
 "Source Code" = "https://github.com/JoyMonteiro/waper"
 "Changelog" = "https://github.com/JoyMonteiro/waper/blob/main/HISTORY.md"
 "Code of Conduct" = "https://github.com/JoyMonteiro/waper/blob/main/CONTRIBUTING.md"

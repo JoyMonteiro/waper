@@ -8,6 +8,7 @@ Contributions are welcome :)
 * [Contributor Setup](#Setting-Up-the-Code-for-Local-Development)
 * [Contributor Guidelines](#Contributor-Guidelines)
 * [Contributor Testing](#Running-the-Tests)
+* [Building the Documentation](#Building-the-Documentation)
 * [Core Committer Guide](#Core-Committer-Guide)
 
 
@@ -18,8 +19,8 @@ You can contribute in many ways:
 ### Report Bugs
 
 Report bugs at [https://github.com/JoyMonteiro/waper/issues](https://github.com/JoyMonteiro/waper/issues).
-W
-Stambling upon a Bug means encountering different behaviour than the expected/advertised one. When you are reporting a bug, please include the following infromation by filling in [the template](https://github.com/JoyMonteiro/waper/.github/blob/master/.github/ISSUE_TEMPLATE/bug_report.md).
+
+A bug means encountering different behaviour than the expected or advertised one. There is no issue template; when you are reporting a bug, please include the following information.
 
 * Your operating system name and version.
 * Any details about your local setup that might be helpful in troubleshooting.
@@ -40,7 +41,7 @@ See [Contributor Setup](#Setting-Up-the-Code-for-Local-Development) to get start
 
 ### Write Documentation
 
-WAPER could always use more documentation, whether as part of the official WAPER docs, in docstrings, etc.
+WAPER could always use more documentation, whether as part of the official WAPER docs, in docstrings, etc. See [Building the Documentation](#Building-the-Documentation) for how to build the site locally.
 
 ### Submit Feedback
 
@@ -166,6 +167,38 @@ mypy
 
 Both are configured in `pyproject.toml`. `ruff check --fix .` applies the fixes it can
 make automatically.
+
+
+## Building the Documentation
+
+The docs are a [Quarto](https://quarto.org) site under `docs/`, configured in
+`docs/_quarto.yml`. `.github/workflows/docs.yml` builds it on every pull request into
+`main` and publishes it to GitHub Pages on every push to `main`.
+
+You need the Quarto CLI, which is not a Python package — install it from
+[quarto.org/docs/get-started](https://quarto.org/docs/get-started/). The Python side is
+the `docs` extra:
+
+```bash
+pip install -e ".[docs]"
+```
+
+Then build in two steps, from the repository root:
+
+```bash
+cd docs && quartodoc build   # regenerates docs/api/ by importing waper
+cd .. && quarto render docs/ # renders the site into docs/_site/
+```
+
+Open `docs/_site/index.html` to view the result. Both `docs/api/` and `docs/_site/` are
+generated and gitignored — do not commit them. Re-run `quartodoc build` whenever you
+change a docstring or add something to the `quartodoc:` sections in `docs/_quarto.yml`;
+`quarto render` alone will not pick those up.
+
+The pages that are hand-written are `docs/index.qmd` (the landing page) and
+`docs/algorithm.md` (how identification and tracking actually work). Everything under
+`docs/api/` comes from the package's own docstrings, so that is where to fix an API
+description.
 
 
 ## Core Committer Guide
