@@ -31,7 +31,10 @@ classifiers = [
     "Intended Audience :: Developers",
     "Intended Audience :: End Users/Desktop",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: GNU Affero General Public License v3",
+    # `license = {file = "LICENSE"}` above is the authoritative statement; this
+    # classifier exists so PyPI can facet on it. PyPI's trove list has no
+    # 3-Clause-specific BSD entry, so plain "BSD License" is the correct value.
+    "License :: OSI Approved :: BSD License",
     "Natural Language :: English",
     "Operating System :: Unix",
     "Operating System :: POSIX :: Linux",

@@ -74,13 +74,7 @@ License
 
 |gh-lic|
 
-* `BSD 3-Clause License`_
-
-
-License
-=======
-
-* Free software: BSD 3-Clause License
+* Free software: `BSD 3-Clause License`_
 
 
 
