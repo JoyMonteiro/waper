@@ -1479,10 +1479,25 @@ passes unchanged, as does the rest of the suite (139 passed, 1 skipped).
 6. Remove `WAPER_IMAGE_SIZE`, `WAPER_NUM_PIXELS`, `WAPER_X_BOUNDS`, `WAPER_Y_BOUNDS`, `WAPER_RASTER_TRANSFORM`.
 
 **Definition of Done:**
-- [ ] `quadtree.py` is deleted.
-- [ ] Tracking uses direct polygon intersection.
-- [ ] Raster-related code is removed.
-- [ ] Integration test passes.
+- [x] `quadtree.py` is deleted.
+- [ ] ~~Tracking uses direct polygon intersection.~~ — superseded; see below.
+- [ ] ~~Raster-related code is removed.~~ — superseded; see below.
+- [x] Integration test passes.
+
+**Done 2026-08-07, but not the way this task imagined.** The quadtree is gone and tracking
+no longer goes through it — however tracking did *not* move to Shapely polygon
+intersection, and the rasters were *not* removed. It moved the other way: `e349b42`
+replaced quadtree merge with masked NumPy over the raster pair
+(`waper/tracking/energy_overlap.py`), and the overlap quantity changed from pixel counts
+to summed `sqrt(E_prev · E_curr)` — a scientific change this task did not contemplate.
+Rasters are therefore load-bearing, and steps 4–6 above (deleting `raster_data`,
+`raster_features`, `rasterize_all_rwps`, `WAPER_IMAGE_SIZE` and friends) are **dead
+proposals, not pending work.** A second raster, the §9.2 energy raster, has since been
+added alongside them.
+
+What actually shipped on 2026-08-07 was the leftover: `quadtree.py` had been orphaned by
+`e349b42` back in June and kept being built into `WaperSingleTimestepData.quadtree` every
+time step for nothing. That field and the module are deleted.
 
 ---
 
@@ -1756,7 +1771,9 @@ These are desirable but not critical. They can be tackled after all other phases
 
 ### Task 9.1 — Replace NetworkX Quadtree with Direct Polygon Intersection
 
-See Task 5.5 for full specification.
+See Task 5.5 for full specification. **Closed 2026-08-07** — the quadtree is deleted, but
+via masked NumPy over the rasters rather than polygon intersection. Read 5.5's closing note
+before acting on anything here: its steps 4–6 are dead proposals.
 
 ### Task 9.2 — Parallel Timestep Processing
 

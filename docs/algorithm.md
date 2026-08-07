@@ -68,8 +68,7 @@ Input scalar field (e.g. meridional wind at 300 hPa)
   │
   ├─ Rasterisation (§9)
   │    ├─ 512×512 stereographic feature-ID raster
-  │    ├─ 512×512 stereographic energy raster (disks around extrema)
-  │    └─ Quadtree decomposition (retained, off the tracking path)
+  │    └─ 512×512 stereographic energy raster (disks around extrema)
   │
   └─ Temporal Tracking (§10)
        ├─ Energy overlap → edge weights
@@ -450,8 +449,8 @@ used as the node coordinate in the tracking graph.
 
 ## 9. Rasterisation
 
-**Files:** `waper/tracking/rwp_polygon.py` → `rasterize_all_rwps()`,
-`energy_disks()`, `rasterize_energy()`; `waper/tracking/quadtree.py`
+**File:** `waper/tracking/rwp_polygon.py` → `rasterize_all_rwps()`,
+`energy_disks()`, `rasterize_energy()`
 
 Each time step produces **two** rasters on the same 512×512 stereographic
 grid: a feature-ID raster saying *which* RWP occupies a pixel, and an energy
@@ -483,24 +482,16 @@ broad quiet interior of a hull, which is exactly the weighting §10.1 wants.
 footprint: a feature whose pixels receive no disk has zero total energy and
 drops out of tracking entirely.
 
-### 9.3 Quadtree construction
-
-The raster image is recursively split into quadrants (4-ary tree). Each
-quadtree node stores:
-
-- `mean`: average pixel value
-- `features`: set of RWP IDs present in that quadrant
-- `level`: depth in the tree
-- `start_pixel`: top-left corner of the quadrant
-
-The quadtree was built to answer spatial overlap queries between time steps
-without comparing every pixel pair, and a quadtree merge supplied the
-`(prev_feature, curr_feature)` pixel-overlap counts that tracking once used.
-
-**It is no longer on the tracking path.** §10.1 now computes overlap directly
-from the two rasters, so the quadtree is built per time step
-(`WaperSingleTimestepData.quadtree`) and consumed by nothing but its own
-tests.
+> **Historical note.** Overlap between time steps used to go through a
+> quadtree: each raster was recursively split into quadrants until every leaf
+> was homogeneous, and merging two such trees yielded the
+> `(prev_feature, curr_feature)` pixel-overlap counts that tracking consumed.
+> The point was to answer overlap queries without comparing every pixel pair.
+> §10.1 now reads the answer straight off the two rasters with masked NumPy —
+> the co-occurring feature IDs come from `np.unique(curr[prev == a])` — which
+> does more raw pixel work but in vectorised C rather than a Python-level tree
+> walk, and in a small fraction of the code. `waper/tracking/quadtree.py` and
+> the `WaperSingleTimestepData.quadtree` field were removed on 2026-08-07.
 
 ---
 

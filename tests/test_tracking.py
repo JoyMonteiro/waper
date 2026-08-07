@@ -9,7 +9,7 @@ import xarray as xr
 
 from waper.interface.api import Waper, WaperConfig, _identify_rwps
 from waper.tracking import tracking_graph
-from waper.tracking.quadtree import compute_size_features, create_quadtree
+from waper.tracking.energy_overlap import feature_energies, overlap_energies
 from waper.tracking.rwp_polygon import (
     WAPER_IMAGE_SIZE,
     _amplitude_weighted_lonlat_centroid,
@@ -44,7 +44,7 @@ def test_identical_timesteps_full_overlap(simple_wave_field, default_config):
     track_g = tracking_graph.build_tracking_graph(ts_list, 2)
 
     # Check edges
-    # Weight should be 1.0 because the quadtrees are exactly the same
+    # Weight should be 1.0 because both timesteps rasterise identically
     for _u, _v, data in track_g.edges(data=True):
         assert pytest.approx(data["weight"], 0.01) == 1.0
 
@@ -228,20 +228,6 @@ def test_dag_dp_completes_fast():
     assert len(paths) > 0
 
 
-def test_quadtree_pixel_counts():
-    raster = np.zeros((WAPER_IMAGE_SIZE, WAPER_IMAGE_SIZE), dtype=int)
-    # Feature 1: 10x10 block
-    raster[10:20, 10:20] = 1
-    # Feature 2: 20x20 block
-    raster[50:70, 50:70] = 2
-
-    qt = create_quadtree(raster)
-    sizes = compute_size_features(qt)
-
-    assert sizes[(1,)] == 100
-    assert sizes[(2,)] == 400
-
-
 def _stub_tsd(raster, energy, features):
     from unittest.mock import MagicMock
     s = MagicMock()
@@ -250,6 +236,37 @@ def _stub_tsd(raster, energy, features):
     s.raster_features = features
     s.rwp_info = {}
     return s
+
+
+def test_feature_energies_are_summed_per_feature():
+    """Each feature gets its own total, and background 0 is excluded.
+
+    Replaces the pixel-count assertion the quadtree's `compute_size_features`
+    used to carry: the sizes tracking normalises by are now energy sums.
+    """
+    raster = np.zeros((WAPER_IMAGE_SIZE, WAPER_IMAGE_SIZE), dtype=int)
+    raster[10:20, 10:20] = 1          # 100 pixels
+    raster[50:70, 50:70] = 2          # 400 pixels
+    energy = np.zeros_like(raster, dtype=float)
+    energy[raster == 1] = 3.0
+    energy[raster == 2] = 0.5
+
+    sizes = feature_energies(raster, energy)
+
+    assert sizes == {1: 300.0, 2: 200.0}
+
+
+def test_overlap_energies_keeps_features_separate():
+    """A pair is keyed by (prev_id, curr_id); non-overlapping features get no key."""
+    prev_f = np.array([[1, 1, 0, 2, 2]])
+    curr_f = np.array([[0, 1, 1, 0, 2]])
+    prev_e = np.array([[4.0, 4.0, 0.0, 9.0, 9.0]])
+    curr_e = np.array([[0.0, 1.0, 1.0, 0.0, 1.0]])
+
+    overlaps = overlap_energies(prev_f, prev_e, curr_f, curr_e)
+
+    # 1 overlaps 1 on one pixel: sqrt(4*1) = 2. 2 overlaps 2 on one: sqrt(9*1) = 3.
+    assert overlaps == {(1, 1): 2.0, (2, 2): 3.0}
 
 
 def test_energy_weight_full_overlap_is_one():

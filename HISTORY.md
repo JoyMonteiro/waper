@@ -23,6 +23,20 @@ account) whose only two real entries have been folded in at the bottom of this f
   outright. Exposed on `WaperConfig`, `Waper.__init__`, `Waper.plot_tracks`, and
   `prune_tracking_graph`.
 
+### 2026-08-07 — quadtree removal
+
+#### Removed
+- `waper/tracking/quadtree.py` and the `WaperSingleTimestepData.quadtree` field. The
+  quadtree had been orphaned since `e349b42` (2026-06-17) replaced quadtree merge with
+  masked NumPy over the raster pair, but it was still built for every time step and read by
+  nothing except its own test. This closes refactoring-spec tasks 5.5 / 9.1, though not by
+  the route those tasks proposed — tracking did not move to Shapely polygon intersection,
+  and the rasters it wanted deleted are now load-bearing for the energy overlap.
+- `test_quadtree_pixel_counts`, replaced by two direct tests of the energy primitives that
+  superseded it: `test_feature_energies_are_summed_per_feature` (per-feature totals stay
+  separate, background 0 excluded — the property the old pixel-count assertion pinned) and
+  `test_overlap_energies_keeps_features_separate`.
+
 ### 2026-08-07 — VTK removal (refactoring spec Phase 5, tasks 5.1 and 5.3)
 
 #### Removed

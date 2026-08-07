@@ -203,10 +203,12 @@
       Loose ends noticed while doing 5.1/5.3, neither actioned:
   - `get_point_data_label` and `get_cell_data_label` in `utils.py` are unreferenced
     one-liners. Outside the VTK tasks' remit, so left alone.
-  - `waper/tracking/quadtree.py` is dead on the tracking path — still built into
-    `WaperSingleTimestepData.quadtree` each time step, but read only by
-    `tests/test_tracking.py` since energy overlap replaced quadtree merge. Deleting it
-    touches a public dataclass field, so it wants a deliberate decision.
+  - ~~`waper/tracking/quadtree.py` is dead on the tracking path.~~ **Deleted 2026-08-07**
+    on Joy's instruction, along with the `WaperSingleTimestepData.quadtree` field. It had
+    been orphaned since `e349b42` in June. Closes refactoring-spec 5.5 / 9.1 — but read
+    5.5's closing note before touching anything else there: its plan to move tracking to
+    Shapely polygon intersection and delete the rasters is dead, because energy overlap
+    made the rasters load-bearing.
 
 ---
 

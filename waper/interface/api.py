@@ -11,7 +11,7 @@ from tqdm import tqdm
 from xarray import DataArray
 
 from ..identification import max_min, rwp_graph, topology, utils
-from ..tracking import quadtree, rwp_polygon, tracking_graph
+from ..tracking import rwp_polygon, tracking_graph
 from .visualization import (
     _plot_clusters,
     _plot_graph,
@@ -87,7 +87,6 @@ class WaperSingleTimestepData:
 
     raster_data: ndarray
     raster_features: set
-    quadtree: Graph
     energy_raster: ndarray | None = None  # set by _identify_rwps
 
     def __init__(self, input_data: DataArray, config: WaperConfig) -> None:
@@ -275,12 +274,10 @@ def _identify_rwps(
 
     if time_step_data.raster_data is None:
         time_step_data.raster_features = {0}
-        time_step_data.quadtree = None
     else:
         features = set(np.unique(time_step_data.raster_data))
         features.add(0)
         time_step_data.raster_features = features
-        time_step_data.quadtree = quadtree.create_quadtree(time_step_data.raster_data)
 
     return time_step_data
 
