@@ -6,6 +6,50 @@ account) whose only two real entries have been folded in at the bottom of this f
 
 ## [Unreleased]
 
+### 2026-08-07 — VTK removal completed (refactoring spec Phase 5, tasks 5.2 and 5.4)
+
+**No module under `waper/` imports VTK any more.** Phase 5 is closed.
+
+#### Changed
+- `cluster_extrema` (`waper/identification/topology.py`) computes geodesic distances with
+  `scipy.sparse.csgraph.dijkstra` instead of `vtkDijkstraGraphGeodesicPath`. Two new
+  helpers do the work: `_surface_graph()` builds the triangle-edge adjacency matrix of the
+  clipped surface, and `_path_extremes()` reads the hill-climbing path extreme off the
+  shortest-path tree. The old code ran one VTK Dijkstra per pair of extrema; the new code
+  runs one scipy pass sourced at every extremum at once, which made identification roughly
+  1.5–2× faster per time step.
+
+  **Output is unchanged, and this was checked rather than assumed** — the task alters
+  clustering numerics, so a green suite would not have settled it. The pre-refactor VTK
+  loop was transcribed verbatim and run side by side with the new code on
+  `forecast_bust_hourly.nc`: 6 fields, both signs, two mesh resolutions, 13,551 extrema
+  pairs. Geodesic distances agree to ~2 m (VTK accumulates float32 segment lengths, scipy
+  sums in float64) and the path extreme feeding the penalty was identical on every pair, so
+  Dijkstra tie-breaking does not diverge on these meshes. End-to-end, cluster membership
+  and `identified_rwp_paths` are unchanged across 4 time steps.
+- The `vtkGeometryFilter` + `vtkTriangleFilter` chain became
+  `extract_surface().triangulate()`, verified byte-identical on real data. It is guarded by
+  an `isinstance` check: both callers already pass `PolyData`, for which the geometry filter
+  was a pass-through, and calling `extract_surface()` on one emits a `PyVistaFutureWarning`
+  per time step that the `algorithm=` keyword cannot silence under the declared
+  `pyvista >= 0.36` floor.
+
+#### Removed
+- `cluster_extrema`'s `base_field` first argument. It fed only the `vtkCellLocator` and a
+  `"<name> Cell Value"` fallback that was already unreachable — the point-data lookup
+  guarding it never returns `None` on these meshes. Call sites in `api.py` and
+  `tests/test_clustering.py` updated.
+- `add_connectivity_data_min` (task 5.4), the last raw VTK call left in `topology.py`. It
+  had no callers anywhere in the tree, so it was deleted rather than ported to PyVista,
+  matching the precedent from 5.1 and 5.3. `identify_connected_regions` was already PyVista
+  and is unchanged.
+
+#### Added
+- Four tests in `tests/test_clustering.py` pinning the two helpers, including the two traps
+  found while writing them: `coo_matrix` **sums** duplicate entries, so the triangle edges
+  shared by two faces must be de-duplicated or every interior edge comes out at twice its
+  true length; and scipy's "no predecessor" sentinel is `-9999`, not `-1`.
+
 ### 2026-08-07 — tracking
 
 #### Added
@@ -54,7 +98,8 @@ account) whose only two real entries have been folded in at the bottom of this f
   taken PyVista objects for as long as they have called `.n_points` and `.extract_points`.
 
 `waper/identification/topology.py` is now the only module importing vtk — task 5.2, the
-`vtkDijkstraGraphGeodesicPath` → `scipy.sparse.csgraph` rewrite, is untouched.
+`vtkDijkstraGraphGeodesicPath` → `scipy.sparse.csgraph` rewrite, is untouched. *(Closed
+later the same day; see the Phase 5 completion entry above.)*
 
 ### 2026-08-07 — housekeeping
 

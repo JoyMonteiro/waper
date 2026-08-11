@@ -42,10 +42,10 @@ Input scalar field (e.g. meridional wind at 300 hPa)
   │
   ├─ Connected Region Labelling (§3)
   │    ├─ Clip field at ±clip_value → positive/negative regions
-  │    └─ VTK connectivity filter → RegionId per point
+  │    └─ PyVista connectivity filter → RegionId per point
   │
   ├─ Extrema Clustering (§4)
-  │    ├─ Geodesic distances via Dijkstra on the mesh
+  │    ├─ Geodesic distances via SciPy Dijkstra on the mesh graph
   │    ├─ Hill-climbing penalty for cross-ridge paths
   │    └─ DBSCAN clustering within each connected region
   │
@@ -92,7 +92,7 @@ A point is flagged as a maximum if its value equals the local maximum in the
 
 The detected extrema are then filtered by an amplitude threshold
 (`extrema_threshold`): only maxima exceeding this value (and minima below its
-negation) are retained. This is done via VTK's `clip_scalar`, which also
+negation) are retained. This is done via PyVista's `clip_scalar`, which also
 provides the connectivity information needed in the next step.
 
 ### Key parameters
@@ -106,13 +106,12 @@ provides the connectivity information needed in the next step.
 
 ## 3. Connected Region Labelling
 
-**File:** `waper/identification/topology.py` → `identify_connected_regions()`,
-`add_connectivity_data_min()`
+**File:** `waper/identification/topology.py` → `identify_connected_regions()`
 
 After clipping the scalar field at `±clip_value`, each contiguous region of
-the same sign is assigned a unique `RegionId` using VTK's
-`vtkConnectivityFilter` (extraction mode: all regions, with colour-by-region
-enabled). This produces a labelling where every grid point in a positive
+the same sign is assigned a unique `RegionId` by PyVista's `.connectivity()`
+filter (`largest=False`, so all regions are kept and coloured rather than only
+the biggest). This produces a labelling where every grid point in a positive
 (negative) region shares a `RegionId` with its spatially connected neighbours.
 
 The `RegionId` serves two purposes:
@@ -136,12 +135,21 @@ The clustering proceeds as follows:
 ### 4.1 Distance matrix computation
 
 For every pair of extrema within the same `RegionId`, the geodesic distance
-along the mesh is computed using VTK's `vtkDijkstraGraphGeodesicPath`. This
-gives the distance *along the scalar field surface*, not the great-circle
-distance — an important distinction because it respects the field's geometry.
+along the mesh is computed with `scipy.sparse.csgraph.dijkstra`. This gives the
+distance *along the scalar field surface*, not the great-circle distance — an
+important distinction because it respects the field's geometry.
+
+The graph it runs on is built by `_surface_graph()`: the clipped field is
+triangulated, and each triangle edge becomes a graph edge weighted by the
+Euclidean distance between its endpoints (in mesh units on the sphere of radius
+`RADIUS_SPHERE`, which `SCALE_FACTOR` converts to kilometres). Interior edges
+are shared by two triangles and are de-duplicated, or their weights would
+double. One Dijkstra pass per extremum covers all of that extremum's pairs,
+rather than one pass per pair.
 
 Pairs in different connected regions are never compared (their distance is set
-to `CLUSTER_MAX_DISTANCE = 15000 km`).
+to `CLUSTER_MAX_DISTANCE = 15000 km`), and so are same-region pairs with no
+path across the triangulated surface.
 
 ### 4.2 Hill-climbing penalty
 
@@ -153,13 +161,13 @@ being clustered together.
 For maxima (`sign > 0`):
 
 - The **reference value** is the weaker (smaller) of the two peak values.
-- The **path minimum** is the smallest scalar value along the Dijkstra path.
+- The **path minimum** is the smallest scalar value along the shortest path.
 - The **fractional descent** is `f = max(0, (reference − path_minimum) / |reference|)`.
 
 For minima (`sign < 0`):
 
 - The **reference value** is the weaker (least negative) trough.
-- The **path maximum** is the largest scalar value along the Dijkstra path.
+- The **path maximum** is the largest scalar value along the shortest path.
 - The **fractional descent** is `f = max(0, (path_maximum − reference) / |reference|)`.
 
 The penalty added to the geodesic distance is:
@@ -168,10 +176,15 @@ The penalty added to the geodesic distance is:
 penalty = f × penalty_length_scale_km
 ```
 
-**Example:** Two maxima at 30 and 25 m/s, with the Dijkstra path dipping to
+**Example:** Two maxima at 30 and 25 m/s, with the shortest path dipping to
 10 m/s. Reference = 25, descent = 15, f = 0.6, penalty = 0.6 × 2000 = 1200 km
 added to the geodesic distance. This makes it harder for DBSCAN to place them
 in the same cluster.
+
+The path extreme is read off the shortest-path tree by `_path_extremes()`:
+every vertex has exactly one parent in the tree, so the extreme along a path is
+a bottleneck query up that tree, answered for all vertices at once by pointer
+doubling instead of one walk per pair.
 
 ### 4.3 DBSCAN clustering
 
@@ -219,8 +232,8 @@ Each node in the graph is identified by a tuple `("max", cluster_id)` or
 
 ### 5.2 Edge construction via the zero-crossing isocontour
 
-The zero-value isocontour of the scalar field is extracted using VTK's
-`vtkContourFilter`. For each point on this isocontour, the nearest maximum
+The zero-value isocontour of the scalar field is extracted using PyVista's
+`.contour()`. For each point on this isocontour, the nearest maximum
 cluster and nearest minimum cluster are found using two separate K-D trees
 (built from the 3D spherical coordinates of the extrema).
 

@@ -1378,10 +1378,54 @@ This is the largest single refactoring task. Take it in sub-steps.
 3. Use `mesh.point_data["Cluster ID"] = cluster_assign` instead of VTK arrays.
 
 **Definition of Done:**
-- [ ] `import vtk` is removed from `topology.py`.
-- [ ] No VTK Dijkstra, geometry filter, triangle filter, or cell locator remains.
-- [ ] Clustering results match (or improve upon) the VTK-based version.
-- [ ] Integration test passes.
+- [x] `import vtk` is removed from `topology.py`.
+- [x] No VTK Dijkstra, geometry filter, triangle filter, or cell locator remains.
+- [x] Clustering results match (or improve upon) the VTK-based version.
+- [x] Integration test passes.
+
+**Done 2026-08-07.** `topology.py` no longer imports VTK, and neither does any other
+module in `waper/`. Two helpers carry the work: `_surface_graph()` builds the triangle-edge
+adjacency matrix (sub-step A) and `_path_extremes()` reads the hill-climbing penalty off the
+shortest-path tree (sub-step C). One `scipy.sparse.csgraph.dijkstra` call, sourced at every
+extremum at once, replaces the O(n²) loop of per-pair `vtkDijkstraGraphGeodesicPath` runs.
+
+- **The de-duplication in `_surface_graph` is load-bearing** and the sketch above omits it.
+  Interior edges belong to two triangles, and `coo_matrix` *sums* duplicate entries on the
+  conversion to CSR — every interior edge would have come out at twice its true length.
+  `test_surface_graph_does_not_double_the_shared_edge` pins this.
+- **`_path_extremes` replaces the per-pair path walk with a bottleneck query.** The sketch's
+  `get_path_penalty` walks predecessors once per (source, target) pair in Python. Because a
+  shortest-path tree gives each vertex exactly one parent, the extreme along the path to
+  *every* vertex can instead be computed in one pass per source by pointer doubling —
+  O(log depth) vectorised rounds. Note scipy's "no predecessor" sentinel is `-9999`, not
+  `-1`; feeding it to fancy indexing unguarded reads from the wrong end of the array.
+- **`base_field` was dropped from the signature.** It existed only to feed the
+  `vtkCellLocator` and the `f"{scalar_name} Cell Value"` fallback, and that fallback was
+  already dead — the point-data lookup it guarded never returns `None` on these meshes.
+  Four call sites updated (`api.py` ×2, `tests/test_clustering.py` ×2).
+- The old `vtkGeometryFilter` + `vtkTriangleFilter` chain is now
+  `extract_surface().triangulate()`, verified byte-identical (points, faces, and all point
+  arrays) on real data. It is guarded by an `isinstance` check because both callers already
+  pass `PolyData`, for which the geometry filter was a pass-through — calling
+  `extract_surface()` unconditionally emits a `PyVistaFutureWarning` on every timestep, and
+  the `algorithm=` keyword that would silence it postdates the declared `pyvista >= 0.36`
+  floor.
+
+**Numerical verification** (the point of the task — it changes clustering numerics, so
+green tests alone were not sufficient):
+
+- *Distance matrices, element-wise.* The pre-refactor VTK loop was transcribed verbatim and
+  run alongside the new code on `forecast_bust_hourly.nc`, both signs, at two mesh
+  resolutions (6 fields, 13,551 extrema pairs). Worst geodesic disagreement
+  **2.0e-5 mesh units ≈ 2 m** — VTK accumulates float32 segment lengths in a Python loop,
+  scipy sums in float64. The path extreme used for the hill-climbing penalty was
+  **identical on every one of the 13,551 pairs**, so Dijkstra tie-breaking does not diverge
+  in practice on these meshes.
+- *End-to-end.* Cluster membership (canonicalised, since labels are only defined up to
+  relabelling) and the resulting `identified_rwp_paths` are **unchanged** on 4 timesteps.
+- *Speed.* Identification per timestep 0.63/0.88/1.05/1.14 s → 0.73/0.60/0.50/0.52 s.
+- Suite 148 passed, 1 skipped, including the real-data `test_acceptance_t95`. `ruff check .`
+  clean, `mypy waper` clean.
 
 ---
 
@@ -1445,8 +1489,14 @@ passes unchanged, as does the rest of the suite (139 passed, 1 skipped).
    ```
 
 **Definition of Done:**
-- [ ] No `vtk.vtkConnectivityFilter` in the codebase.
-- [ ] `add_connectivity_data_min` is either deleted or uses PyVista.
+- [x] No `vtk.vtkConnectivityFilter` in the codebase.
+- [x] `add_connectivity_data_min` is either deleted or uses PyVista.
+
+**Done 2026-08-07**, alongside 5.2 — it was the last raw VTK call left in `topology.py`
+once the Dijkstra chain went, so `import vtk` could not be removed without settling it.
+`add_connectivity_data_min` had no callers anywhere in the tree and was deleted rather than
+ported, matching the precedent set by 5.1 and 5.3. `identify_connected_regions` was already
+PyVista and is unchanged.
 
 ---
 

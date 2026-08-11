@@ -137,7 +137,7 @@ def _identify_rwps(
     )
 
     clustered_points = topology.cluster_extrema(
-        data_with_maxima, connectivity, maxima_points, config.scalar_name, sign=1,
+        connectivity, maxima_points, config.scalar_name, sign=1,
         max_eps_km=config.cluster_max_eps_km, min_samples=config.cluster_min_samples,
         xi=config.cluster_xi, penalty_length_scale_km=config.penalty_length_scale_km,
     )
@@ -180,7 +180,7 @@ def _identify_rwps(
     )
 
     clustered_points = topology.cluster_extrema(
-        data_with_minima, connectivity, minima_points, config.scalar_name, sign=-1,
+        connectivity, minima_points, config.scalar_name, sign=-1,
         max_eps_km=config.cluster_max_eps_km, min_samples=config.cluster_min_samples,
         xi=config.cluster_xi, penalty_length_scale_km=config.penalty_length_scale_km,
     )

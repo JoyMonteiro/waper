@@ -183,22 +183,38 @@
       **`.git`: 4.2 GB → 65 MB** (26 packs → 1, 62 MiB). `git fsck` clean, history intact,
       suite still 126 passed. Commits were pushed to `origin` first.
 
-## Tier 3 — large, still no scientific input
+## Tier 3 — large, still no scientific input — **done 2026-08-07**
 
-- [ ] **Refactoring spec Phase 5: VTK → PyVista/SciPy.** The only live remainder of
-      `waper_refactoring_spec.md`. **Tasks 5.1 and 5.3 are done (2026-08-07)** —
-      `utils.py` and `max_min.py` no longer import VTK. All three functions the tasks
-      targeted (`get_iso_contour`, `compute_gradients`, `interpolate_cell_values`) turned
-      out to be dead and were deleted rather than ported; `test_acceptance_t95` confirms
-      the real-data pipeline is unchanged. Two raw `GetNumberOfCells()` calls became
+- [x] **Refactoring spec Phase 5: VTK → PyVista/SciPy.** The only live remainder of
+      `waper_refactoring_spec.md`, now closed. **Tasks 5.1 and 5.3 (2026-08-07)** left
+      `utils.py` and `max_min.py` free of VTK. All three functions those tasks targeted
+      (`get_iso_contour`, `compute_gradients`, `interpolate_cell_values`) turned out to be
+      dead and were deleted rather than ported; `test_acceptance_t95` confirms the
+      real-data pipeline is unchanged. Two raw `GetNumberOfCells()` calls became
       `.n_cells` on the way past.
 
-      **Task 5.2 is what remains, and it is the whole of the difficulty**:
-      `waper/identification/topology.py` is now the only module importing VTK, and it
-      needs `vtkDijkstraGraphGeodesicPath` replaced by `scipy.sparse.csgraph`. Unlike 5.1
-      and 5.3 this is not a deletion — it changes clustering numerics, so the output has
-      to be compared against the current run, not just kept green. Multi-day; not a
-      wrap-up item.
+      **Tasks 5.2 and 5.4 are done (2026-08-07).** `waper/identification/topology.py` —
+      the last module importing VTK — now uses `scipy.sparse.csgraph.dijkstra` via two new
+      helpers, `_surface_graph()` and `_path_extremes()`. **No module under `waper/`
+      imports VTK any more.** 5.4 came along for the ride: `add_connectivity_data_min` was
+      the only other raw VTK call left in the file, had no callers, and was deleted.
+
+      This was the one task that could not be settled by keeping the suite green, so it was
+      checked numerically. The pre-refactor VTK loop was transcribed verbatim and run
+      side by side with the new code on `forecast_bust_hourly.nc` — 6 fields, two mesh
+      resolutions, 13,551 extrema pairs. Geodesic distances agree to **~2 m** (float32 vs
+      float64 accumulation) and the path extreme feeding the hill-climbing penalty was
+      **identical on every pair**, so Dijkstra tie-breaking does not diverge here.
+      End-to-end, cluster membership and `identified_rwp_paths` are unchanged on 4
+      timesteps, and identification got ~1.5–2× faster. Full write-up in the spec.
+
+      Two traps worth knowing if this area is touched again, both now pinned by tests:
+      `coo_matrix` **sums** duplicate entries, so the triangle edges shared by two faces
+      must be de-duplicated or every interior edge doubles in length; and scipy's
+      "no predecessor" sentinel is `-9999`, not `-1`.
+
+      `cluster_extrema` lost its `base_field` first argument — it fed only the
+      `vtkCellLocator` and an already-dead cell-value fallback. Four call sites updated.
 
       Loose ends noticed while doing 5.1/5.3, neither actioned:
   - `get_point_data_label` and `get_cell_data_label` in `utils.py` are unreferenced

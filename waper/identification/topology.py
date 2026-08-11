@@ -1,9 +1,9 @@
-import math
 from collections import defaultdict
 
 import numpy as np
 import pyvista as pv
-import vtk
+from scipy.sparse import coo_matrix
+from scipy.sparse.csgraph import dijkstra
 from sklearn import cluster
 
 from .utils import RADIUS_EARTH_KM, RADIUS_SPHERE
@@ -11,9 +11,86 @@ from .utils import RADIUS_EARTH_KM, RADIUS_SPHERE
 CLUSTER_MAX_DISTANCE = 15000.0
 SCALE_FACTOR = RADIUS_EARTH_KM / RADIUS_SPHERE
 
+# scipy.sparse.csgraph marks "no predecessor" — the source itself, or a vertex
+# unreachable from it — with this sentinel rather than -1.
+_NO_PREDECESSOR = -9999
+
+
+def _surface_graph(mesh):
+    """Build the point-adjacency graph of a triangulated surface mesh.
+
+    Nodes are mesh point IDs; edges are triangle edges weighted by the
+    Euclidean distance between their endpoints. This is the graph
+    ``vtkDijkstraGraphGeodesicPath`` walked internally, so shortest-path lengths
+    over it are the same geodesic distances — in mesh units, i.e. on the scaled
+    sphere of radius ``RADIUS_SPHERE``, which ``SCALE_FACTOR`` converts to km.
+
+    Args:
+        mesh (pv.PolyData): triangulated surface
+
+    Returns:
+        scipy.sparse.csr_matrix: symmetric (n_points, n_points) weight matrix
+    """
+    triangles = mesh.faces.reshape(-1, 4)[:, 1:]
+    edges = np.vstack(
+        [triangles[:, [0, 1]], triangles[:, [1, 2]], triangles[:, [2, 0]]]
+    )
+    # Interior edges are shared by two triangles. De-duplicate them, or the
+    # coo -> csr conversion would sum the duplicates into a doubled weight.
+    edges = np.unique(np.sort(edges, axis=1), axis=0)
+    edges = edges[edges[:, 0] != edges[:, 1]]
+
+    lengths = np.linalg.norm(
+        mesh.points[edges[:, 0]] - mesh.points[edges[:, 1]], axis=1
+    )
+    rows = np.concatenate([edges[:, 0], edges[:, 1]])
+    cols = np.concatenate([edges[:, 1], edges[:, 0]])
+    weights = np.concatenate([lengths, lengths])
+
+    n = mesh.n_points
+    return coo_matrix((weights, (rows, cols)), shape=(n, n)).tocsr()
+
+
+def _path_extremes(predecessors, values, sign):
+    """Extremal scalar value along each shortest path out of one source.
+
+    Given the predecessor row scipy returns for a single source, produce an
+    array ``ext`` where ``ext[v]`` is the minimum (``sign > 0``) or maximum
+    (``sign < 0``) of ``values`` over every vertex on the shortest path from the
+    source to ``v``, both endpoints included.
+
+    A shortest-path tree gives each vertex exactly one parent, so this is a
+    bottleneck query up the tree. It is answered for every vertex at once by
+    pointer doubling: round k folds in the ancestor 2^k steps up, so the whole
+    tree resolves in O(log depth) vectorised passes rather than one Python walk
+    per (source, target) pair.
+
+    Args:
+        predecessors (ndarray): parent of each vertex in the shortest-path tree
+        values (ndarray): scalar value at each vertex
+        sign (int): +1 for maxima (take the minimum), -1 for minima (the maximum)
+
+    Returns:
+        ndarray: the extremal value along the path to each vertex
+    """
+    ancestor = predecessors.astype(np.intp, copy=True)
+    # Point roots and unreachable vertices at themselves, so doubling is a no-op
+    # for them. Unreachable vertices are never queried — their pair distance is
+    # infinite and the pair stays at CLUSTER_MAX_DISTANCE.
+    detached = ancestor == _NO_PREDECESSOR
+    ancestor[detached] = np.flatnonzero(detached)
+
+    combine = np.minimum if sign > 0 else np.maximum
+    ext = values.astype(float, copy=True)
+    while True:
+        ext = combine(ext, ext[ancestor])
+        nxt = ancestor[ancestor]
+        if np.array_equal(nxt, ancestor):
+            return ext
+        ancestor = nxt
+
 
 def cluster_extrema(
-    base_field,
     connectivity_clipped_scalar_field,
     extrema_points,
     scalar_name,
@@ -23,118 +100,91 @@ def cluster_extrema(
     xi=0.05,
     penalty_length_scale_km=2000.0,
 ):
-    """Cluster extrema (maxima or minima) in the scalar field using OPTICS.
+    """Cluster extrema (maxima or minima) in the scalar field.
+
+    Extrema in the same connected region are separated by the geodesic distance
+    between them across the clipped surface, plus a hill-climbing penalty for
+    paths that leave the shared ridge (or trough). DBSCAN over that precomputed
+    distance then groups them.
 
     Args:
-        base_field (object): vtk object containing the unclipped scalar field data
-        connectivity_clipped_scalar_field (object): vtk object containing connectivity information
-        extrema_points (object): vtk object containing the extrema
+        connectivity_clipped_scalar_field (pv.PolyData): scalar field labelled
+            by connected region
+        extrema_points (pv.PolyData): the extrema, carrying "vtkOriginalPointIds"
         scalar_name (string): name of the variable
         sign (int): +1 for maxima, -1 for minima
-        max_eps_km (float): OPTICS maximum neighborhood radius in km
-        min_samples (int): OPTICS minimum cluster size
-        xi (float): OPTICS steepness threshold for cluster boundary detection
+        max_eps_km (float): DBSCAN neighbourhood radius in km
+        min_samples (int): unused — DBSCAN runs with min_samples=1 so that every
+            extremum lands in a cluster
+        xi (float): unused — retained from the earlier OPTICS implementation
+        penalty_length_scale_km (float): km of extra distance charged per unit of
+            fractional descent along the path
 
     Returns:
-        object: extrema points with cluster IDs (noise points discarded)
+        pv.PolyData: extrema points with a "Cluster ID" point array
     """
-    if extrema_points.GetNumberOfPoints() == 0:
-        cluster_id = vtk.vtkIntArray()
-        cluster_id.SetNumberOfComponents(1)
-        cluster_id.SetNumberOfTuples(0)
-        cluster_id.SetName("Cluster ID")
-        extrema_points.GetPointData().AddArray(cluster_id)
-        return pv.wrap(extrema_points)
+    num_points = extrema_points.n_points
+    if num_points == 0:
+        extrema_points.point_data["Cluster ID"] = np.zeros(0, dtype=int)
+        return extrema_points
 
-    scalar_field = connectivity_clipped_scalar_field
+    # The geodesic graph is built from triangle edges, so the field has to be a
+    # triangulated surface. Both callers already pass PolyData (clip_scalar ->
+    # connectivity keeps it), for which the old vtkGeometryFilter step was a
+    # pass-through; extract the surface only if that is not the case.
+    surface = connectivity_clipped_scalar_field
+    if not isinstance(surface, pv.PolyData):
+        surface = surface.extract_surface()
+    surface = surface.triangulate()
 
-    geometry_filter = vtk.vtkGeometryFilter()
-    geometry_filter.SetInputData(scalar_field)
-    geometry_filter.Update()
-    scalar_field = geometry_filter.GetOutput()
-
-    triangle_filter = vtk.vtkTriangleFilter()
-    triangle_filter.SetInputData(scalar_field)
-    triangle_filter.Update()
-    scalar_field = triangle_filter.GetOutput()
-
-    extrema_point_id = extrema_points.GetPointData().GetArray("vtkOriginalPointIds")
-    num_points = extrema_points.GetNumberOfPoints()
-    extrema_regions = extrema_points.GetPointData().GetArray("RegionId")
-    point_region_id = scalar_field.GetPointData().GetArray("RegionId")
+    extrema_node = np.asarray(
+        extrema_points.point_data["vtkOriginalPointIds"], dtype=np.intp
+    )
+    extrema_regions = np.asarray(extrema_points.point_data["RegionId"])
+    point_region_id = np.asarray(surface.point_data["RegionId"])
     num_regions = int(np.max(point_region_id) + 1)
+
+    point_scalar_values = np.asarray(surface.point_data[scalar_name], dtype=float)
+
+    # Scalar value at each extremum, for the hill-climbing penalty.
+    if scalar_name in extrema_points.point_data:
+        extrema_scalar_values = np.asarray(
+            extrema_points.point_data[scalar_name], dtype=float
+        )
+    else:
+        # Fall back: look up via original point ID in the clipped scalar field
+        extrema_scalar_values = point_scalar_values[extrema_node]
 
     dist_matrix = np.full((num_points, num_points), CLUSTER_MAX_DISTANCE)
 
-    dijkstra = vtk.vtkDijkstraGraphGeodesicPath()
-    dijkstra.SetInputData(scalar_field)
-
-    locator = vtk.vtkCellLocator()
-    locator.SetDataSet(base_field)
-    locator.BuildLocator()
-
-    cell_v = base_field.GetCellData().GetArray(f"{scalar_name} Cell Value")
-
-    point_coords = np.empty((0, 3))
-    for i in range(num_points):
-        point_coords = np.append(point_coords, [extrema_points.GetPoint(i)], axis=0)
-
-    # Extract scalar values at each extremum for hill-climbing penalty.
-    extrema_scalar_values = np.zeros(num_points)
-    # Try point data on extrema_points first
-    extrema_scalar_arr = extrema_points.GetPointData().GetArray(scalar_name)
-    if extrema_scalar_arr is not None:
-        for i in range(num_points):
-            extrema_scalar_values[i] = extrema_scalar_arr.GetTuple1(i)
-    else:
-        # Fall back: look up via original point ID in the clipped scalar field
-        sf_scalar_arr = scalar_field.GetPointData().GetArray(scalar_name)
-        for i in range(num_points):
-            orig_id = int(extrema_point_id.GetTuple1(i))
-            extrema_scalar_values[i] = sf_scalar_arr.GetTuple1(orig_id)
+    graph = _surface_graph(surface)
+    geodesic, predecessors = dijkstra(
+        graph, directed=False, indices=extrema_node, return_predecessors=True
+    )
 
     for i in range(num_points):
-        for j in range(i + 1, num_points):
-            p0 = [0, 0, 0]
-            p1 = [0, 0, 0]
-            dist = 0.0
-            
-            region_1 = extrema_regions.GetTuple1(i)
-            region_2 = extrema_regions.GetTuple1(j)
-            if region_1 != region_2:
+        partners = np.flatnonzero(extrema_regions[i + 1 :] == extrema_regions[i]) + (
+            i + 1
+        )
+        if partners.size == 0:
+            continue
+
+        # Extreme scalar value along the path from extremum i to every vertex:
+        # the minimum for maxima, the maximum for minima.
+        path_extremes = _path_extremes(predecessors[i], point_scalar_values, sign)
+
+        for j in partners:
+            dist = geodesic[i, extrema_node[j]]
+            if not np.isfinite(dist):
+                # Same region label, but no path across the triangulated
+                # surface. Leave the pair at CLUSTER_MAX_DISTANCE.
                 continue
 
-            dijkstra.SetStartVertex(int(extrema_point_id.GetTuple1(i)))
-            dijkstra.SetEndVertex(int(extrema_point_id.GetTuple1(j)))
-            dijkstra.Update()
-            
-            dijkstra_output = dijkstra.GetOutput()
-            pts = dijkstra_output.GetPoints()
-            id_list = dijkstra.GetIdList()
-            
-            # Track the extreme value along the Dijkstra path for hill-climbing penalty.
-            # For maxima (sign>0): find minimum along path.
-            # For minima (sign<0): find maximum along path.
-            path_extreme_v = extrema_scalar_values[i]  # initialize to endpoint value
-            
-            for ptId in range(pts.GetNumberOfPoints() - 1):
-                pts.GetPoint(ptId, p0)
-                pts.GetPoint(ptId + 1, p1)
-                dist += math.sqrt(vtk.vtkMath.Distance2BetweenPoints(p0, p1))
-                
-            # Look up point_scalar_arr once (moved out of inner loop — same result,
-            # since the array doesn't change per iteration).
-            point_scalar_arr = scalar_field.GetPointData().GetArray(scalar_name)
-            for ptIdx in range(id_list.GetNumberOfIds()):
-                vid = id_list.GetId(ptIdx)
-                val = point_scalar_arr.GetTuple1(vid) if point_scalar_arr else cell_v.GetTuple1(vid)
-                    
-                if sign > 0:
-                    if val < path_extreme_v:
-                        path_extreme_v = val
-                else:
-                    if val > path_extreme_v:
-                        path_extreme_v = val
+            path_extreme_v = path_extremes[extrema_node[j]]
+            if sign > 0:
+                path_extreme_v = min(path_extreme_v, extrema_scalar_values[i])
+            else:
+                path_extreme_v = max(path_extreme_v, extrema_scalar_values[i])
 
             # Hill-climbing penalty: fractional descent from weaker endpoint.
             #
@@ -149,19 +199,19 @@ def cluster_extrema(
             #   reference=-18, descent=(-5)-(-18)=13, f=13/18=0.72.
             val_i = extrema_scalar_values[i]
             val_j = extrema_scalar_values[j]
-            
+
             if sign > 0:
                 reference = min(val_i, val_j)
                 descent = reference - path_extreme_v
             else:
                 reference = max(val_i, val_j)
                 descent = path_extreme_v - reference
-                
+
             abs_ref = abs(reference)
             f = max(0.0, descent / abs_ref) if abs_ref > 0 else 0.0
-                
+
             penalty_km = f * penalty_length_scale_km
-            
+
             final_dist = dist * SCALE_FACTOR + penalty_km
             dist_matrix[i][j] = final_dist
             dist_matrix[j][i] = final_dist
@@ -170,9 +220,7 @@ def cluster_extrema(
     cluster_assign = np.full(num_points, -1)
 
     for i in range(num_points):
-        region_array[
-            int(point_region_id.GetTuple1(int(extrema_point_id.GetTuple1(i))))
-        ].append(i)
+        region_array[int(point_region_id[extrema_node[i]])].append(i)
 
     prev_cluster_id = 0
 
@@ -180,7 +228,7 @@ def cluster_extrema(
         num_cluster = len(region_array[k])
         if num_cluster == 0:
             continue
-            
+
         if num_cluster == 1:
             cluster_assign[region_array[k][0]] = prev_cluster_id
             prev_cluster_id += 1
@@ -210,16 +258,8 @@ def cluster_extrema(
             cluster_assign[i] = prev_cluster_id
             prev_cluster_id += 1
 
-    cluster_id = vtk.vtkIntArray()
-    cluster_id.SetNumberOfComponents(1)
-    cluster_id.SetNumberOfTuples(num_points)
-    cluster_id.SetName("Cluster ID")
-
-    for i in range(num_points):
-        cluster_id.SetTuple1(i, cluster_assign[i])
-
-    extrema_points.GetPointData().AddArray(cluster_id)
-    return pv.wrap(extrema_points)
+    extrema_points.point_data["Cluster ID"] = cluster_assign.astype(int)
+    return extrema_points
 
 
 def identify_connected_regions(dataset):
@@ -233,24 +273,6 @@ def identify_connected_regions(dataset):
     """
 
     return dataset.connectivity(largest=False)
-
-
-def add_connectivity_data_min(dataset):
-    """Identify connected regions in the data
-
-    Args:
-        dataset (vtk.UnstructuredGrid): scalar field
-
-    Returns:
-        vtk.UnstructuredGrid: scalar field labeled by connected regions
-    """
-
-    connectivity_filter = vtk.vtkConnectivityFilter()
-    connectivity_filter.SetInputData(dataset)
-    connectivity_filter.SetExtractionModeToAllRegions()
-    connectivity_filter.ColorRegionsOn()
-    connectivity_filter.Update()
-    return connectivity_filter.GetOutput()
 
 
 def min_cluster_assign(min_points, scalar_name):
@@ -272,7 +294,7 @@ def min_cluster_assign(min_points, scalar_name):
     cluster_min_arr = np.full(num_min_clusters, 0.0)
     cluster_min_point = np.full((num_min_clusters, 2), 0.0)
     min_scalars = min_points[scalar_name]
-    
+
     cluster_lon_sum = np.zeros(num_min_clusters)
     cluster_lat_sum = np.zeros(num_min_clusters)
     cluster_weight_sum = np.zeros(num_min_clusters)
@@ -284,22 +306,22 @@ def min_cluster_assign(min_points, scalar_name):
         lat = min_points["Latitude"][i]
         val = min_scalars[i]
         weight = abs(val)
-        
+
         min_pt_dict[cid].append([lon, lat])
 
         if cluster_min_arr[cid] > val:
             cluster_min_arr[cid] = val
-            
+
         if cluster_base_lon[cid] == -1.0:
             cluster_base_lon[cid] = lon
-            
+
         shifted_lon = lon
         if abs(lon - cluster_base_lon[cid]) > 180:
             if lon > cluster_base_lon[cid]:
                 shifted_lon -= 360
             else:
                 shifted_lon += 360
-                
+
         cluster_lon_sum[cid] += shifted_lon * weight
         cluster_lat_sum[cid] += lat * weight
         cluster_weight_sum[cid] += weight
@@ -333,7 +355,7 @@ def max_cluster_assign(max_points, scalar_name):
     cluster_max_arr = np.full(num_max_clusters, 0.0)
     cluster_max_point = np.full((num_max_clusters, 2), 0.0)
     max_scalars = max_points[scalar_name]
-    
+
     cluster_lon_sum = np.zeros(num_max_clusters)
     cluster_lat_sum = np.zeros(num_max_clusters)
     cluster_weight_sum = np.zeros(num_max_clusters)
@@ -344,15 +366,15 @@ def max_cluster_assign(max_points, scalar_name):
         lon = max_points["Longitude"][i]
         lat = max_points["Latitude"][i]
         val = max_scalars[i]
-        
+
         max_pt_dict[cid].append([lon, lat])
-        
+
         if cluster_max_arr[cid] < val:
             cluster_max_arr[cid] = val
-            
+
         if cluster_base_lon[cid] == -1.0:
             cluster_base_lon[cid] = lon
-            
+
         # Shift longitude if it wraps around
         shifted_lon = lon
         if abs(lon - cluster_base_lon[cid]) > 180:
@@ -360,7 +382,7 @@ def max_cluster_assign(max_points, scalar_name):
                 shifted_lon -= 360
             else:
                 shifted_lon += 360
-                
+
         cluster_lon_sum[cid] += shifted_lon * val
         cluster_lat_sum[cid] += lat * val
         cluster_weight_sum[cid] += val

@@ -1,7 +1,87 @@
 import numpy as np
+import pyvista as pv
 import xarray as xr
+from scipy.sparse.csgraph import dijkstra
 
 from waper.identification import max_min, topology
+from waper.identification.topology import (
+    _NO_PREDECESSOR,
+    _path_extremes,
+    _surface_graph,
+)
+
+
+def _two_triangles():
+    """Two triangles sharing the edge 1-2, in a plane.
+
+        0 --- 1
+          \\  | \\
+           \\ |  \\
+             2 --- 3
+    """
+    points = np.array(
+        [[0.0, 1.0, 0.0], [3.0, 1.0, 0.0], [0.0, -3.0, 0.0], [3.0, -3.0, 0.0]]
+    )
+    faces = np.hstack([[3, 0, 1, 2], [3, 1, 3, 2]])
+    return pv.PolyData(points, faces)
+
+
+def test_surface_graph_edge_weights_are_euclidean_distances():
+    graph = _surface_graph(_two_triangles()).toarray()
+
+    assert graph[0, 1] == 3.0  # horizontal
+    assert graph[0, 2] == 4.0  # vertical
+    assert graph[1, 2] == 5.0  # the shared diagonal, 3-4-5
+    # Symmetric, and non-adjacent points carry no edge.
+    assert np.array_equal(graph, graph.T)
+    assert graph[0, 3] == 0.0
+
+
+def test_surface_graph_does_not_double_the_shared_edge():
+    """Edge 1-2 belongs to both triangles. Summing the duplicate on the
+    coo -> csr conversion would report 10.0 instead of 5.0."""
+    graph = _surface_graph(_two_triangles())
+
+    assert graph[1, 2] == 5.0
+    assert graph.nnz == 2 * 5  # 5 undirected edges, stored both ways
+
+
+def test_path_extremes_matches_an_explicit_walk_up_the_tree():
+    """The pointer-doubling bottleneck must agree with walking each shortest
+    path vertex by vertex, which is what the VTK implementation did."""
+    rng = np.random.default_rng(0)
+    mesh = pv.Sphere(theta_resolution=20, phi_resolution=20).triangulate()
+    values = rng.normal(size=mesh.n_points)
+    graph = _surface_graph(mesh)
+
+    source = 7
+    _, predecessors = dijkstra(
+        graph, directed=False, indices=[source], return_predecessors=True
+    )
+
+    for sign in (1, -1):
+        fast = _path_extremes(predecessors[0], values, sign)
+        for target in range(0, mesh.n_points, 13):
+            path = [target]
+            while path[-1] != source:
+                parent = predecessors[0][path[-1]]
+                assert parent != _NO_PREDECESSOR
+                path.append(parent)
+            expected = values[path].min() if sign > 0 else values[path].max()
+            assert fast[target] == expected
+
+
+def test_path_extremes_leaves_unreachable_vertices_alone():
+    """Vertices in another component have no predecessor; the helper must not
+    index out of bounds on scipy's -9999 sentinel."""
+    values = np.array([1.0, 2.0, 3.0])
+    predecessors = np.array([_NO_PREDECESSOR, 0, _NO_PREDECESSOR])
+
+    result = _path_extremes(predecessors, values, sign=1)
+
+    assert result[0] == 1.0  # the source
+    assert result[1] == 1.0  # min over the path 0 -> 1
+    assert result[2] == 3.0  # detached: its own value, and never queried
 
 
 def _create_and_process_field(v, lons, lats, threshold=5, max_eps_km=1500, xi=0.05, penalty_length_scale_km=2000.0):
@@ -16,7 +96,7 @@ def _create_and_process_field(v, lons, lats, threshold=5, max_eps_km=1500, xi=0.
     connectivity = topology.identify_connected_regions(clipped)
     maxima_points = max_min.extract_maxima_points(connectivity, threshold, "v")
     clustered = topology.cluster_extrema(
-        data_with_max, connectivity, maxima_points, "v",
+        connectivity, maxima_points, "v",
         sign=1, max_eps_km=max_eps_km, xi=xi,
         penalty_length_scale_km=penalty_length_scale_km,
     )
@@ -200,7 +280,7 @@ def _create_and_process_minima_field(v, lons, lats, threshold=5, max_eps_km=1500
     connectivity = topology.identify_connected_regions(clipped)
     minima_points = max_min.extract_minima_points(connectivity, -threshold, "v")
     clustered = topology.cluster_extrema(
-        data_with_min, connectivity, minima_points, "v",
+        connectivity, minima_points, "v",
         sign=-1, max_eps_km=max_eps_km, xi=xi,
         penalty_length_scale_km=penalty_length_scale_km,
     )
