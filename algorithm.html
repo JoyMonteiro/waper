@@ -262,10 +262,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   │
   ├─ Connected Region Labelling (§3)
   │    ├─ Clip field at ±clip_value → positive/negative regions
-  │    └─ VTK connectivity filter → RegionId per point
+  │    └─ PyVista connectivity filter → RegionId per point
   │
   ├─ Extrema Clustering (§4)
-  │    ├─ Geodesic distances via Dijkstra on the mesh
+  │    ├─ Geodesic distances via SciPy Dijkstra on the mesh graph
   │    ├─ Hill-climbing penalty for cross-ridge paths
   │    └─ DBSCAN clustering within each connected region
   │
@@ -302,7 +302,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p><strong>File:</strong> <code>waper/identification/max_min.py</code></p>
 <p>Local maxima and minima of the scalar field are detected using SciPy’s <code>maximum_filter</code> and <code>minimum_filter</code> with a 3×3 kernel. The longitude dimension uses <code>wrap</code> mode to handle the periodic boundary; the latitude dimension uses <code>constant</code> mode.</p>
 <p>A point is flagged as a maximum if its value equals the local maximum in the 3×3 neighbourhood. Minima are identified analogously.</p>
-<p>The detected extrema are then filtered by an amplitude threshold (<code>extrema_threshold</code>): only maxima exceeding this value (and minima below its negation) are retained. This is done via VTK’s <code>clip_scalar</code>, which also provides the connectivity information needed in the next step.</p>
+<p>The detected extrema are then filtered by an amplitude threshold (<code>extrema_threshold</code>): only maxima exceeding this value (and minima below its negation) are retained. This is done via PyVista’s <code>clip_scalar</code>, which also provides the connectivity information needed in the next step.</p>
 <section id="key-parameters" class="level3">
 <h3 class="anchored" data-anchor-id="key-parameters">Key parameters</h3>
 <table class="caption-top table">
@@ -336,8 +336,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="connected-region-labelling" class="level2">
 <h2 class="anchored" data-anchor-id="connected-region-labelling">3. Connected Region Labelling</h2>
-<p><strong>File:</strong> <code>waper/identification/topology.py</code> → <code>identify_connected_regions()</code>, <code>add_connectivity_data_min()</code></p>
-<p>After clipping the scalar field at <code>±clip_value</code>, each contiguous region of the same sign is assigned a unique <code>RegionId</code> using VTK’s <code>vtkConnectivityFilter</code> (extraction mode: all regions, with colour-by-region enabled). This produces a labelling where every grid point in a positive (negative) region shares a <code>RegionId</code> with its spatially connected neighbours.</p>
+<p><strong>File:</strong> <code>waper/identification/topology.py</code> → <code>identify_connected_regions()</code></p>
+<p>After clipping the scalar field at <code>±clip_value</code>, each contiguous region of the same sign is assigned a unique <code>RegionId</code> by PyVista’s <code>.connectivity()</code> filter (<code>largest=False</code>, so all regions are kept and coloured rather than only the biggest). This produces a labelling where every grid point in a positive (negative) region shares a <code>RegionId</code> with its spatially connected neighbours.</p>
 <p>The <code>RegionId</code> serves two purposes:</p>
 <ol type="1">
 <li><strong>Clustering scope</strong> — Extrema are only clustered with other extrema in the same connected region (§4).</li>
@@ -351,8 +351,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Within each connected region, nearby extrema of the same sign are grouped into clusters. Each cluster represents a single wave component (a ridge or trough). The clustering proceeds as follows:</p>
 <section id="distance-matrix-computation" class="level3">
 <h3 class="anchored" data-anchor-id="distance-matrix-computation">4.1 Distance matrix computation</h3>
-<p>For every pair of extrema within the same <code>RegionId</code>, the geodesic distance along the mesh is computed using VTK’s <code>vtkDijkstraGraphGeodesicPath</code>. This gives the distance <em>along the scalar field surface</em>, not the great-circle distance — an important distinction because it respects the field’s geometry.</p>
-<p>Pairs in different connected regions are never compared (their distance is set to <code>CLUSTER_MAX_DISTANCE = 15000 km</code>).</p>
+<p>For every pair of extrema within the same <code>RegionId</code>, the geodesic distance along the mesh is computed with <code>scipy.sparse.csgraph.dijkstra</code>. This gives the distance <em>along the scalar field surface</em>, not the great-circle distance — an important distinction because it respects the field’s geometry.</p>
+<p>The graph it runs on is built by <code>_surface_graph()</code>: the clipped field is triangulated, and each triangle edge becomes a graph edge weighted by the Euclidean distance between its endpoints (in mesh units on the sphere of radius <code>RADIUS_SPHERE</code>, which <code>SCALE_FACTOR</code> converts to kilometres). Interior edges are shared by two triangles and are de-duplicated, or their weights would double. One Dijkstra pass per extremum covers all of that extremum’s pairs, rather than one pass per pair.</p>
+<p>Pairs in different connected regions are never compared (their distance is set to <code>CLUSTER_MAX_DISTANCE = 15000 km</code>), and so are same-region pairs with no path across the triangulated surface.</p>
 </section>
 <section id="hill-climbing-penalty" class="level3">
 <h3 class="anchored" data-anchor-id="hill-climbing-penalty">4.2 Hill-climbing penalty</h3>
@@ -360,18 +361,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>For maxima (<code>sign &gt; 0</code>):</p>
 <ul>
 <li>The <strong>reference value</strong> is the weaker (smaller) of the two peak values.</li>
-<li>The <strong>path minimum</strong> is the smallest scalar value along the Dijkstra path.</li>
+<li>The <strong>path minimum</strong> is the smallest scalar value along the shortest path.</li>
 <li>The <strong>fractional descent</strong> is <code>f = max(0, (reference − path_minimum) / |reference|)</code>.</li>
 </ul>
 <p>For minima (<code>sign &lt; 0</code>):</p>
 <ul>
 <li>The <strong>reference value</strong> is the weaker (least negative) trough.</li>
-<li>The <strong>path maximum</strong> is the largest scalar value along the Dijkstra path.</li>
+<li>The <strong>path maximum</strong> is the largest scalar value along the shortest path.</li>
 <li>The <strong>fractional descent</strong> is <code>f = max(0, (path_maximum − reference) / |reference|)</code>.</li>
 </ul>
 <p>The penalty added to the geodesic distance is:</p>
 <pre><code>penalty = f × penalty_length_scale_km</code></pre>
-<p><strong>Example:</strong> Two maxima at 30 and 25 m/s, with the Dijkstra path dipping to 10 m/s. Reference = 25, descent = 15, f = 0.6, penalty = 0.6 × 2000 = 1200 km added to the geodesic distance. This makes it harder for DBSCAN to place them in the same cluster.</p>
+<p><strong>Example:</strong> Two maxima at 30 and 25 m/s, with the shortest path dipping to 10 m/s. Reference = 25, descent = 15, f = 0.6, penalty = 0.6 × 2000 = 1200 km added to the geodesic distance. This makes it harder for DBSCAN to place them in the same cluster.</p>
+<p>The path extreme is read off the shortest-path tree by <code>_path_extremes()</code>: every vertex has exactly one parent in the tree, so the extreme along a path is a bottleneck query up that tree, answered for all vertices at once by pointer doubling instead of one walk per pair.</p>
 </section>
 <section id="dbscan-clustering" class="level3">
 <h3 class="anchored" data-anchor-id="dbscan-clustering">4.3 DBSCAN clustering</h3>
@@ -471,7 +473,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="edge-construction-via-the-zero-crossing-isocontour" class="level3">
 <h3 class="anchored" data-anchor-id="edge-construction-via-the-zero-crossing-isocontour">5.2 Edge construction via the zero-crossing isocontour</h3>
-<p>The zero-value isocontour of the scalar field is extracted using VTK’s <code>vtkContourFilter</code>. For each point on this isocontour, the nearest maximum cluster and nearest minimum cluster are found using two separate K-D trees (built from the 3D spherical coordinates of the extrema).</p>
+<p>The zero-value isocontour of the scalar field is extracted using PyVista’s <code>.contour()</code>. For each point on this isocontour, the nearest maximum cluster and nearest minimum cluster are found using two separate K-D trees (built from the 3D spherical coordinates of the extrema).</p>
 <p>If a <code>(max_id, min_id)</code> pair is linked by at least one isocontour point, an edge is added to the association graph. This ensures that only clusters separated by a zero-crossing — i.e., genuinely alternating ridges and troughs — are connected.</p>
 <hr>
 </section>
