@@ -7,14 +7,6 @@ RADIUS_SPHERE = 63.71
 RADIUS_EARTH_KM = 6371.0
 
 
-def get_point_data_label(scalar_name):
-    return scalar_name
-
-
-def get_cell_data_label(scalar_name):
-    return f"Cell Value {scalar_name}"
-
-
 def get_vtk_object_from_data_array(data_array, lons, lats, array_name="v"):
     """Get vtk object from xarray dataArray
 
