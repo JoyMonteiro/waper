@@ -30,13 +30,12 @@ file can be restored by moving it back.
 
 ### Caveat on branch resolution
 
-That last one is **implemented and reviewed but not merged or pushed** — the code
-lives only on the `energy-weighted-tracking` branch, which has no remote copy. The
-plan is retired because its tasks are executed; the merge is outstanding git work,
-not outstanding plan work. Four minor findings were consciously deferred rather
-than fixed (`_arc_bins` off-by-one, `_lat_ranges_within` naming, a missing
-early-return test, test-file import style) — see `progress.md` for the
-adjudication.
+That last one was implemented and reviewed on `energy-weighted-tracking` before it
+had a remote copy. **Merged and pushed as of 2026-08-07** — it is on `main`
+(`31f6c72`, `30badc1`, `f80f94d`). The four minor findings deferred during review
+were all closed in Tier 1 of the housekeeping backlog (`_arc_bins` off-by-one fixed
+with a regression test, `_lat_ranges_within` renamed, the early-return test added,
+the test-file import hoisted) — see `progress.md` for the original adjudication.
 
 ---
 
@@ -50,15 +49,23 @@ adjudication.
 
 ## What deliberately stayed active
 
-- **`implementation/2026-08-07-housekeeping-backlog.md`** — open housekeeping and
-  engineering items that need no scientific input, plus an explicit list of the ones
-  that *do* and must not be actioned as housekeeping.
+- **`implementation/2026-08-07-housekeeping-backlog.md`** — **all three tiers closed
+  2026-08-07.** It stays active only for its closing register, "Explicitly NOT here —
+  these need Joy's input": the operating-point promotion, the group-velocity question,
+  envelope-weighted edge pruning, the ERA5 re-download, and the two uncommitted files.
+  Read that list before proposing engineering cleanup; the tiers above it are history.
 
-- **`implementation/waper_refactoring_spec.md`** — Phases 0–4 are done (see the
-  table above), but **Phase 5 (VTK → PyVista/SciPy) has not started**:
-  `waper/identification/{utils,max_min,topology}.py` still import VTK and there is
-  no `scipy.sparse` shortest-path in `topology.py`. 32/126 boxes understates it,
-  but the live remainder is real.
+- **`implementation/waper_refactoring_spec.md`** — Phases 0–5 are done. **Phase 5
+  (VTK → PyVista/SciPy) closed 2026-08-07** (`2a8d0ff`, `3496eb1`): no module under
+  `waper/` imports VTK any more, and `topology.py` uses `scipy.sparse.csgraph.dijkstra`.
+  Live remainder is Phases 6–9, none of them load-bearing:
+  6.3 (benchmark tests — 6.1/6.2 were absorbed by 5.3/2.4), 7.1–7.4 (visualisation:
+  `ax=` is now threaded through most plot entry points, projections are still
+  hardcoded), 8.2 (public docstrings — this is why the generated API pages are
+  signature-only; 8.1 and 8.3 shipped with the Quarto site and `docs/algorithm.md`),
+  and 9.2–9.4 (parallel timesteps, `to_dataset()`/`tracks_to_dataframe()`,
+  `WaperConfig` YAML round-trip). 9.1 is closed — read 5.5's closing note first,
+  its Shapely-and-delete-the-rasters plan is dead.
 - **`design/validation_strategy_plan.md`** and **`implementation/phase0_implementation_plan.md`**
   — the Phase 0 gate has never been run; every downstream layer depends on it.
 - **`design/western_disturbance_validation_plan.md`**, **`design/regime_rwp_structure_plan.md`**
