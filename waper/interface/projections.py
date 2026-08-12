@@ -2,16 +2,18 @@
 
 Two distinct things live here and must not be conflated:
 
-* :func:`polygon_crs` (and its northern alias ``POLYGON_CRS``) is the coordinate
-  system RWP polygons and rasters are *built* in. It is fixed by the
-  identification run's hemisphere. Vertex coordinates are meaningless in any
-  other CRS, so it is what belongs in matplotlib's ``transform=`` argument.
+* :func:`polygon_crs` is the coordinate system RWP polygons and rasters are
+  *built* in. The identification run's hemisphere fixes it — vertices are in
+  ``+proj=stere +lat_0=90`` metres for a northern run and ``lat_0=-90`` for a
+  southern one — and the numbers are meaningless read in any other CRS, so this
+  is what belongs in matplotlib's ``transform=`` argument.
 * :func:`default_projection` returns the CRS a map is *displayed* in. It is a
   presentation choice and callers override it freely.
 
-They coincide by default, which is why one constant used to serve both. Passing
-``projection=`` to a plot changes only the second; the ``transform=`` arguments
-must keep following the first.
+For a given hemisphere the two return the same projection, which is why one
+constant used to serve both. Passing ``projection=`` to a plot changes only the
+second; the ``transform=`` arguments must keep following the first, or the
+polygons move.
 """
 
 import cartopy.crs as ccrs
@@ -35,11 +37,6 @@ def polygon_crs(hemisphere: str) -> ccrs.Projection:
     """
     lat0 = -90 if hemisphere == "south" else 90
     return ccrs.Stereographic(central_longitude=0, central_latitude=lat0)
-
-
-#: The CRS northern-hemisphere RWP polygons and rasters are constructed in.
-#: Fixed; not a display choice. See :func:`polygon_crs` for southern runs.
-POLYGON_CRS = polygon_crs("north")
 
 
 def default_projection(hemisphere: str) -> ccrs.Projection:

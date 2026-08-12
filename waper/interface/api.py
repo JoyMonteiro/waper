@@ -708,7 +708,11 @@ class Waper:
             projection: Cartopy projection to *display* in. ``None`` means the
                 hemisphere default (:func:`~waper.interface.projections.default_projection`);
                 an ``ax`` you pass in takes precedence over both. The raster is
-                reprojected from the grid CRS it was burned in, not moved.
+                reprojected from the grid CRS it was burned in, not moved. Note
+                that a non-default projection sends the image through cartopy's
+                ``img_transform.regrid``, which is slow and, where ``pykdtree`` is
+                mis-linked, can abort the interpreter; the default path does not
+                reproject at all.
 
         Returns:
             The matplotlib ``Axes`` drawn on.
