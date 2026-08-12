@@ -14,6 +14,11 @@ from shapely import wkb
 
 from .colormaps import bokeh_palette, joy_nl8
 
+# Re-exported: the matplotlib and holoviews layers must agree on the default
+# display projection, so it lives in one place. Existing callers import it
+# from here, which keeps working.
+from .projections import default_projection
+
 pn.extension(throttled=True)
 
 NODE_CMAP = {"max": "#b2182b", "min": "#2166ac"}
@@ -23,18 +28,6 @@ def _stereo_proj4(hemisphere):
     """proj4 string for the polar-stereographic CRS WAPER builds RWP polygons in."""
     lat0 = -90 if hemisphere == "south" else 90
     return f"+proj=stere +lat_0={lat0} +lon_0=0"
-
-
-def default_projection(hemisphere):
-    """Default *display* projection: polar stereographic for the hemisphere.
-
-    Matches the matplotlib ``_plot_polygons`` view and is seam-free, so
-    dateline-crossing packets stay contiguous (Web Mercator tore them apart).
-    Override per-call for other workflows — e.g. western disturbances over South
-    Asia read better in ``ccrs.Orthographic(central_longitude=75, central_latitude=25)``.
-    """
-    lat0 = -90 if hemisphere == "south" else 90
-    return ccrs.Stereographic(central_latitude=lat0, central_longitude=0)
 
 
 def _hemisphere(cat):

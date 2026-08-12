@@ -6,8 +6,10 @@ from matplotlib.colors import LinearSegmentedColormap
 from shapely.geometry import MultiPolygon
 from xarray import DataArray
 
-from ..tracking.rwp_polygon import WAPER_X_BOUNDS, WAPER_Y_BOUNDS
+from ..tracking.rwp_polygon import _get_bounds
 from .colormaps import ColorDict
+from .projections import PLATE_CARREE as _PLATE_CARREE
+from .projections import default_extent, default_projection, polygon_crs
 
 cdictDivergeNL: ColorDict = {'red' : (
                   (0.,0.455,0.455),
@@ -43,9 +45,6 @@ cdictDivergeNL: ColorDict = {'red' : (
 
 NLDivCmap = LinearSegmentedColormap('NLDCmap',cdictDivergeNL)
 
-_PLATE_CARREE = ccrs.PlateCarree(central_longitude=0)
-_STEREO_NH = ccrs.Stereographic(central_longitude=0, central_latitude=90)
-
 
 def _plot_clusters(
     input_data,
@@ -57,10 +56,14 @@ def _plot_clusters(
     vtk_lat_label,
     vtk_region_label,
     clip_value,
+    projection=None,
 ):
 
-    ax = plt.subplot(211, projection=ccrs.PlateCarree(central_longitude=180))
+    display_crs = projection or ccrs.PlateCarree(central_longitude=180)
+
+    ax = plt.subplot(211, projection=display_crs)
     ax.coastlines(linewidth=0.5, color="gray")
+    ax.gridlines(linewidth=0.3, color="gray", alpha=0.5)
 
     input_data.plot.contourf(
         ax=ax,
@@ -113,8 +116,9 @@ def _plot_clusters(
 
     ax.set_title("Extrema by region", fontsize=9)
 
-    ax = plt.subplot(212, projection=ccrs.PlateCarree(central_longitude=180))
+    ax = plt.subplot(212, projection=display_crs)
     ax.coastlines(linewidth=0.5, color="gray")
+    ax.gridlines(linewidth=0.3, color="gray", alpha=0.5)
 
     input_data.plot.contourf(
         ax=ax,
@@ -151,12 +155,15 @@ def _plot_clusters(
     return ax
 
 
-def _plot_graph(rwp_graph, scalar_data=None, ax=None):
+def _plot_graph(rwp_graph, scalar_data=None, ax=None, projection=None):
 
     if ax is None:
-        ax = plt.subplot(projection=ccrs.PlateCarree(central_longitude=180))
+        ax = plt.subplot(
+            projection=projection or ccrs.PlateCarree(central_longitude=180)
+        )
 
     ax.coastlines(linewidth=0.5, color="gray")
+    ax.gridlines(linewidth=0.3, color="gray", alpha=0.5)
 
     if isinstance(scalar_data, DataArray):
         scalar_data.plot.contourf(
@@ -206,12 +213,15 @@ def _plot_graph(rwp_graph, scalar_data=None, ax=None):
     return ax
 
 
-def _plot_rwp_paths(rwp_graph, paths, scalar_data=None, ax=None):
+def _plot_rwp_paths(rwp_graph, paths, scalar_data=None, ax=None, projection=None):
 
     if ax is None:
-        ax = plt.subplot(projection=ccrs.PlateCarree(central_longitude=180))
+        ax = plt.subplot(
+            projection=projection or ccrs.PlateCarree(central_longitude=180)
+        )
 
     ax.coastlines(linewidth=0.5, color="gray")
+    ax.gridlines(linewidth=0.3, color="gray", alpha=0.5)
 
     colors = plt.cm.tab10.colors
 
@@ -269,6 +279,18 @@ def _plot_rwp_paths(rwp_graph, paths, scalar_data=None, ax=None):
     return ax
 
 
+def _apply_default_extent(ax, hemisphere):
+    # The extent exists to keep the *opposite* pole out of the axes: it projects
+    # to infinity in a polar projection and blows the axes up. Not every display
+    # projection has a finite bounding box for that lat/lon band, though —
+    # Orthographic clips the band at the limb and hands matplotlib NaN limits. In
+    # that case the projection's own domain is already finite, so use it.
+    try:
+        ax.set_extent(default_extent(hemisphere), crs=_PLATE_CARREE)
+    except ValueError:
+        ax.set_global()
+
+
 def _plot_polygons(
     poly_list,
     scalar_data,
@@ -278,13 +300,20 @@ def _plot_polygons(
     plot_samples=False,
     ax=None,
     poly_colors=None,
+    projection=None,
+    hemisphere="north",
 ):
 
+    # Display projection (a presentation choice, overridable) and data CRS (fixed
+    # by the run's hemisphere) are separate: `transform=` must follow the latter.
+    data_crs = polygon_crs(hemisphere)
+
     if ax is None:
-        ax = plt.subplot(projection=_STEREO_NH)
+        ax = plt.subplot(projection=projection or default_projection(hemisphere))
 
     ax.coastlines(linewidth=0.5, color="gray")
-    ax.set_extent([-180, 180, 20, 90], crs=_PLATE_CARREE)
+    ax.gridlines(linewidth=0.3, color="gray", alpha=0.5)
+    _apply_default_extent(ax, hemisphere)
 
     if scalar_data is not None:
         scalar_data.plot.contourf(
@@ -313,7 +342,7 @@ def _plot_polygons(
                 list(lons), list(lats),
                 facecolor=color, alpha=0.3, edgecolor=color,
                 linewidth=1.5, zorder=3,
-                transform=_STEREO_NH,
+                transform=data_crs,
             )
 
     if weighted_lat_list is not None:
@@ -330,12 +359,17 @@ def _plot_polygons(
                 edgecolors='k', linewidths=0.5,
             )
 
+            # `xycoords`, not `transform`, is the documented way to give an
+            # annotation's anchor a CRS: `transform=` is a property of the text
+            # artist and only reaches `xy` incidentally. Both forms happen to
+            # place identically on matplotlib 3.10 / cartopy 0.25 (checked); this
+            # one says what is meant and cannot quietly stop meaning it.
             ax.annotate(
                 str(index),
-                (lon, lat),
+                xy=(lon, lat),
+                xycoords=_PLATE_CARREE._as_mpl_transform(ax),
                 fontsize=8,
                 bbox={'boxstyle': "round", 'fc': "white", 'ec': "b"},
-                transform=_PLATE_CARREE,
                 zorder=1000,
             )
 
@@ -345,23 +379,34 @@ def _plot_polygons(
                 ax.scatter(
                     lon, lat,
                     color="b", s=5,
-                    transform=_STEREO_NH,
+                    transform=data_crs,
                 )
 
     plt.tight_layout()
     return ax
 
 
-def _plot_raster(raster_data):
-    ax = plt.subplot(projection=_STEREO_NH)
+def _plot_raster(raster_data, ax=None, projection=None, hemisphere="north"):
+
+    # As in `_plot_polygons`: the raster is burned onto the hemisphere's
+    # stereographic grid (`rwp_polygon._get_raster_transform`), so its extent is
+    # in that CRS's metres whatever projection the map is displayed in.
+    data_crs = polygon_crs(hemisphere)
+    x_bounds, y_bounds = _get_bounds(hemisphere)
+
+    if ax is None:
+        ax = plt.subplot(projection=projection or default_projection(hemisphere))
+
     ax.coastlines(linewidth=0.5, color="gray")
-    ax.set_extent([-180, 180, 20, 90], crs=_PLATE_CARREE)
+    ax.gridlines(linewidth=0.3, color="gray", alpha=0.5)
+    _apply_default_extent(ax, hemisphere)
 
     ax.imshow(
         np.ma.array(raster_data, mask=(raster_data == 0)),
         origin="lower",
         cmap="tab20b",
-        extent=(WAPER_X_BOUNDS[1], WAPER_X_BOUNDS[0], WAPER_Y_BOUNDS[1], WAPER_Y_BOUNDS[0]),
+        extent=(x_bounds[1], x_bounds[0], y_bounds[1], y_bounds[0]),
+        transform=data_crs,
         alpha=0.7,
     )
 

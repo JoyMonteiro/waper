@@ -527,7 +527,7 @@ class Waper:
             weight_threshold=self._config.track_weight_threshold,
         )
 
-    def plot_clusters(self, time_index):
+    def plot_clusters(self, time_index, projection=None):
         """Plot the clustered maxima and minima for one timestep.
 
         Draws two stacked PlateCarree panels — maxima above, minima below — with
@@ -536,6 +536,9 @@ class Waper:
 
         Args:
             time_index: Index into ``_time_step_data`` (i.e. along the time axis).
+            projection: Cartopy projection to draw both panels in. ``None`` keeps
+                the whole-globe ``PlateCarree(central_longitude=180)`` default,
+                which is hemisphere-agnostic.
 
         Returns:
             The matplotlib ``Axes`` of the lower (minima) panel.
@@ -551,9 +554,10 @@ class Waper:
             self._config.vtk_latitude_label,
             self._config.vtk_region_label,
             self._config.clip_value,
+            projection=projection,
         )
 
-    def plot_association_graph(self, time_index, ax=None):
+    def plot_association_graph(self, time_index, ax=None, projection=None):
         """Plot the unpruned association graph over the scalar field.
 
         Shows every extremum node and every candidate max–min link found at this
@@ -564,6 +568,10 @@ class Waper:
             time_index: Index into ``_time_step_data``.
             ax: Axes to draw on. Must already carry a cartopy projection. ``None``
                 creates one with ``PlateCarree(central_longitude=180)``.
+            projection: Cartopy projection for the axes this method creates.
+                ``None`` keeps the whole-globe ``PlateCarree(central_longitude=180)``
+                default. An ``ax`` you pass in takes precedence over both: its own
+                projection is used and ``projection`` is ignored.
 
         Returns:
             The matplotlib ``Axes`` drawn on.
@@ -571,10 +579,11 @@ class Waper:
         time_step_data = self._time_step_data[time_index]
 
         return _plot_graph(
-            time_step_data.association_graph, time_step_data.input_data, ax=ax
+            time_step_data.association_graph, time_step_data.input_data, ax=ax,
+            projection=projection,
         )
 
-    def plot_pruned_graph(self, time_index, ax=None):
+    def plot_pruned_graph(self, time_index, ax=None, projection=None):
         """Plot the association graph after node and edge pruning.
 
         Same rendering as :meth:`plot_association_graph`, but of the graph the
@@ -585,6 +594,9 @@ class Waper:
             time_index: Index into ``_time_step_data``.
             ax: Axes to draw on. Must already carry a cartopy projection. ``None``
                 creates one with ``PlateCarree(central_longitude=180)``.
+            projection: Cartopy projection for the axes this method creates.
+                ``None`` keeps the whole-globe ``PlateCarree(central_longitude=180)``
+                default. An ``ax`` you pass in takes precedence over both.
 
         Returns:
             The matplotlib ``Axes`` drawn on.
@@ -592,10 +604,11 @@ class Waper:
         time_step_data = self._time_step_data[time_index]
 
         return _plot_graph(
-            time_step_data.pruned_graph, time_step_data.input_data, ax=ax
+            time_step_data.pruned_graph, time_step_data.input_data, ax=ax,
+            projection=projection,
         )
 
-    def plot_rwp_graphs(self, time_index, ax=None, plot_scalar_data=True):
+    def plot_rwp_graphs(self, time_index, ax=None, plot_scalar_data=True, projection=None):
         """Plot the identified RWP paths as node chains through the pruned graph.
 
         Only the ranked paths are drawn, not the whole pruned graph, so this is
@@ -607,6 +620,9 @@ class Waper:
                 creates one with ``PlateCarree(central_longitude=180)``.
             plot_scalar_data: Draw the scalar field underneath the paths. Set
                 ``False`` for a paths-only figure.
+            projection: Cartopy projection for the axes this method creates.
+                ``None`` keeps the whole-globe ``PlateCarree(central_longitude=180)``
+                default. An ``ax`` you pass in takes precedence over both.
 
         Returns:
             The matplotlib ``Axes`` drawn on.
@@ -622,9 +638,10 @@ class Waper:
             time_step_data.identified_rwp_paths,
             field,
             ax=ax,
+            projection=projection,
         )
 
-    def plot_rwp_polygons(self, time_index, plot_samples=False, ax=None):
+    def plot_rwp_polygons(self, time_index, plot_samples=False, ax=None, projection=None):
         """Plot every RWP footprint polygon for one timestep.
 
         Each packet's hull is drawn over the scalar field, together with its
@@ -635,7 +652,12 @@ class Waper:
             time_index: Index into ``_time_step_data``.
             plot_samples: Also scatter the sample points the hull was built from.
             ax: Axes to draw on. Must already carry a cartopy projection. ``None``
-                creates a northern polar-stereographic axes.
+                creates a polar-stereographic axes for the configured hemisphere.
+            projection: Cartopy projection to *display* in. ``None`` means the
+                hemisphere default (:func:`~waper.interface.projections.default_projection`);
+                an ``ax`` you pass in takes precedence over both. This changes only
+                the display — the polygons are still drawn in the CRS they were
+                built in, so overriding it reprojects them rather than moving them.
 
         Returns:
             The matplotlib ``Axes`` drawn on.
@@ -667,27 +689,40 @@ class Waper:
             weighted_lat_list,
             plot_samples=plot_samples,
             ax=ax,
+            projection=projection,
+            hemisphere=self._config.hemisphere,
         )
 
-    def plot_raster(self, time_index):
+    def plot_raster(self, time_index, ax=None, projection=None):
         """Plot the rasterised RWP label field for one timestep.
 
         Shows ``raster_data`` — the polygons burned onto WAPER's polar-stereographic
         grid, each cell holding an ``rwp_id`` — with zero (no packet) masked out.
         This is the array tracking overlaps between timesteps, so it is the view
-        to check when a link looks wrong. Creates its own axes; takes no ``ax``.
+        to check when a link looks wrong.
 
         Args:
             time_index: Index into ``_time_step_data``.
+            ax: Axes to draw on. Must already carry a cartopy projection. ``None``
+                creates a polar-stereographic axes for the configured hemisphere.
+            projection: Cartopy projection to *display* in. ``None`` means the
+                hemisphere default (:func:`~waper.interface.projections.default_projection`);
+                an ``ax`` you pass in takes precedence over both. The raster is
+                reprojected from the grid CRS it was burned in, not moved.
 
         Returns:
             The matplotlib ``Axes`` drawn on.
         """
         time_step_data = self._time_step_data[time_index]
 
-        return _plot_raster(time_step_data.raster_data)
+        return _plot_raster(
+            time_step_data.raster_data,
+            ax=ax,
+            projection=projection,
+            hemisphere=self._config.hemisphere,
+        )
 
-    def plot_tracks(self, threshold=None, weight_threshold=None):
+    def plot_tracks(self, threshold=None, weight_threshold=None, projection=None):
         """Plot every track path, re-pruning the tracking graph on the fly.
 
         Prunes ``_tracking_graph`` with the thresholds given here rather than
@@ -707,6 +742,9 @@ class Waper:
                 configured value.
             weight_threshold: Minimum overlap weight in (0, 1]. ``None`` uses the
                 configured value, which is itself ``None`` (gate disabled) by default.
+            projection: Cartopy projection for the axes this method creates.
+                ``None`` keeps the whole-globe ``PlateCarree(central_longitude=180)``
+                default, which is hemisphere-agnostic.
 
         Returns:
             The matplotlib ``Axes`` drawn on.
@@ -725,9 +763,10 @@ class Waper:
             pruned,
             paths,
             None,
+            projection=projection,
         )
 
-    def plot_track_polygons(self, path, plot_samples=False, ax=None):
+    def plot_track_polygons(self, path, plot_samples=False, ax=None, projection=None):
         """Plot one track's RWP footprints, coloured by time.
 
         Overlays the polygon of every packet along the track on a single map,
@@ -739,7 +778,11 @@ class Waper:
                 pair — e.g. one element of ``get_track_paths(pruned_graph)``.
             plot_samples: Also scatter the sample points each hull was built from.
             ax: Axes to draw on. Must already carry a cartopy projection. ``None``
-                creates a northern polar-stereographic axes.
+                creates a polar-stereographic axes for the configured hemisphere.
+            projection: Cartopy projection to *display* in. ``None`` means the
+                hemisphere default (:func:`~waper.interface.projections.default_projection`);
+                an ``ax`` you pass in takes precedence over both. The polygons keep
+                being drawn in the CRS they were built in either way.
 
         Returns:
             The matplotlib ``Axes`` drawn on.
@@ -778,9 +821,11 @@ class Waper:
             plot_samples=plot_samples,
             ax=ax,
             poly_colors=poly_colors,
+            projection=projection,
+            hemisphere=self._config.hemisphere,
         )
 
-    def plot_track_rwps(self, path, ax=None):
+    def plot_track_rwps(self, path, ax=None, projection=None):
         """Plot one track's RWP node chains on a single map.
 
         The graph-level counterpart of :meth:`plot_track_polygons`: instead of the
@@ -792,6 +837,9 @@ class Waper:
                 pair.
             ax: Axes to draw on. Must already carry a cartopy projection. ``None``
                 creates one with ``PlateCarree(central_longitude=180)``.
+            projection: Cartopy projection for the axes this method creates.
+                ``None`` keeps the whole-globe ``PlateCarree(central_longitude=180)``
+                default. An ``ax`` you pass in takes precedence over both.
 
         Returns:
             The matplotlib ``Axes`` drawn on.
@@ -800,7 +848,7 @@ class Waper:
 
         if ax is None:
             ax = plt.subplot(
-                projection=ccrs.PlateCarree(central_longitude=180)
+                projection=projection or ccrs.PlateCarree(central_longitude=180)
             )
 
         for node in path:
