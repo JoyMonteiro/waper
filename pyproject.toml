@@ -69,7 +69,8 @@ dependencies = [
     "geoviews",
     "panel",
     "panel-material-ui",
-    "datashader"
+    "datashader",
+    "pyyaml"
 ]
 
 [project.optional-dependencies]

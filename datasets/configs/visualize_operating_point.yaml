@@ -1,0 +1,20 @@
+# The operating point used by datasets/visualize.py, extracted from the literal
+# dict that used to live in that script. These values are NOT the WaperConfig
+# defaults: edge_pruning_threshold is 0.02 here vs 3e-5 in WaperConfig, and
+# penalty_length_scale_km is 4000 vs 2000. Whether to promote these to the
+# package defaults is Joy's call, not an engineering task — see the
+# out-of-scope register in the plan that created this file.
+scalar_name: v
+latitude_label: latitude
+longitude_label: longitude
+time_label: time
+clip_value: 2
+extrema_threshold: 10
+min_latitude: 20
+max_latitude: 80
+node_pruning_threshold: 20
+edge_pruning_threshold: 0.02
+max_edge_weight: 1
+track_pruning_threshold: 8000
+penalty_length_scale_km: 4000
+debug: false

@@ -1,9 +1,12 @@
+import dataclasses
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import numpy as np
+import yaml
 from networkx import Graph
 from numpy import ndarray
 from pyvista import PolyData
@@ -88,6 +91,45 @@ class WaperConfig:
     vtk_latitude_label: str = "Latitude"
     vtk_longitude_label: str = "Longitude"
     vtk_region_label: str = "RegionId"
+
+    def to_yaml(self, path: str | Path | None = None) -> str:
+        """Serialise this configuration to YAML.
+
+        Args:
+            path: If given, the YAML is also written to this path.
+
+        Returns:
+            The YAML document as a string.
+        """
+        text = yaml.safe_dump(dataclasses.asdict(self), sort_keys=False)
+        if path is not None:
+            Path(path).write_text(text)
+        return text
+
+    @classmethod
+    def from_yaml(cls, source: str | Path) -> "WaperConfig":
+        """Build a configuration from a YAML file or YAML string.
+
+        Args:
+            source: A path to a ``.yaml`` file, or the YAML document itself.
+
+        Returns:
+            The deserialised configuration.
+
+        Raises:
+            TypeError: If the document contains a key that is not a field of
+                this class.
+        """
+        candidate = Path(source)
+        try:
+            # A YAML document is not a filename. `is_file()` is the cheapest
+            # way to tell the two accepted inputs apart; it raises rather than
+            # returning False when the string is too long to be a path.
+            is_file = candidate.is_file()
+        except OSError:
+            is_file = False
+        text = candidate.read_text() if is_file else str(source)
+        return cls(**yaml.safe_load(text))
 
 
 @dataclass(eq=False)
@@ -413,12 +455,38 @@ class Waper:
             lat_gate=lat_gate,
         )
 
+        self._setup(data_array, self._config)
+
+    def _setup(self, data_array, config: WaperConfig) -> None:
+        self._config = config
         self.data_array = data_array
-        self._num_time_steps = len(data_array[time_label])
+        self._num_time_steps = len(data_array[config.time_label])
         self._time_step_data: list = []
 
-        if debug:
+        if config.debug:
             logging.basicConfig(level=logging.DEBUG)
+
+    @classmethod
+    def from_config(cls, data_array, config: WaperConfig) -> "Waper":
+        """Construct from a :class:`WaperConfig`, reaching every field.
+
+        ``__init__`` exposes 18 of the config's 25 fields as keyword arguments;
+        ``hemisphere``, ``hull_method``, ``energy_radius_km`` and the clustering
+        parameters are not among them. This is the way to set those — and the way
+        to run from a config file:
+
+        >>> waper = Waper.from_config(ds, WaperConfig.from_yaml("run.yaml"))
+
+        Args:
+            data_array: The input dataset, indexed by the config's ``time_label``.
+            config: A fully specified configuration.
+
+        Returns:
+            An unrun ``Waper``. Call ``identify_rwps()`` next.
+        """
+        obj = cls.__new__(cls)
+        obj._setup(data_array, config)
+        return obj
 
     def identify_rwps(self):
         """Identify wave packets at every timestep of the input field.

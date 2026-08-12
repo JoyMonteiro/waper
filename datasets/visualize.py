@@ -8,8 +8,11 @@ Usage:
     python datasets/visualize.py
 """
 
+import dataclasses
+import inspect
 import os
 import sys
+from pathlib import Path
 
 import matplotlib
 
@@ -21,6 +24,7 @@ import xarray as xr
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from waper import Waper
+from waper.interface.api import WaperConfig
 from waper.tracking import tracking_graph as tg
 
 DATASETS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -34,21 +38,14 @@ DATASETS = [
 #    "event_winds_abs_2.nc",
 ]
 
-# WAPER configuration (shared across datasets)
+# WAPER configuration (shared across datasets), held as data in
+# datasets/configs/visualize_operating_point.yaml.
+WAPER_CONFIG_PATH = Path(__file__).parent / "configs" / "visualize_operating_point.yaml"
+WAPER_CONFIG = WaperConfig.from_yaml(WAPER_CONFIG_PATH)
 WAPER_KWARGS = {
-    "scalar_name": "v",
-    "latitude_label": "latitude",
-    "longitude_label": "longitude",
-    "time_label": "time",
-    "clip_value": 2,
-    "extrema_threshold": 10,
-    "min_latitude": 20,
-    "max_latitude": 80,
-    "node_pruning_threshold": 20,
-    "edge_pruning_threshold": 0.02,
-    "max_edge_weight": 1,
-    "track_pruning_threshold": 8000,
-    "penalty_length_scale_km": 4000,
+    k: v
+    for k, v in dataclasses.asdict(WAPER_CONFIG).items()
+    if k in inspect.signature(Waper.__init__).parameters
 }
 
 # Use a generous distance threshold for track display (keep all plausible tracks)
