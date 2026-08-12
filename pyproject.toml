@@ -120,6 +120,7 @@ select = [
     "SIM",  # flake8-simplify
     "PIE",  # flake8-pie
     "RUF",  # ruff-specific
+    "D",    # pydocstyle — scoped to the documented API surface, see per-file-ignores
 ]
 ignore = [
     # No autoformatter runs on this repo, so line length is advisory; the
@@ -130,6 +131,9 @@ ignore = [
     "RUF001",
     "RUF002",
     "RUF003",
+    # Module and package docstrings are not the point here; the API reference
+    # renders objects, not modules. `__init__` is documented on its class.
+    "D100", "D104", "D105", "D107",
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -138,11 +142,23 @@ ignore = [
 # Diagnostic scripts must run side effects before importing: `matplotlib.use("Agg")`
 # ahead of `pyplot`, `warnings.filterwarnings` ahead of the vtk/pyvista chain.
 # They also use the same compact `a = f(); a.x = 1` idiom as the tests.
-"scripts/*" = ["E402", "E702"]
-"datasets/*" = ["E402", "E702"]
 # Tests set up fixtures with a deliberately compact one-line idiom
 # (`f0 = _feat(0, "max", 0); f0.lat = 60.0`).
-"tests/*" = ["E702"]
+#
+# `D` is deliberately scoped to the surface quartodoc renders (docs/_quarto.yml)
+# plus the io layer users call directly. Everything else is internal: adding
+# docstring pressure there would bury the pages that are actually published.
+"waper/identification/*" = ["D"]
+"waper/tracking/*" = ["D"]
+"waper/interface/visualization.py" = ["D"]
+"waper/interface/colormaps.py" = ["D"]
+"tests/*" = ["D", "E702"]
+"scripts/*" = ["D", "E402", "E702"]
+"datasets/*" = ["D", "E402", "E702"]
+"misc/*" = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.mypy]
 files = ["waper"]

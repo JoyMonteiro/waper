@@ -41,6 +41,11 @@ quartodoc:
   dir: api
   title: "API Reference"
   style: pkgdown
+  # The package writes Google-convention docstrings (enforced by ruff's
+  # `pydocstyle.convention` in pyproject.toml), so parse them as such. This also
+  # sidesteps quartodoc 0.11's numpy-parser defaults, which pass an
+  # `allow_section_blank_line` option that griffe 2.x no longer accepts.
+  parser: google
   sections:
     - title: "Pipeline"
       desc: |

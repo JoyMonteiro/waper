@@ -42,10 +42,12 @@ def _hemisphere(cat):
 
 
 def _domain_extent(lon_lo, lon_hi, lat_lo, lat_hi, projection, n=60):
-    """Projected (xlim, ylim) of a lon/lat box, used to clip the map to the
-    region of interest. Without this, ``coastline=True`` draws *global* coasts,
-    and the off-hemisphere ones project to ~infinity in a polar projection,
-    blowing up the axes (the matplotlib viz used ``ax.set_extent`` for this)."""
+    """Projected (xlim, ylim) of a lon/lat box, used to clip the map.
+
+    Without this, ``coastline=True`` draws *global* coasts, and the
+    off-hemisphere ones project to ~infinity in a polar projection, blowing up
+    the axes (the matplotlib viz used ``ax.set_extent`` for this).
+    """
     edge = np.linspace(0, 1, n)
     lons = np.concatenate([
         lon_lo + (lon_hi - lon_lo) * edge, np.full(n, lon_hi),
@@ -60,6 +62,24 @@ def _domain_extent(lon_lo, lon_hi, lat_lo, lat_hi, projection, n=60):
 
 
 def nodes_layer(cat, time, projection=None):
+    """Scatter the RWP extremum nodes of one timestep, coloured by node type.
+
+    Maxima are red and minima blue; hovering reports the node's scalar value.
+    The node lon/lat are plain geographic coordinates, so the **data** CRS is
+    always ``PlateCarree`` — ``projection`` only sets how they are *displayed*.
+    An empty timestep yields an empty ``gv.Points`` rather than raising, so the
+    layer can stay in an overlay across all times.
+
+    Args:
+        cat: Catalogue to read from; its ``meta["hemisphere"]`` picks the default
+            projection.
+        time: Timestep to filter to.
+        projection: Cartopy display projection. ``None`` falls back to
+            :func:`default_projection` for the catalogue's hemisphere.
+
+    Returns:
+        A holoviews/geoviews element ready to compose into an overlay.
+    """
     projection = projection or default_projection(_hemisphere(cat))
     df = cat.filter(time=time).nodes()
     if df.empty:
@@ -72,6 +92,22 @@ def nodes_layer(cat, time, projection=None):
 
 
 def polygons_layer(cat, time, projection=None):
+    """Draw the RWP footprint polygons of one timestep, filled by ``rwp_id``.
+
+    Unlike the node and edge layers, polygons are stored in WAPER's
+    polar-stereographic CRS in metres, not lon/lat; that CRS is declared on the
+    GeoDataFrame so geoviews reprojects them into the display projection
+    correctly. An empty timestep yields an empty ``gv.Polygons``.
+
+    Args:
+        cat: Catalogue to read from.
+        time: Timestep to filter to.
+        projection: Cartopy display projection. ``None`` falls back to
+            :func:`default_projection` for the catalogue's hemisphere.
+
+    Returns:
+        A holoviews/geoviews element ready to compose into an overlay.
+    """
     hemi = _hemisphere(cat)
     projection = projection or default_projection(hemi)
     df = cat.filter(time=time).rwps()
@@ -87,6 +123,22 @@ def polygons_layer(cat, time, projection=None):
 
 
 def edges_layer(cat, time, projection=None):
+    """Draw the within-timestep RWP graph edges as black great-circle segments.
+
+    Each edge is looked up as a ``(rwp_id, node_id)`` pair in the node table;
+    edges whose endpoints are missing from that table are silently skipped, so a
+    partially written catalogue still renders. Endpoints are lon/lat, so the
+    **data** CRS is always ``PlateCarree`` whatever the display projection is.
+
+    Args:
+        cat: Catalogue to read from.
+        time: Timestep to filter to.
+        projection: Cartopy display projection. ``None`` falls back to
+            :func:`default_projection` for the catalogue's hemisphere.
+
+    Returns:
+        A ``gv.Path`` ready to compose into an overlay.
+    """
     projection = projection or default_projection(_hemisphere(cat))
     nd = cat.filter(time=time).nodes()
     if nd.empty:
@@ -106,6 +158,28 @@ def edges_layer(cat, time, projection=None):
 
 
 def field_layer(field_da, time_index, projection=None):
+    """Rasterise the background scalar field for one timestep as a quadmesh.
+
+    The colour limits are symmetric about zero at the 99th percentile of
+    ``|field|`` *for that timestep*, so the scale moves between frames — read
+    colours qualitatively, not as absolute values. Rendering goes through
+    datashader (``rasterize=True``) because a full ERA5 grid is too dense to send
+    to the browser as vectors. Coastlines are drawn by this layer.
+
+    The field carries lon/lat coordinates, so its **data** CRS is ``PlateCarree``
+    regardless of the display projection.
+
+    Args:
+        field_da: DataArray with ``time``, ``latitude`` and ``longitude`` dims.
+        time_index: Positional index along ``time`` (``isel``, not ``sel``).
+        projection: Cartopy display projection. ``None`` falls back to
+            :func:`default_projection` for the **northern** hemisphere — this
+            function has no catalogue to read the hemisphere from, so pass it
+            explicitly for southern-hemisphere work.
+
+    Returns:
+        A holoviews element ready to compose into an overlay.
+    """
     projection = projection or default_projection("north")
     da = field_da.isel(time=time_index)
     vmax = float(abs(da).quantile(0.99))
@@ -117,6 +191,34 @@ def field_layer(field_da, time_index, projection=None):
 
 
 class RWPExplorer(pn.viewable.Viewer):
+    """Panel app for stepping through a catalogue of identified and tracked RWPs.
+
+    The layout is a map with a time player, a layer toggle, a sortable table of
+    track durations whose selection highlights that track on the map in yellow,
+    and — when ``field_da`` is given — a Hovmöller panel of the
+    latitude-averaged field.
+
+    Rendering is **polar stereographic by default**, matching the matplotlib
+    polygon plots and keeping dateline-crossing packets contiguous (Web Mercator
+    tears them). The display projection is overridable per instance via
+    ``projection``: the motivating case is western disturbances over South Asia,
+    which read far better in
+    ``ccrs.Orthographic(central_longitude=75, central_latitude=25)``. The map is
+    clipped to the analysis hemisphere (lat 15–90, or -90 to -15) so global
+    coastlines do not blow up a polar-projection axes.
+
+    Args:
+        cat: Catalogue of nodes, edges, RWP polygons and tracks.
+        n_times: Number of timesteps; sets the time slider's upper bound.
+        field_da: Optional background field. When present, the ``field`` layer is
+            offered and enabled by default, and the Hovmöller panel appears.
+        projection: Cartopy display projection. ``None`` falls back to
+            :func:`default_projection` for the catalogue's hemisphere.
+        **params: Forwarded to ``param.Parameterized`` (e.g. ``time``, ``layers``).
+
+    Display it with ``.servable()``, or just let a notebook cell render it.
+    """
+
     time = param.Integer(default=0, bounds=(0, 0))
     layers = param.ListSelector(default=["polygons", "nodes"],
                                 objects=["nodes", "edges", "polygons"])

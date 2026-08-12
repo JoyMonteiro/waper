@@ -25,6 +25,33 @@ logger = logging.getLogger(__name__)
 
 @dataclass(eq=False, frozen=True)
 class WaperConfig:
+    """Frozen bundle of every tunable that identification and tracking read.
+
+    The instance is immutable (``frozen=True``): build a new one to change a
+    setting rather than mutating an existing :class:`Waper`'s config.
+
+    Units are explicit rather than normalised, because the thresholds live on
+    physically different scales:
+
+    * ``track_pruning_threshold`` is the maximum centroid displacement of a
+      tracking edge, **in kilometres** (default 8000). The historical default of
+      ``0.3`` was a bug: read as km it prunes every edge and leaves an empty
+      tracking graph.
+    * ``penalty_length_scale_km`` (clustering distance penalty) and
+      ``energy_radius_km`` (radius of the per-node energy disk rasterised into
+      the energy raster) are also kilometres.
+    * ``lat_gate`` is **degrees** of latitude.
+    * ``cluster_max_eps_km`` is kilometres; ``cluster_min_samples`` and
+      ``cluster_xi`` are OPTICS parameters passed through unchanged.
+
+    ``track_weight_threshold`` is the minimum envelope-overlap weight in (0, 1]
+    a tracking edge must carry. It defaults to ``None``, which **disables** the
+    overlap gate — the weight has not been calibrated, so distance alone decides.
+
+    The ``vtk_*_label`` fields name the point-data arrays WAPER attaches to the
+    VTK mesh, and are not read from the input dataset.
+    """
+
     debug: bool
     scalar_name: str
     latitude_label: str
@@ -65,6 +92,22 @@ class WaperConfig:
 
 @dataclass(eq=False)
 class WaperSingleTimestepData:
+    """All intermediate state produced for one timestep of the input field.
+
+    ``__init__`` only fills ``input_data``, ``vtk_data`` (the geovista mesh built
+    from the field) and an empty ``rwp_info``. Every other attribute is populated
+    later by the identification pass, in order: the clustered extrema
+    (``all_maxima`` / ``all_minima`` and their ``*_cluster_info`` dicts), the
+    ``association_graph`` and its ``pruned_graph``, the ranked
+    ``identified_rwp_paths``, then ``rwp_info`` keyed by ``tuple(path)`` holding
+    each packet's polygon, integer ``rwp_id``, sample points and energy-weighted
+    centroid, and finally the rasters.
+
+    ``energy_raster`` is ``None`` until ``_identify_rwps`` sets it; ``raster_data``
+    may be ``None`` when no packet was found, in which case ``raster_features``
+    is just ``{0}``.
+    """
+
     input_data: DataArray
 
     vtk_data: PolyData
@@ -288,6 +331,48 @@ def _track_rwps(time_step_data, num_time_steps):
 
 
 class Waper:
+    """Entry point: identify Rossby wave packets in a field and track them in time.
+
+    Construction only records the configuration; no computation happens until you
+    call the two stages, **in this order**:
+
+    1. :meth:`identify_rwps` — runs the per-timestep identification over the whole
+       time axis and fills ``_time_step_data``.
+    2. :meth:`track_rwps` — links those packets across time into
+       ``_tracking_graph`` and ``_pruned_tracking_graph``.
+
+    Every ``plot_*`` method reads ``_time_step_data``, so :meth:`identify_rwps`
+    must have run first; :meth:`plot_tracks`, :meth:`plot_track_polygons` and
+    :meth:`plot_track_rwps` additionally need :meth:`track_rwps`.
+
+    Args:
+        data_array: Dataset containing the scalar field to analyse.
+        scalar_name: Name of the field variable inside ``data_array``.
+        latitude_label: Name of the latitude coordinate.
+        longitude_label: Name of the longitude coordinate.
+        time_label: Name of the time coordinate; its length sets how many
+            timesteps :meth:`identify_rwps` processes.
+        clip_value: Field magnitude below which the mesh is clipped away before
+            extrema are extracted.
+        extrema_threshold: Minimum magnitude for a point to count as an extremum.
+        max_latitude: Poleward latitude bound, or ``None`` for no bound.
+        min_latitude: Equatorward latitude bound, or ``None`` for no bound.
+        node_pruning_threshold: Minimum node scalar kept in the association graph.
+        edge_pruning_threshold: Minimum association-graph edge weight kept.
+        track_pruning_threshold: Maximum tracking-edge centroid displacement, in km.
+        track_weight_threshold: Minimum tracking-edge overlap weight, or ``None``
+            to disable that gate (the default).
+        max_edge_weight: Upper bound on association-graph edge weight, also used
+            when ranking paths.
+        debug: Turn on debug-level logging.
+        penalty_length_scale_km: Length scale, in km, of the clustering distance
+            penalty.
+        lat_gate: Latitude gate, in degrees, applied when ranking RWP paths.
+
+    See :class:`WaperConfig` for the settings that have no constructor argument
+    and keep their defaults.
+    """
+
     def __init__(
         self,
         data_array,
@@ -336,7 +421,16 @@ class Waper:
             logging.basicConfig(level=logging.DEBUG)
 
     def identify_rwps(self):
+        """Identify wave packets at every timestep of the input field.
 
+        Appends one :class:`WaperSingleTimestepData` per timestep to
+        ``_time_step_data``, in time order, so a timestep's index into that list
+        is its index along the time axis. Progress is reported with a tqdm bar.
+
+        Calling this twice appends a second pass rather than replacing the first.
+        A timestep in which no packet survives pruning logs a warning and still
+        contributes an (empty) entry.
+        """
         for i in tqdm(range(self._num_time_steps)):
             self._time_step_data.append(
                 _identify_rwps(
@@ -345,7 +439,19 @@ class Waper:
             )
 
     def track_rwps(self, num_time_steps=None):
+        """Link identified wave packets across time into a tracking graph.
 
+        Stores the full graph on ``_tracking_graph`` and a pruned copy on
+        ``_pruned_tracking_graph``. Pruning drops edges whose centroid
+        displacement exceeds the configured ``track_pruning_threshold``
+        kilometres and, if ``track_weight_threshold`` is set, edges whose
+        energy-overlap weight falls below it.
+
+        Requires :meth:`identify_rwps` to have run first.
+
+        Args:
+            num_time_steps: Number of timesteps to link. ``None`` uses all of them.
+        """
         self._tracking_graph = _track_rwps(self._time_step_data, num_time_steps)
         self._pruned_tracking_graph = tracking_graph.prune_tracking_graph(
             self._tracking_graph,
@@ -354,7 +460,18 @@ class Waper:
         )
 
     def plot_clusters(self, time_index):
+        """Plot the clustered maxima and minima for one timestep.
 
+        Draws two stacked PlateCarree panels — maxima above, minima below — with
+        points coloured by cluster id over the clipped scalar field. Creates its
+        own figure axes, so it takes no ``ax``.
+
+        Args:
+            time_index: Index into ``_time_step_data`` (i.e. along the time axis).
+
+        Returns:
+            The matplotlib ``Axes`` of the lower (minima) panel.
+        """
         time_step_data = self._time_step_data[time_index]
         return _plot_clusters(
             time_step_data.input_data,
@@ -369,6 +486,20 @@ class Waper:
         )
 
     def plot_association_graph(self, time_index, ax=None):
+        """Plot the unpruned association graph over the scalar field.
+
+        Shows every extremum node and every candidate max–min link found at this
+        timestep, before node and edge pruning — useful for judging whether the
+        pruning thresholds are throwing away real structure.
+
+        Args:
+            time_index: Index into ``_time_step_data``.
+            ax: Axes to draw on. Must already carry a cartopy projection. ``None``
+                creates one with ``PlateCarree(central_longitude=180)``.
+
+        Returns:
+            The matplotlib ``Axes`` drawn on.
+        """
         time_step_data = self._time_step_data[time_index]
 
         return _plot_graph(
@@ -376,6 +507,20 @@ class Waper:
         )
 
     def plot_pruned_graph(self, time_index, ax=None):
+        """Plot the association graph after node and edge pruning.
+
+        Same rendering as :meth:`plot_association_graph`, but of the graph the
+        RWP paths are actually extracted from; comparing the two shows what the
+        thresholds removed.
+
+        Args:
+            time_index: Index into ``_time_step_data``.
+            ax: Axes to draw on. Must already carry a cartopy projection. ``None``
+                creates one with ``PlateCarree(central_longitude=180)``.
+
+        Returns:
+            The matplotlib ``Axes`` drawn on.
+        """
         time_step_data = self._time_step_data[time_index]
 
         return _plot_graph(
@@ -383,6 +528,21 @@ class Waper:
         )
 
     def plot_rwp_graphs(self, time_index, ax=None, plot_scalar_data=True):
+        """Plot the identified RWP paths as node chains through the pruned graph.
+
+        Only the ranked paths are drawn, not the whole pruned graph, so this is
+        the view of what was accepted as a wave packet at this timestep.
+
+        Args:
+            time_index: Index into ``_time_step_data``.
+            ax: Axes to draw on. Must already carry a cartopy projection. ``None``
+                creates one with ``PlateCarree(central_longitude=180)``.
+            plot_scalar_data: Draw the scalar field underneath the paths. Set
+                ``False`` for a paths-only figure.
+
+        Returns:
+            The matplotlib ``Axes`` drawn on.
+        """
         time_step_data = self._time_step_data[time_index]
 
         field = None
@@ -397,6 +557,21 @@ class Waper:
         )
 
     def plot_rwp_polygons(self, time_index, plot_samples=False, ax=None):
+        """Plot every RWP footprint polygon for one timestep.
+
+        Each packet's hull is drawn over the scalar field, together with its
+        energy-weighted centroid. Polygons live in WAPER's polar-stereographic
+        CRS, so the default axes are polar stereographic rather than PlateCarree.
+
+        Args:
+            time_index: Index into ``_time_step_data``.
+            plot_samples: Also scatter the sample points the hull was built from.
+            ax: Axes to draw on. Must already carry a cartopy projection. ``None``
+                creates a northern polar-stereographic axes.
+
+        Returns:
+            The matplotlib ``Axes`` drawn on.
+        """
         time_step_data = self._time_step_data[time_index]
 
         poly_list = [
@@ -427,11 +602,47 @@ class Waper:
         )
 
     def plot_raster(self, time_index):
+        """Plot the rasterised RWP label field for one timestep.
+
+        Shows ``raster_data`` — the polygons burned onto WAPER's polar-stereographic
+        grid, each cell holding an ``rwp_id`` — with zero (no packet) masked out.
+        This is the array tracking overlaps between timesteps, so it is the view
+        to check when a link looks wrong. Creates its own axes; takes no ``ax``.
+
+        Args:
+            time_index: Index into ``_time_step_data``.
+
+        Returns:
+            The matplotlib ``Axes`` drawn on.
+        """
         time_step_data = self._time_step_data[time_index]
 
         return _plot_raster(time_step_data.raster_data)
 
     def plot_tracks(self, threshold=None, weight_threshold=None):
+        """Plot every track path, re-pruning the tracking graph on the fly.
+
+        Prunes ``_tracking_graph`` with the thresholds given here rather than
+        reusing ``_pruned_tracking_graph``, so you can sweep thresholds without
+        re-running :meth:`track_rwps`.
+
+        Note the ``None`` semantics differ from the underlying
+        ``prune_tracking_graph``: here ``None`` means "fall back to the
+        **configured** ``track_pruning_threshold`` / ``track_weight_threshold``",
+        whereas ``prune_tracking_graph(g, None)`` means "keep every edge". To
+        actually keep every edge, call that function directly.
+
+        Requires :meth:`track_rwps` to have run. Creates its own axes.
+
+        Args:
+            threshold: Maximum centroid displacement in km. ``None`` uses the
+                configured value.
+            weight_threshold: Minimum overlap weight in (0, 1]. ``None`` uses the
+                configured value, which is itself ``None`` (gate disabled) by default.
+
+        Returns:
+            The matplotlib ``Axes`` drawn on.
+        """
         if threshold is None:
             threshold = self._config.track_pruning_threshold
         if weight_threshold is None:
@@ -449,7 +660,22 @@ class Waper:
         )
 
     def plot_track_polygons(self, path, plot_samples=False, ax=None):
+        """Plot one track's RWP footprints, coloured by time.
 
+        Overlays the polygon of every packet along the track on a single map,
+        shaded from dark to light through ``viridis`` in track-time order, so the
+        packet's propagation is visible in one figure. No scalar field is drawn.
+
+        Args:
+            path: Sequence of tracking-graph nodes, each a ``(time_index, rwp_id)``
+                pair — e.g. one element of ``get_track_paths(pruned_graph)``.
+            plot_samples: Also scatter the sample points each hull was built from.
+            ax: Axes to draw on. Must already carry a cartopy projection. ``None``
+                creates a northern polar-stereographic axes.
+
+        Returns:
+            The matplotlib ``Axes`` drawn on.
+        """
         poly_list = []
         sample_points_list = []
         weighted_lon_list = []
@@ -487,7 +713,21 @@ class Waper:
         )
 
     def plot_track_rwps(self, path, ax=None):
+        """Plot one track's RWP node chains on a single map.
 
+        The graph-level counterpart of :meth:`plot_track_polygons`: instead of the
+        footprint hulls it draws the max/min node chain of each packet along the
+        track, all overlaid on one axes and without the scalar field.
+
+        Args:
+            path: Sequence of tracking-graph nodes, each a ``(time_index, rwp_id)``
+                pair.
+            ax: Axes to draw on. Must already carry a cartopy projection. ``None``
+                creates one with ``PlateCarree(central_longitude=180)``.
+
+        Returns:
+            The matplotlib ``Axes`` drawn on.
+        """
         rwp_list = []
 
         if ax is None:
