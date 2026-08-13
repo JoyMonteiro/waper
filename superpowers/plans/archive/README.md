@@ -27,6 +27,8 @@ file can be restored by moving it back.
 | `implementation/2026-06-18-feature-track-layer.md` + `design/feature_track_layer_plan.md` | Feature-track layer (SP1) — per-extremum trajectory tracking | `waper/tracking/feature_tracks.py`, `tests/test_feature_tracks.py`. Merged as PR #1. Commits `3567f67`..`13e3a5f` |
 | `implementation/2026-06-20-rwp-method-comparison.md` + `specs/2026-06-20-…-design.md` | Three-method agreement study (WAPER vs Zimin envelope vs node-amplitude vs edge-pruning) | `scripts/method_comparison/`, `tests/test_method_comparison.py`, `results/method_comparison_sweep.csv` (720 timesteps). Commits `b86fb34`..`98074b4` |
 | `implementation/2026-06-22-rwp-branch-resolution.md` + `specs/2026-06-22-…-design.md` | Latitude-gated RWP branch resolution — in-band zonal exclusivity + orphan reassignment | `rwp_graph.py` helpers, `api.py:52` `lat_gate=15.0`. Commits `f7849bd`..`fea7757`. All 5 SDD tasks + final whole-branch review complete (`.superpowers/sdd/progress.md`) |
+| `implementation/waper_refactoring_spec.md` | Phases 0–9 — the whole spec. Phases 6–9, its last live remainder, were closed by `implementation/2026-08-12-engineering-backlog.md` | Ruff `D` gate in `pyproject.toml` (`[tool.ruff.lint.pydocstyle]`, `D` in `select`) with `waper/interface/api.py`, `explorer.py`, `waper/io/*` documented (8.2); `waper/interface/projections.py` + `tests/interface/test_projections.py` (7.1/7.2/7.4); `results/benchmarks.md` + `tests/test_benchmark.py` (6.3); `Waper.identify_rwps(n_jobs=…)` + `tests/test_parallel_identify.py` (9.2); `WaperConfig.to_yaml`/`from_yaml` + `Waper.from_config` + `tests/test_config_yaml.py` (9.4). 7.3 (Hovmöller) deferred by Joy 2026-08-12; 9.3 retired as superseded by `waper/io/` |
+| `implementation/2026-08-07-housekeeping-backlog.md` | All three tiers, closed 2026-08-07 | Tier work is in the tree; its "needs Joy's input" register was carried forward verbatim rather than lost — see the note below |
 
 ### Caveat on branch resolution
 
@@ -43,29 +45,19 @@ the test-file import hoisted) — see `progress.md` for the original adjudicatio
 
 | File | Superseded by |
 |---|---|
-| `transcripts/2026-architecture-assessment-session.md` | A 7,568-line raw chat transcript of the architecture-assessment session. Its conclusions were written up as `implementation/waper_refactoring_spec.md`, which is still active. Kept only as provenance for that spec |
+| `transcripts/2026-architecture-assessment-session.md` | A 7,568-line raw chat transcript of the architecture-assessment session. Its conclusions were written up as `waper_refactoring_spec.md`, itself now archived here. Kept only as provenance for that spec |
 
 ---
 
 ## What deliberately stayed active
 
-- **`implementation/2026-08-07-housekeeping-backlog.md`** — **all three tiers closed
-  2026-08-07.** It stays active only for its closing register, "Explicitly NOT here —
-  these need Joy's input": the operating-point promotion, the group-velocity question,
-  envelope-weighted edge pruning, the ERA5 re-download, and the two uncommitted files.
-  Read that list before proposing engineering cleanup; the tiers above it are history.
+Both plans archived above on 2026-08-13 carried a register of items that are **not** closed:
+the housekeeping backlog's "Explicitly NOT here — these need Joy's input" list (operating-point
+promotion, the group-velocity question, envelope-weighted edge pruning, the ERA5 re-download,
+and the two uncommitted files). That register lives on, reproduced verbatim, in
+`superpowers/plans/implementation/2026-08-12-engineering-backlog.md`. Read it there before
+proposing engineering cleanup — archiving these two files retired the *work*, not the register.
 
-- **`implementation/waper_refactoring_spec.md`** — Phases 0–5 are done. **Phase 5
-  (VTK → PyVista/SciPy) closed 2026-08-07** (`2a8d0ff`, `3496eb1`): no module under
-  `waper/` imports VTK any more, and `topology.py` uses `scipy.sparse.csgraph.dijkstra`.
-  Live remainder is Phases 6–9, none of them load-bearing:
-  6.3 (benchmark tests — 6.1/6.2 were absorbed by 5.3/2.4), 7.1–7.4 (visualisation:
-  `ax=` is now threaded through most plot entry points, projections are still
-  hardcoded), 8.2 (public docstrings — this is why the generated API pages are
-  signature-only; 8.1 and 8.3 shipped with the Quarto site and `docs/algorithm.md`),
-  and 9.2–9.4 (parallel timesteps, `to_dataset()`/`tracks_to_dataframe()`,
-  `WaperConfig` YAML round-trip). 9.1 is closed — read 5.5's closing note first,
-  its Shapely-and-delete-the-rasters plan is dead.
 - **`design/validation_strategy_plan.md`** and **`implementation/phase0_implementation_plan.md`**
   — the Phase 0 gate has never been run; every downstream layer depends on it.
 - **`design/western_disturbance_validation_plan.md`**, **`design/regime_rwp_structure_plan.md`**
