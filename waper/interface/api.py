@@ -1,6 +1,9 @@
 import dataclasses
 import logging
+import os
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
+from itertools import repeat
 from pathlib import Path
 
 import cartopy.crs as ccrs
@@ -488,7 +491,7 @@ class Waper:
         obj._setup(data_array, config)
         return obj
 
-    def identify_rwps(self):
+    def identify_rwps(self, n_jobs: int = 1):
         """Identify wave packets at every timestep of the input field.
 
         Appends one :class:`WaperSingleTimestepData` per timestep to
@@ -498,11 +501,35 @@ class Waper:
         Calling this twice appends a second pass rather than replacing the first.
         A timestep in which no packet survives pruning logs a warning and still
         contributes an (empty) entry.
+
+        Args:
+            n_jobs: Worker processes to use. ``1`` (the default) runs
+                sequentially in this process. ``-1`` uses every CPU. Results are
+                identical either way and always ordered by timestep.
+
+                Starting a pool costs ~15 s (each worker re-imports the pyvista
+                stack), so parallelism only pays off past roughly 25 timesteps;
+                below that ``n_jobs=1`` is faster. On machines with both
+                performance and efficiency cores, an explicit ``n_jobs`` equal to
+                the performance-core count beats ``-1``, which counts all cores
+                and lets the slow ones straggle. See ``results/benchmarks.md``.
         """
-        for i in tqdm(range(self._num_time_steps)):
-            self._time_step_data.append(
-                _identify_rwps(
-                    self.data_array[self._config.scalar_name][i], self._config
+        scalar = self._config.scalar_name
+        frames = [self.data_array[scalar][i] for i in range(self._num_time_steps)]
+
+        if n_jobs == 1:
+            for frame in tqdm(frames):
+                self._time_step_data.append(_identify_rwps(frame, self._config))
+            return
+
+        workers = os.cpu_count() if n_jobs == -1 else n_jobs
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            # `executor.map` yields in submission order, which is what keeps
+            # _time_step_data indexed by timestep.
+            self._time_step_data.extend(
+                tqdm(
+                    pool.map(_identify_rwps, frames, repeat(self._config)),
+                    total=len(frames),
                 )
             )
 
