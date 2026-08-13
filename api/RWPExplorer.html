@@ -164,7 +164,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#waper.interface.explorer.RWPExplorer" id="toc-waper.interface.explorer.RWPExplorer" class="nav-link active" data-scroll-target="#waper.interface.explorer.RWPExplorer">RWPExplorer</a></li>
+  <li><a href="#waper.interface.explorer.RWPExplorer" id="toc-waper.interface.explorer.RWPExplorer" class="nav-link active" data-scroll-target="#waper.interface.explorer.RWPExplorer">RWPExplorer</a>
+  <ul class="collapse">
+  <li><a href="#parameters" id="toc-parameters" class="nav-link" data-scroll-target="#parameters">Parameters</a></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -183,8 +186,63 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    projection<span class="op">=</span><span class="va">None</span>,</span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">**</span>params,</span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Panel app for stepping through a catalogue of identified and tracked RWPs.</p>
+<p>The layout is a map with a time player, a layer toggle, a sortable table of track durations whose selection highlights that track on the map in yellow, and — when <code>field_da</code> is given — a Hovmöller panel of the latitude-averaged field.</p>
+<p>Rendering is <strong>polar stereographic by default</strong>, matching the matplotlib polygon plots and keeping dateline-crossing packets contiguous (Web Mercator tears them). The display projection is overridable per instance via <code>projection</code>: the motivating case is western disturbances over South Asia, which read far better in <code>ccrs.Orthographic(central_longitude=75, central_latitude=25)</code>. The map is clipped to the analysis hemisphere (lat 15–90, or -90 to -15) so global coastlines do not blow up a polar-projection axes.</p>
+<section id="parameters" class="level2 doc-section doc-section-parameters">
+<h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 7%">
+<col style="width: 4%">
+<col style="width: 80%">
+<col style="width: 7%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>cat</td>
+<td></td>
+<td>Catalogue of nodes, edges, RWP polygons and tracks.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>n_times</td>
+<td></td>
+<td>Number of timesteps; sets the time slider’s upper bound.</td>
+<td><code>1</code></td>
+</tr>
+<tr class="odd">
+<td>field_da</td>
+<td></td>
+<td>Optional background field. When present, the <code>field</code> layer is offered and enabled by default, and the Hovmöller panel appears.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td>projection</td>
+<td></td>
+<td>Cartopy display projection. <code>None</code> falls back to :func:<code>default_projection</code> for the catalogue’s hemisphere.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>**params</td>
+<td></td>
+<td>Forwarded to <code>param.Parameterized</code> (e.g.&nbsp;<code>time</code>, <code>layers</code>).</td>
+<td><code>{}</code></td>
+</tr>
+</tbody>
+</table>
+<p>Display it with <code>.servable()</code>, or just let a notebook cell render it.</p>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->

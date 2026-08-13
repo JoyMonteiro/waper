@@ -164,7 +164,25 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#waper.Waper" id="toc-waper.Waper" class="nav-link active" data-scroll-target="#waper.Waper">Waper</a></li>
+  <li><a href="#waper.Waper" id="toc-waper.Waper" class="nav-link active" data-scroll-target="#waper.Waper">Waper</a>
+  <ul class="collapse">
+  <li><a href="#parameters" id="toc-parameters" class="nav-link" data-scroll-target="#parameters">Parameters</a></li>
+  <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a>
+  <ul class="collapse">
+  <li><a href="#waper.Waper.from_config" id="toc-waper.Waper.from_config" class="nav-link" data-scroll-target="#waper.Waper.from_config">from_config</a></li>
+  <li><a href="#waper.Waper.identify_rwps" id="toc-waper.Waper.identify_rwps" class="nav-link" data-scroll-target="#waper.Waper.identify_rwps">identify_rwps</a></li>
+  <li><a href="#waper.Waper.plot_association_graph" id="toc-waper.Waper.plot_association_graph" class="nav-link" data-scroll-target="#waper.Waper.plot_association_graph">plot_association_graph</a></li>
+  <li><a href="#waper.Waper.plot_clusters" id="toc-waper.Waper.plot_clusters" class="nav-link" data-scroll-target="#waper.Waper.plot_clusters">plot_clusters</a></li>
+  <li><a href="#waper.Waper.plot_pruned_graph" id="toc-waper.Waper.plot_pruned_graph" class="nav-link" data-scroll-target="#waper.Waper.plot_pruned_graph">plot_pruned_graph</a></li>
+  <li><a href="#waper.Waper.plot_raster" id="toc-waper.Waper.plot_raster" class="nav-link" data-scroll-target="#waper.Waper.plot_raster">plot_raster</a></li>
+  <li><a href="#waper.Waper.plot_rwp_graphs" id="toc-waper.Waper.plot_rwp_graphs" class="nav-link" data-scroll-target="#waper.Waper.plot_rwp_graphs">plot_rwp_graphs</a></li>
+  <li><a href="#waper.Waper.plot_rwp_polygons" id="toc-waper.Waper.plot_rwp_polygons" class="nav-link" data-scroll-target="#waper.Waper.plot_rwp_polygons">plot_rwp_polygons</a></li>
+  <li><a href="#waper.Waper.plot_track_polygons" id="toc-waper.Waper.plot_track_polygons" class="nav-link" data-scroll-target="#waper.Waper.plot_track_polygons">plot_track_polygons</a></li>
+  <li><a href="#waper.Waper.plot_track_rwps" id="toc-waper.Waper.plot_track_rwps" class="nav-link" data-scroll-target="#waper.Waper.plot_track_rwps">plot_track_rwps</a></li>
+  <li><a href="#waper.Waper.plot_tracks" id="toc-waper.Waper.plot_tracks" class="nav-link" data-scroll-target="#waper.Waper.plot_tracks">plot_tracks</a></li>
+  <li><a href="#waper.Waper.track_rwps" id="toc-waper.Waper.track_rwps" class="nav-link" data-scroll-target="#waper.Waper.track_rwps">track_rwps</a></li>
+  </ul></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -195,8 +213,938 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    penalty_length_scale_km<span class="op">=</span><span class="fl">2000.0</span>,</span>
 <span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    lat_gate<span class="op">=</span><span class="fl">15.0</span>,</span>
 <span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Entry point: identify Rossby wave packets in a field and track them in time.</p>
+<p>Construction only records the configuration; no computation happens until you call the two stages, <strong>in this order</strong>:</p>
+<ol type="1">
+<li>:meth:<code>identify_rwps</code> — runs the per-timestep identification over the whole time axis and fills <code>_time_step_data</code>.</li>
+<li>:meth:<code>track_rwps</code> — links those packets across time into <code>_tracking_graph</code> and <code>_pruned_tracking_graph</code>.</li>
+</ol>
+<p>Every <code>plot_*</code> method reads <code>_time_step_data</code>, so :meth:<code>identify_rwps</code> must have run first; :meth:<code>plot_tracks</code>, :meth:<code>plot_track_polygons</code> and :meth:<code>plot_track_rwps</code> additionally need :meth:<code>track_rwps</code>.</p>
+<section id="parameters" class="level2 doc-section doc-section-parameters">
+<h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 17%">
+<col style="width: 5%">
+<col style="width: 68%">
+<col style="width: 8%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>data_array</td>
+<td></td>
+<td>Dataset containing the scalar field to analyse.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>scalar_name</td>
+<td></td>
+<td>Name of the field variable inside <code>data_array</code>.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td>latitude_label</td>
+<td></td>
+<td>Name of the latitude coordinate.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>longitude_label</td>
+<td></td>
+<td>Name of the longitude coordinate.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td>time_label</td>
+<td></td>
+<td>Name of the time coordinate; its length sets how many timesteps :meth:<code>identify_rwps</code> processes.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>clip_value</td>
+<td></td>
+<td>Field magnitude below which the mesh is clipped away before extrema are extracted.</td>
+<td><code>2</code></td>
+</tr>
+<tr class="odd">
+<td>extrema_threshold</td>
+<td></td>
+<td>Minimum magnitude for a point to count as an extremum.</td>
+<td><code>10</code></td>
+</tr>
+<tr class="even">
+<td>max_latitude</td>
+<td></td>
+<td>Poleward latitude bound, or <code>None</code> for no bound.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>min_latitude</td>
+<td></td>
+<td>Equatorward latitude bound, or <code>None</code> for no bound.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td>node_pruning_threshold</td>
+<td></td>
+<td>Minimum node scalar kept in the association graph.</td>
+<td><code>20</code></td>
+</tr>
+<tr class="odd">
+<td>edge_pruning_threshold</td>
+<td></td>
+<td>Minimum association-graph edge weight kept.</td>
+<td><code>3e-05</code></td>
+</tr>
+<tr class="even">
+<td>track_pruning_threshold</td>
+<td></td>
+<td>Maximum tracking-edge centroid displacement, in km.</td>
+<td><code>8000.0</code></td>
+</tr>
+<tr class="odd">
+<td>track_weight_threshold</td>
+<td></td>
+<td>Minimum tracking-edge overlap weight, or <code>None</code> to disable that gate (the default).</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td>max_edge_weight</td>
+<td></td>
+<td>Upper bound on association-graph edge weight, also used when ranking paths.</td>
+<td><code>1</code></td>
+</tr>
+<tr class="odd">
+<td>debug</td>
+<td></td>
+<td>Turn on debug-level logging.</td>
+<td><code>False</code></td>
+</tr>
+<tr class="even">
+<td>penalty_length_scale_km</td>
+<td></td>
+<td>Length scale, in km, of the clustering distance penalty.</td>
+<td><code>2000.0</code></td>
+</tr>
+<tr class="odd">
+<td>lat_gate</td>
+<td></td>
+<td>Latitude gate, in degrees, applied when ranking RWP paths.</td>
+<td><code>15.0</code></td>
+</tr>
+</tbody>
+</table>
+<p>See :class:<code>WaperConfig</code> for the settings that have no constructor argument and keep their defaults.</p>
+</section>
+<section id="methods" class="level2">
+<h2 class="anchored" data-anchor-id="methods">Methods</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#waper.Waper.from_config">from_config</a></td>
+<td>Construct from a :class:<code>WaperConfig</code>, reaching every field.</td>
+</tr>
+<tr class="even">
+<td><a href="#waper.Waper.identify_rwps">identify_rwps</a></td>
+<td>Identify wave packets at every timestep of the input field.</td>
+</tr>
+<tr class="odd">
+<td><a href="#waper.Waper.plot_association_graph">plot_association_graph</a></td>
+<td>Plot the unpruned association graph over the scalar field.</td>
+</tr>
+<tr class="even">
+<td><a href="#waper.Waper.plot_clusters">plot_clusters</a></td>
+<td>Plot the clustered maxima and minima for one timestep.</td>
+</tr>
+<tr class="odd">
+<td><a href="#waper.Waper.plot_pruned_graph">plot_pruned_graph</a></td>
+<td>Plot the association graph after node and edge pruning.</td>
+</tr>
+<tr class="even">
+<td><a href="#waper.Waper.plot_raster">plot_raster</a></td>
+<td>Plot the rasterised RWP label field for one timestep.</td>
+</tr>
+<tr class="odd">
+<td><a href="#waper.Waper.plot_rwp_graphs">plot_rwp_graphs</a></td>
+<td>Plot the identified RWP paths as node chains through the pruned graph.</td>
+</tr>
+<tr class="even">
+<td><a href="#waper.Waper.plot_rwp_polygons">plot_rwp_polygons</a></td>
+<td>Plot every RWP footprint polygon for one timestep.</td>
+</tr>
+<tr class="odd">
+<td><a href="#waper.Waper.plot_track_polygons">plot_track_polygons</a></td>
+<td>Plot one track’s RWP footprints, coloured by time.</td>
+</tr>
+<tr class="even">
+<td><a href="#waper.Waper.plot_track_rwps">plot_track_rwps</a></td>
+<td>Plot one track’s RWP node chains on a single map.</td>
+</tr>
+<tr class="odd">
+<td><a href="#waper.Waper.plot_tracks">plot_tracks</a></td>
+<td>Plot every track path, re-pruning the tracking graph on the fly.</td>
+</tr>
+<tr class="even">
+<td><a href="#waper.Waper.track_rwps">track_rwps</a></td>
+<td>Link identified wave packets across time into a tracking graph.</td>
+</tr>
+</tbody>
+</table>
+<section id="waper.Waper.from_config" class="level3">
+<h3 class="anchored" data-anchor-id="waper.Waper.from_config">from_config</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>Waper.from_config(data_array, config)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Construct from a :class:<code>WaperConfig</code>, reaching every field.</p>
+<p><code>__init__</code> exposes 18 of the config’s 25 fields as keyword arguments; <code>hemisphere</code>, <code>hull_method</code>, <code>energy_radius_km</code> and the clustering parameters are not among them. This is the way to set those — and the way to run from a config file:</p>
+<blockquote class="blockquote">
+<blockquote class="blockquote">
+<blockquote class="blockquote">
+<p>waper = Waper.from_config(ds, WaperConfig.from_yaml(“run.yaml”))</p>
+</blockquote>
+</blockquote>
+</blockquote>
+<section id="parameters-1" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-1">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 12%">
+<col style="width: 13%">
+<col style="width: 61%">
+<col style="width: 12%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>data_array</td>
+<td></td>
+<td>The input dataset, indexed by the config’s <code>time_label</code>.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>config</td>
+<td>WaperConfig</td>
+<td>A fully specified configuration.</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td>Waper</td>
+<td>An unrun <code>Waper</code>. Call <code>identify_rwps()</code> next.</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="waper.Waper.identify_rwps" class="level3">
+<h3 class="anchored" data-anchor-id="waper.Waper.identify_rwps">identify_rwps</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>Waper.identify_rwps(n_jobs<span class="op">=</span><span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Identify wave packets at every timestep of the input field.</p>
+<p>Appends one :class:<code>WaperSingleTimestepData</code> per timestep to <code>_time_step_data</code>, in time order, so a timestep’s index into that list is its index along the time axis. Progress is reported with a tqdm bar.</p>
+<p>Calling this twice appends a second pass rather than replacing the first. A timestep in which no packet survives pruning logs a warning and still contributes an (empty) entry.</p>
+<section id="parameters-2" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-2">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 1%">
+<col style="width: 1%">
+<col style="width: 95%">
+<col style="width: 1%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>n_jobs</td>
+<td>int</td>
+<td>Worker processes to use. <code>1</code> (the default) runs sequentially in this process. <code>-1</code> uses every CPU. Results are identical either way and always ordered by timestep. Starting a pool costs ~15 s (each worker re-imports the pyvista stack), so parallelism only pays off past roughly 25 timesteps; below that <code>n_jobs=1</code> is faster. On machines with both performance and efficiency cores, an explicit <code>n_jobs</code> equal to the performance-core count beats <code>-1</code>, which counts all cores and lets the slow ones straggle. See <code>results/benchmarks.md</code>.</td>
+<td><code>1</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="waper.Waper.plot_association_graph" class="level3">
+<h3 class="anchored" data-anchor-id="waper.Waper.plot_association_graph">plot_association_graph</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>Waper.plot_association_graph(time_index, ax<span class="op">=</span><span class="va">None</span>, projection<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Plot the unpruned association graph over the scalar field.</p>
+<p>Shows every extremum node and every candidate max–min link found at this timestep, before node and edge pruning — useful for judging whether the pruning thresholds are throwing away real structure.</p>
+<section id="parameters-3" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-3">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 4%">
+<col style="width: 2%">
+<col style="width: 88%">
+<col style="width: 4%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>time_index</td>
+<td></td>
+<td>Index into <code>_time_step_data</code>.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>ax</td>
+<td></td>
+<td>Axes to draw on. Must already carry a cartopy projection. <code>None</code> creates one with <code>PlateCarree(central_longitude=180)</code>.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>projection</td>
+<td></td>
+<td>Cartopy projection for the axes this method creates. <code>None</code> keeps the whole-globe <code>PlateCarree(central_longitude=180)</code> default. An <code>ax</code> you pass in takes precedence over both: its own projection is used and <code>projection</code> is ignored.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-1" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-1">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>The matplotlib <code>Axes</code> drawn on.</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="waper.Waper.plot_clusters" class="level3">
+<h3 class="anchored" data-anchor-id="waper.Waper.plot_clusters">plot_clusters</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>Waper.plot_clusters(time_index, projection<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Plot the clustered maxima and minima for one timestep.</p>
+<p>Draws two stacked PlateCarree panels — maxima above, minima below — with points coloured by cluster id over the clipped scalar field. Creates its own figure axes, so it takes no <code>ax</code>.</p>
+<section id="parameters-4" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-4">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 6%">
+<col style="width: 4%">
+<col style="width: 82%">
+<col style="width: 6%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>time_index</td>
+<td></td>
+<td>Index into <code>_time_step_data</code> (i.e.&nbsp;along the time axis).</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>projection</td>
+<td></td>
+<td>Cartopy projection to draw both panels in. <code>None</code> keeps the whole-globe <code>PlateCarree(central_longitude=180)</code> default, which is hemisphere-agnostic.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-2" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-2">Returns</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 77%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>The matplotlib <code>Axes</code> of the lower (minima) panel.</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="waper.Waper.plot_pruned_graph" class="level3">
+<h3 class="anchored" data-anchor-id="waper.Waper.plot_pruned_graph">plot_pruned_graph</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>Waper.plot_pruned_graph(time_index, ax<span class="op">=</span><span class="va">None</span>, projection<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Plot the association graph after node and edge pruning.</p>
+<p>Same rendering as :meth:<code>plot_association_graph</code>, but of the graph the RWP paths are actually extracted from; comparing the two shows what the thresholds removed.</p>
+<section id="parameters-5" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-5">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 5%">
+<col style="width: 3%">
+<col style="width: 85%">
+<col style="width: 5%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>time_index</td>
+<td></td>
+<td>Index into <code>_time_step_data</code>.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>ax</td>
+<td></td>
+<td>Axes to draw on. Must already carry a cartopy projection. <code>None</code> creates one with <code>PlateCarree(central_longitude=180)</code>.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>projection</td>
+<td></td>
+<td>Cartopy projection for the axes this method creates. <code>None</code> keeps the whole-globe <code>PlateCarree(central_longitude=180)</code> default. An <code>ax</code> you pass in takes precedence over both.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-3" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-3">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>The matplotlib <code>Axes</code> drawn on.</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="waper.Waper.plot_raster" class="level3">
+<h3 class="anchored" data-anchor-id="waper.Waper.plot_raster">plot_raster</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>Waper.plot_raster(time_index, ax<span class="op">=</span><span class="va">None</span>, projection<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Plot the rasterised RWP label field for one timestep.</p>
+<p>Shows <code>raster_data</code> — the polygons burned onto WAPER’s polar-stereographic grid, each cell holding an <code>rwp_id</code> — with zero (no packet) masked out. This is the array tracking overlaps between timesteps, so it is the view to check when a link looks wrong.</p>
+<section id="parameters-6" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-6">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 2%">
+<col style="width: 1%">
+<col style="width: 93%">
+<col style="width: 2%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>time_index</td>
+<td></td>
+<td>Index into <code>_time_step_data</code>.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>ax</td>
+<td></td>
+<td>Axes to draw on. Must already carry a cartopy projection. <code>None</code> creates a polar-stereographic axes for the configured hemisphere.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>projection</td>
+<td></td>
+<td>Cartopy projection to <em>display</em> in. <code>None</code> means the hemisphere default (:func:<code>~waper.interface.projections.default_projection</code>); an <code>ax</code> you pass in takes precedence over both. The raster is reprojected from the grid CRS it was burned in, not moved. Note that a non-default projection sends the image through cartopy’s <code>img_transform.regrid</code>, which is slow and, where <code>pykdtree</code> is mis-linked, can abort the interpreter; the default path does not reproject at all.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-4" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-4">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>The matplotlib <code>Axes</code> drawn on.</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="waper.Waper.plot_rwp_graphs" class="level3">
+<h3 class="anchored" data-anchor-id="waper.Waper.plot_rwp_graphs">plot_rwp_graphs</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>Waper.plot_rwp_graphs(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    time_index,</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    ax<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    plot_scalar_data<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    projection<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Plot the identified RWP paths as node chains through the pruned graph.</p>
+<p>Only the ranked paths are drawn, not the whole pruned graph, so this is the view of what was accepted as a wave packet at this timestep.</p>
+<section id="parameters-7" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-7">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 8%">
+<col style="width: 3%">
+<col style="width: 82%">
+<col style="width: 5%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>time_index</td>
+<td></td>
+<td>Index into <code>_time_step_data</code>.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>ax</td>
+<td></td>
+<td>Axes to draw on. Must already carry a cartopy projection. <code>None</code> creates one with <code>PlateCarree(central_longitude=180)</code>.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>plot_scalar_data</td>
+<td></td>
+<td>Draw the scalar field underneath the paths. Set <code>False</code> for a paths-only figure.</td>
+<td><code>True</code></td>
+</tr>
+<tr class="even">
+<td>projection</td>
+<td></td>
+<td>Cartopy projection for the axes this method creates. <code>None</code> keeps the whole-globe <code>PlateCarree(central_longitude=180)</code> default. An <code>ax</code> you pass in takes precedence over both.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-5" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-5">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>The matplotlib <code>Axes</code> drawn on.</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="waper.Waper.plot_rwp_polygons" class="level3">
+<h3 class="anchored" data-anchor-id="waper.Waper.plot_rwp_polygons">plot_rwp_polygons</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>Waper.plot_rwp_polygons(</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    time_index,</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    plot_samples<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    ax<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    projection<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Plot every RWP footprint polygon for one timestep.</p>
+<p>Each packet’s hull is drawn over the scalar field, together with its energy-weighted centroid. Polygons live in WAPER’s polar-stereographic CRS, so the default axes are polar stereographic rather than PlateCarree.</p>
+<section id="parameters-8" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-8">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 3%">
+<col style="width: 2%">
+<col style="width: 90%">
+<col style="width: 3%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>time_index</td>
+<td></td>
+<td>Index into <code>_time_step_data</code>.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>plot_samples</td>
+<td></td>
+<td>Also scatter the sample points the hull was built from.</td>
+<td><code>False</code></td>
+</tr>
+<tr class="odd">
+<td>ax</td>
+<td></td>
+<td>Axes to draw on. Must already carry a cartopy projection. <code>None</code> creates a polar-stereographic axes for the configured hemisphere.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td>projection</td>
+<td></td>
+<td>Cartopy projection to <em>display</em> in. <code>None</code> means the hemisphere default (:func:<code>~waper.interface.projections.default_projection</code>); an <code>ax</code> you pass in takes precedence over both. This changes only the display — the polygons are still drawn in the CRS they were built in, so overriding it reprojects them rather than moving them.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-6" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-6">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>The matplotlib <code>Axes</code> drawn on.</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="waper.Waper.plot_track_polygons" class="level3">
+<h3 class="anchored" data-anchor-id="waper.Waper.plot_track_polygons">plot_track_polygons</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>Waper.plot_track_polygons(path, plot_samples<span class="op">=</span><span class="va">False</span>, ax<span class="op">=</span><span class="va">None</span>, projection<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Plot one track’s RWP footprints, coloured by time.</p>
+<p>Overlays the polygon of every packet along the track on a single map, shaded from dark to light through <code>viridis</code> in track-time order, so the packet’s propagation is visible in one figure. No scalar field is drawn.</p>
+<section id="parameters-9" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-9">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 4%">
+<col style="width: 2%">
+<col style="width: 88%">
+<col style="width: 4%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>path</td>
+<td></td>
+<td>Sequence of tracking-graph nodes, each a <code>(time_index, rwp_id)</code> pair — e.g.&nbsp;one element of <code>get_track_paths(pruned_graph)</code>.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>plot_samples</td>
+<td></td>
+<td>Also scatter the sample points each hull was built from.</td>
+<td><code>False</code></td>
+</tr>
+<tr class="odd">
+<td>ax</td>
+<td></td>
+<td>Axes to draw on. Must already carry a cartopy projection. <code>None</code> creates a polar-stereographic axes for the configured hemisphere.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td>projection</td>
+<td></td>
+<td>Cartopy projection to <em>display</em> in. <code>None</code> means the hemisphere default (:func:<code>~waper.interface.projections.default_projection</code>); an <code>ax</code> you pass in takes precedence over both. The polygons keep being drawn in the CRS they were built in either way.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-7" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-7">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>The matplotlib <code>Axes</code> drawn on.</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="waper.Waper.plot_track_rwps" class="level3">
+<h3 class="anchored" data-anchor-id="waper.Waper.plot_track_rwps">plot_track_rwps</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>Waper.plot_track_rwps(path, ax<span class="op">=</span><span class="va">None</span>, projection<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Plot one track’s RWP node chains on a single map.</p>
+<p>The graph-level counterpart of :meth:<code>plot_track_polygons</code>: instead of the footprint hulls it draws the max/min node chain of each packet along the track, all overlaid on one axes and without the scalar field.</p>
+<section id="parameters-10" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-10">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 5%">
+<col style="width: 3%">
+<col style="width: 85%">
+<col style="width: 5%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>path</td>
+<td></td>
+<td>Sequence of tracking-graph nodes, each a <code>(time_index, rwp_id)</code> pair.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>ax</td>
+<td></td>
+<td>Axes to draw on. Must already carry a cartopy projection. <code>None</code> creates one with <code>PlateCarree(central_longitude=180)</code>.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>projection</td>
+<td></td>
+<td>Cartopy projection for the axes this method creates. <code>None</code> keeps the whole-globe <code>PlateCarree(central_longitude=180)</code> default. An <code>ax</code> you pass in takes precedence over both.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-8" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-8">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>The matplotlib <code>Axes</code> drawn on.</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="waper.Waper.plot_tracks" class="level3">
+<h3 class="anchored" data-anchor-id="waper.Waper.plot_tracks">plot_tracks</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>Waper.plot_tracks(threshold<span class="op">=</span><span class="va">None</span>, weight_threshold<span class="op">=</span><span class="va">None</span>, projection<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Plot every track path, re-pruning the tracking graph on the fly.</p>
+<p>Prunes <code>_tracking_graph</code> with the thresholds given here rather than reusing <code>_pruned_tracking_graph</code>, so you can sweep thresholds without re-running :meth:<code>track_rwps</code>.</p>
+<p>Note the <code>None</code> semantics differ from the underlying <code>prune_tracking_graph</code>: here <code>None</code> means “fall back to the <strong>configured</strong> <code>track_pruning_threshold</code> / <code>track_weight_threshold</code>”, whereas <code>prune_tracking_graph(g, None)</code> means “keep every edge”. To actually keep every edge, call that function directly.</p>
+<p>Requires :meth:<code>track_rwps</code> to have run. Creates its own axes.</p>
+<section id="parameters-11" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-11">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 9%">
+<col style="width: 4%">
+<col style="width: 81%">
+<col style="width: 5%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>threshold</td>
+<td></td>
+<td>Maximum centroid displacement in km. <code>None</code> uses the configured value.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td>weight_threshold</td>
+<td></td>
+<td>Minimum overlap weight in (0, 1]. <code>None</code> uses the configured value, which is itself <code>None</code> (gate disabled) by default.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>projection</td>
+<td></td>
+<td>Cartopy projection for the axes this method creates. <code>None</code> keeps the whole-globe <code>PlateCarree(central_longitude=180)</code> default, which is hemisphere-agnostic.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-9" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-9">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>The matplotlib <code>Axes</code> drawn on.</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="waper.Waper.track_rwps" class="level3">
+<h3 class="anchored" data-anchor-id="waper.Waper.track_rwps">track_rwps</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>Waper.track_rwps(num_time_steps<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Link identified wave packets across time into a tracking graph.</p>
+<p>Stores the full graph on <code>_tracking_graph</code> and a pruned copy on <code>_pruned_tracking_graph</code>. Pruning drops edges whose centroid displacement exceeds the configured <code>track_pruning_threshold</code> kilometres and, if <code>track_weight_threshold</code> is set, edges whose energy-overlap weight falls below it.</p>
+<p>Requires :meth:<code>identify_rwps</code> to have run first.</p>
+<section id="parameters-12" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-12">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 17%">
+<col style="width: 8%">
+<col style="width: 61%">
+<col style="width: 11%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>num_time_steps</td>
+<td></td>
+<td>Number of timesteps to link. <code>None</code> uses all of them.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
 
 
+</section>
+</section>
+</section>
 </section>
 
 </main> <!-- /main -->

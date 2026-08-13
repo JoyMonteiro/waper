@@ -177,6 +177,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="waper.WaperSingleTimestepData" class="level1">
 <h1>WaperSingleTimestepData</h1>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>WaperSingleTimestepData(input_data, config)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>All intermediate state produced for one timestep of the input field.</p>
+<p><code>__init__</code> only fills <code>input_data</code>, <code>vtk_data</code> (the geovista mesh built from the field) and an empty <code>rwp_info</code>. Every other attribute is populated later by the identification pass, in order: the clustered extrema (<code>all_maxima</code> / <code>all_minima</code> and their <code>*_cluster_info</code> dicts), the <code>association_graph</code> and its <code>pruned_graph</code>, the ranked <code>identified_rwp_paths</code>, then <code>rwp_info</code> keyed by <code>tuple(path)</code> holding each packet’s polygon, integer <code>rwp_id</code>, sample points and energy-weighted centroid, and finally the rasters.</p>
+<p><code>energy_raster</code> is <code>None</code> until <code>_identify_rwps</code> sets it; <code>raster_data</code> may be <code>None</code> when no packet was found, in which case <code>raster_features</code> is just <code>{0}</code>.</p>
 
 
 </section>

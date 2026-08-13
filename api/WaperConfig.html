@@ -164,7 +164,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#waper.WaperConfig" id="toc-waper.WaperConfig" class="nav-link active" data-scroll-target="#waper.WaperConfig">WaperConfig</a></li>
+  <li><a href="#waper.WaperConfig" id="toc-waper.WaperConfig" class="nav-link active" data-scroll-target="#waper.WaperConfig">WaperConfig</a>
+  <ul class="collapse">
+  <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a>
+  <ul class="collapse">
+  <li><a href="#waper.WaperConfig.from_yaml" id="toc-waper.WaperConfig.from_yaml" class="nav-link" data-scroll-target="#waper.WaperConfig.from_yaml">from_yaml</a></li>
+  <li><a href="#waper.WaperConfig.to_yaml" id="toc-waper.WaperConfig.to_yaml" class="nav-link" data-scroll-target="#waper.WaperConfig.to_yaml">to_yaml</a></li>
+  </ul></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -205,8 +212,166 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    vtk_longitude_label<span class="op">=</span><span class="st">'Longitude'</span>,</span>
 <span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    vtk_region_label<span class="op">=</span><span class="st">'RegionId'</span>,</span>
 <span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Frozen bundle of every tunable that identification and tracking read.</p>
+<p>The instance is immutable (<code>frozen=True</code>): build a new one to change a setting rather than mutating an existing :class:<code>Waper</code>’s config.</p>
+<p>Units are explicit rather than normalised, because the thresholds live on physically different scales:</p>
+<ul>
+<li><code>track_pruning_threshold</code> is the maximum centroid displacement of a tracking edge, <strong>in kilometres</strong> (default 8000). The historical default of <code>0.3</code> was a bug: read as km it prunes every edge and leaves an empty tracking graph.</li>
+<li><code>penalty_length_scale_km</code> (clustering distance penalty) and <code>energy_radius_km</code> (radius of the per-node energy disk rasterised into the energy raster) are also kilometres.</li>
+<li><code>lat_gate</code> is <strong>degrees</strong> of latitude.</li>
+<li><code>cluster_max_eps_km</code> is kilometres; <code>cluster_min_samples</code> and <code>cluster_xi</code> are OPTICS parameters passed through unchanged.</li>
+</ul>
+<p><code>track_weight_threshold</code> is the minimum envelope-overlap weight in (0, 1] a tracking edge must carry. It defaults to <code>None</code>, which <strong>disables</strong> the overlap gate — the weight has not been calibrated, so distance alone decides.</p>
+<p>The <code>vtk_*_label</code> fields name the point-data arrays WAPER attaches to the VTK mesh, and are not read from the input dataset.</p>
+<section id="methods" class="level2">
+<h2 class="anchored" data-anchor-id="methods">Methods</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#waper.WaperConfig.from_yaml">from_yaml</a></td>
+<td>Build a configuration from a YAML file or YAML string.</td>
+</tr>
+<tr class="even">
+<td><a href="#waper.WaperConfig.to_yaml">to_yaml</a></td>
+<td>Serialise this configuration to YAML.</td>
+</tr>
+</tbody>
+</table>
+<section id="waper.WaperConfig.from_yaml" class="level3">
+<h3 class="anchored" data-anchor-id="waper.WaperConfig.from_yaml">from_yaml</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>WaperConfig.from_yaml(source)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Build a configuration from a YAML file or YAML string.</p>
+<section id="parameters" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 8%">
+<col style="width: 14%">
+<col style="width: 63%">
+<col style="width: 13%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>source</td>
+<td>str | Path</td>
+<td>A path to a <code>.yaml</code> file, or the YAML document itself.</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td>WaperConfig</td>
+<td>The deserialised configuration.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="raises" class="level4 doc-section doc-section-raises">
+<h4 class="doc-section doc-section-raises anchored" data-anchor-id="raises">Raises</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 9%">
+<col style="width: 12%">
+<col style="width: 77%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td>TypeError</td>
+<td>If the document contains a key that is not a field of this class.</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="waper.WaperConfig.to_yaml" class="level3">
+<h3 class="anchored" data-anchor-id="waper.WaperConfig.to_yaml">to_yaml</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>WaperConfig.to_yaml(path<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Serialise this configuration to YAML.</p>
+<section id="parameters-1" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-1">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 8%">
+<col style="width: 23%">
+<col style="width: 55%">
+<col style="width: 12%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>path</td>
+<td>str | Path | None</td>
+<td>If given, the YAML is also written to this path.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-1" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-1">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td>str</td>
+<td>The YAML document as a string.</td>
+</tr>
+</tbody>
+</table>
 
 
+</section>
+</section>
+</section>
 </section>
 
 </main> <!-- /main -->
